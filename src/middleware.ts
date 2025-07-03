@@ -525,43 +525,42 @@ function redirectToAccessDenied(request: NextRequest): NextResponse {
  * 
  * Defines which routes the middleware should run on.
  * Updated to include routes using the new permission system.
+ * 
+ * Note: We include all routes in the matcher but handle the environment-specific
+ * logic inside the middleware function itself for better Next.js compatibility.
  */
 export const config = {
   matcher: [
-    // Only run middleware in development
-    // In production, AuthGuard components handle authentication
-    ...(process.env.NODE_ENV === 'development' ? [
-      // Admin routes (system settings and user management)
-      '/admin/:path*',
-      '/users/:path*', // User Management Dashboard
-      '/system-settings/:path*',
-      '/user-management/:path*',
-      
-      // Tournament management routes
-      '/tournaments/:path*',
-      
-      // Stage and match scheduling routes
-      '/stages/:path*',
-      
-      // Match control routes (referee and admin access)
-      '/control-match/:path*',
-      
-      // Referee routes (scoring and match management)
-      '/referee-panel/:path*',
-      '/scoring/:path*',
-      
-      // Team routes (team management and registration) - excluding /teams which should be public
-      '/team-management/:path*',
-      '/team-registration/:path*',
-      
-      // Reporting routes
-      '/reports/:path*',
-      '/rankings/admin/:path*',
-      
-      // Legacy routes (for backward compatibility)
-      '/legacy-admin/:path*',
-      '/legacy-referee/:path*',
-    ] : []),
+    // Admin routes (system settings and user management)
+    '/admin/:path*',
+    '/users/:path*', // User Management Dashboard
+    '/system-settings/:path*',
+    '/user-management/:path*',
+    
+    // Tournament management routes
+    '/tournaments/:path*',
+    
+    // Stage and match scheduling routes
+    '/stages/:path*',
+    
+    // Match control routes (referee and admin access)
+    '/control-match/:path*',
+    
+    // Referee routes (scoring and match management)
+    '/referee-panel/:path*',
+    '/scoring/:path*',
+    
+    // Team routes (team management and registration) - excluding /teams which should be public
+    '/team-management/:path*',
+    '/team-registration/:path*',
+    
+    // Reporting routes
+    '/reports/:path*',
+    '/rankings/admin/:path*',
+    
+    // Legacy routes (for backward compatibility)
+    '/legacy-admin/:path*',
+    '/legacy-referee/:path*',
   ],
 };
 
