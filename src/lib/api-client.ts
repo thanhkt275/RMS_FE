@@ -1,4 +1,5 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import TokenManager from './tokenManager';
  
 /**
  * API client for making requests to the backend
@@ -55,10 +56,13 @@ class ApiClient {
       'Content-Type': 'application/json',
     };
 
-    // Add Authorization header if token exists in localStorage
-    const token = localStorage.getItem('token');
+    // Add Authorization header if token exists in localStorage (client-side only)
+    const token = TokenManager.getToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+      console.log('[API] Adding Authorization header with token:', TokenManager.getTokenPreview());
+    } else {
+      console.log('[API] No token found for Authorization header');
     }
 
     const config: RequestInit = {

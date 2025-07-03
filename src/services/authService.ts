@@ -36,6 +36,7 @@
 import { User, UserRole } from '@/lib/types';
 import { apiClient } from '@/lib/api-client';
 import { rbacLogger } from '@/utils/rbacLogger';
+import TokenManager from '@/lib/tokenManager';
 
 // Define ApiClient type locally to avoid circular reference
 type ApiClient = typeof apiClient;
@@ -244,7 +245,7 @@ export class EnhancedAuthService implements IAuthService {
       
       // Store token in localStorage for cross-domain scenarios
       if (response.access_token) {
-        localStorage.setItem('token', response.access_token);
+        TokenManager.setToken(response.access_token);
       }
       
       // Log successful authentication
@@ -321,7 +322,7 @@ export class EnhancedAuthService implements IAuthService {
       await this.makeAuthenticatedRequest('POST', '/auth/logout', {});
       
       // Clear token from localStorage
-      localStorage.removeItem('token');
+      TokenManager.removeToken();
       
       // Clear retry counters
       this.retryCount.clear();
@@ -331,7 +332,7 @@ export class EnhancedAuthService implements IAuthService {
       console.warn('Logout request failed:', error);
       
       // Always clear token from localStorage even if server logout fails
-      localStorage.removeItem('token');
+      TokenManager.removeToken();
       
       // Don't throw error - logout should always succeed on client side
     }

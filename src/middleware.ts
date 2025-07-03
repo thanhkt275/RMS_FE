@@ -448,7 +448,14 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
   console.log('[Middleware Debug] Route is protected:', pathname);
 
-  // Extract and verify authentication token directly (efficient approach)
+  // For production cross-domain scenarios, we can't reliably check authentication in middleware
+  // Instead, let the protected pages handle authentication checks on the client side
+  if (process.env.NODE_ENV === 'production') {
+    console.log('[Middleware Debug] Production mode - allowing access, authentication will be checked client-side');
+    return NextResponse.next();
+  }
+
+  // Development mode - try to read cookie (same domain)
   const token = request.cookies.get(AUTH_CONFIG.cookieName)?.value;
   
   console.log('[Middleware Debug] Cookie name:', AUTH_CONFIG.cookieName);
@@ -521,41 +528,40 @@ function redirectToAccessDenied(request: NextRequest): NextResponse {
  */
 export const config = {
   matcher: [
-    // Admin routes (system settings and user management)
-    '/admin/:path*',
-    '/users/:path*', // User Management Dashboard
-    '/system-settings/:path*',
-    '/user-management/:path*',
-    
-    // Tournament management routes
-    '/tournaments/:path*',
-    
-    // Stage and match scheduling routes
-    '/stages/:path*',
-    
-    // Match control routes (referee and admin access)
-    '/control-match/:path*',
-
-    
-    
-    // Referee routes (scoring and match management)
-    '/referee-panel/:path*',
-    '/scoring/:path*',
-    
-    // Team routes (team management and registration) - excluding /teams which should be public
-    '/team-management/:path*',
-    '/team-registration/:path*',
-    
-    // Reporting routes
-    '/reports/:path*',
-    '/rankings/admin/:path*',
-    
-    // Legacy routes (for backward compatibility)
-    '/legacy-admin/:path*',
-    '/legacy-referee/:path*',
-    
-    // Exclude public routes (/teams and /matches), API routes, and static files
-    '/((?!api|_next/static|_next/image|favicon.ico|public|teams|matches).*)',
+    // Only run middleware in development
+    // In production, AuthGuard components handle authentication
+    ...(process.env.NODE_ENV === 'development' ? [
+      // Admin routes (system settings and user management)
+      '/admin/:path*',
+      '/users/:path*', // User Management Dashboard
+      '/system-settings/:path*',
+      '/user-management/:path*',
+      
+      // Tournament management routes
+      '/tournaments/:path*',
+      
+      // Stage and match scheduling routes
+      '/stages/:path*',
+      
+      // Match control routes (referee and admin access)
+      '/control-match/:path*',
+      
+      // Referee routes (scoring and match management)
+      '/referee-panel/:path*',
+      '/scoring/:path*',
+      
+      // Team routes (team management and registration) - excluding /teams which should be public
+      '/team-management/:path*',
+      '/team-registration/:path*',
+      
+      // Reporting routes
+      '/reports/:path*',
+      '/rankings/admin/:path*',
+      
+      // Legacy routes (for backward compatibility)
+      '/legacy-admin/:path*',
+      '/legacy-referee/:path*',
+    ] : []),
   ],
 };
 
