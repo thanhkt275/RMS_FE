@@ -68,6 +68,7 @@ export interface IRegistrationData extends IAuthCredentials {
 export interface IAuthResponse {
   readonly user: User;
   readonly token?: string; // Optional if using httpOnly cookies
+  readonly access_token?: string; // For Authorization header method
   readonly refreshToken?: string;
   readonly expiresAt?: string;
 }
@@ -241,6 +242,11 @@ export class EnhancedAuthService implements IAuthService {
 
       const user = response.user;
       
+      // Store token in localStorage for cross-domain scenarios
+      if (response.access_token) {
+        localStorage.setItem('token', response.access_token);
+      }
+      
       // Log successful authentication
       if (this.config.enableLogging) {
         await rbacLogger.logAuthenticationSuccess(user.id, user.role);
@@ -314,12 +320,19 @@ export class EnhancedAuthService implements IAuthService {
     try {
       await this.makeAuthenticatedRequest('POST', '/auth/logout', {});
       
+      // Clear token from localStorage
+      localStorage.removeItem('token');
+      
       // Clear retry counters
       this.retryCount.clear();
       
     } catch (error: any) {
       // Log logout even if it fails on server side
       console.warn('Logout request failed:', error);
+      
+      // Always clear token from localStorage even if server logout fails
+      localStorage.removeItem('token');
+      
       // Don't throw error - logout should always succeed on client side
     }
   }

@@ -448,7 +448,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
   console.log('[Middleware Debug] Route is protected:', pathname);
 
-  // Extract and verify authentication token
+  // Extract and verify authentication token directly (efficient approach)
   const token = request.cookies.get(AUTH_CONFIG.cookieName)?.value;
   
   console.log('[Middleware Debug] Cookie name:', AUTH_CONFIG.cookieName);
@@ -461,7 +461,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return redirectToAccessDenied(request);
   }
 
-  // Verify token and extract user role
+  // Verify token and extract user role (direct JWT verification)
   const userRole = await jwtVerifier.verifyToken(token);
   
   console.log('[Middleware Debug] JWT verification result:', userRole);
