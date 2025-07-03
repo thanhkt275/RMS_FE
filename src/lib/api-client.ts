@@ -1,5 +1,5 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-
+ 
 /**
  * API client for making requests to the backend
  */

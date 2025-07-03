@@ -99,10 +99,19 @@ const ENHANCED_PROTECTED_ROUTES: Record<string, RouteConfig> = {
     action: 'MANAGE_TOURNAMENTS',
     description: 'Tournament management'
   },
+  '/tournaments': {
+    feature: 'SYSTEM_SETTINGS',
+    action: 'MANAGE_TOURNAMENTS',
+    description: 'Tournament management interface'
+  },
   '/stages': {
     feature: 'MATCH_SCHEDULING',
     action: 'FULL_CONTROL',
     description: 'Stage and match scheduling'
+  },
+  '/control-match': {
+    roles: [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE],
+    description: 'Match control center for admins and referees'
   },
   '/referee-panel': {
     feature: 'LIVE_SCORING',
@@ -515,15 +524,25 @@ export const config = {
     // Admin routes (system settings and user management)
     '/admin/:path*',
     '/users/:path*', // User Management Dashboard
-    '/stages/:path*',
     '/system-settings/:path*',
     '/user-management/:path*',
+    
+    // Tournament management routes
+    '/tournaments/:path*',
+    
+    // Stage and match scheduling routes
+    '/stages/:path*',
+    
+    // Match control routes (referee and admin access)
+    '/control-match/:path*',
+
+    
     
     // Referee routes (scoring and match management)
     '/referee-panel/:path*',
     '/scoring/:path*',
     
-    // Team routes (team management and registration)
+    // Team routes (team management and registration) - excluding /teams which should be public
     '/team-management/:path*',
     '/team-registration/:path*',
     
@@ -535,8 +554,8 @@ export const config = {
     '/legacy-admin/:path*',
     '/legacy-referee/:path*',
     
-    // Exclude public routes, API routes, and static files
-    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
+    // Exclude public routes (/teams and /matches), API routes, and static files
+    '/((?!api|_next/static|_next/image|favicon.ico|public|teams|matches).*)',
   ],
 };
 
