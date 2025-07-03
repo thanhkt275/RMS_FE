@@ -128,3 +128,19 @@ export function injectTextShadowStyle() {
     }
   }
 }
+
+/**
+ * Get the color for a match status badge
+ */
+export function getMatchStatusColor(status: string): string {
+  switch (status) {
+    case "PENDING":
+      return "#6b7280"; // gray-500
+    case "IN_PROGRESS":
+      return "#f59e0b"; // amber-500
+    case "COMPLETED":
+      return "#10b981"; // emerald-500
+    default:
+      return "#6b7280"; // gray-500
+  }
+}

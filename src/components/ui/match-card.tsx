@@ -5,51 +5,63 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Match, MatchStatus, Team } from "@/lib/types";
+import { Match, MatchStatus } from "@/lib/types";
 import { formatDate, getMatchStatusColor } from "@/lib/utils";
-import { useUpdateMatchScore } from "@/hooks/use-matches";
+import { useUpdateMatchScores } from "@/hooks/api/use-matches";
 
 interface MatchCardProps {
   match: Match;
   showScoreUpdate?: boolean;
-  teams: Record<string, Team>;
 }
 
-export function MatchCard({ match, showScoreUpdate = false, teams }: MatchCardProps) {
-  const [redScore, setredScore] = useState<number>(match.redScore || 0);
-  const [blueScore, setblueScore] = useState<number>(match.blueScore || 0);
+export function MatchCard({ match, showScoreUpdate = false }: MatchCardProps) {
+  // Get red and blue alliances
+  const redAlliance = match.alliances?.find(a => a.color === "RED");
+  const blueAlliance = match.alliances?.find(a => a.color === "BLUE");
+  
+  // Get initial scores from alliances
+  const initialRedScore = redAlliance?.allianceScoring?.totalScore || 0;
+  const initialBlueScore = blueAlliance?.allianceScoring?.totalScore || 0;
+  
+  const [redScore, setRedScore] = useState<number>(initialRedScore);
+  const [blueScore, setBlueScore] = useState<number>(initialBlueScore);
   const [isEditing, setIsEditing] = useState(false);
   
-  const updateMatchScore = useUpdateMatchScore(match.stageId);
+  const updateMatchScore = useUpdateMatchScores();
   const statusColor = getMatchStatusColor(match.status);
 
-  const team1 = teams[match.redId];
-  const team2 = teams[match.blueId];
+  // Get team names from alliances
+  const redTeam = redAlliance?.teamAlliances?.[0]?.team;
+  const blueTeam = blueAlliance?.teamAlliances?.[0]?.team;
 
   const handleUpdateScore = async () => {
+    // We need to get or create match scores first
+    // For now, let's assume we have a match scores ID
+    // This would typically come from the match or be created
+    const matchScoresId = redAlliance?.allianceScoring?.id || blueAlliance?.allianceScoring?.id;
+    
+    if (!matchScoresId) {
+      console.error("No match scores ID found");
+      return;
+    }
+    
     try {
       await updateMatchScore.mutateAsync({
+        id: matchScoresId,
         matchId: match.id,
-        // Set redTotalScore directly with alliance1Score
         redTotalScore: redScore,
-        // Set blueTotalScore directly with alliance2Score
         blueTotalScore: blueScore,
-        // Set these to 0 since we're using total scores directly
         redAutoScore: 0,
         redDriveScore: 0,
         blueAutoScore: 0,
         blueDriveScore: 0,
-        // Include team counts which are needed for multiplier calculations
-        redTeamCount: match.alliances.find(a => a.color === "RED")?.teamAlliances.length || 0,
-        blueTeamCount: match.alliances.find(a => a.color === "BLUE")?.teamAlliances.length || 0
+        redTeamCount: redAlliance?.teamAlliances?.length || 0,
+        blueTeamCount: blueAlliance?.teamAlliances?.length || 0
       });
       
-      // After successful update, exit editing mode
       setIsEditing(false);
     } catch (error) {
-      // Log error but don't swallow it - the error handling is in the mutation
       console.error("Error updating match score:", error);
-      // Error will be displayed by toast from the mutation's onError handler
     }
   };
 
@@ -63,40 +75,40 @@ export function MatchCard({ match, showScoreUpdate = false, teams }: MatchCardPr
           </Badge>
         </div>
         <CardDescription>
-          {formatDate(match.scheduledTime)} • Field: {match.actualStartTime || "TBD"}
+          {formatDate(match.scheduledTime || null)} • Field: {match.startTime || "TBD"}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex justify-between items-center">
           <div className="flex flex-col items-center">
-            <span className="font-bold">{team1?.name || "TBD"}</span>
+            <span className="font-bold">{redTeam?.name || "TBD"}</span>
             {isEditing ? (
               <Input
                 type="number"
                 value={redScore}
-                onChange={(e) => setredScore(Number(e.target.value))}
+                onChange={(e) => setRedScore(Number(e.target.value))}
                 className="w-16 mt-1 text-center"
                 min={0}
               />
             ) : (
-              <span className="text-2xl font-bold">{match.redScore ?? 0}</span>
+              <span className="text-2xl font-bold">{initialRedScore}</span>
             )}
           </div>
           
           <span className="text-lg font-bold mx-4">VS</span>
           
           <div className="flex flex-col items-center">
-            <span className="font-bold">{team2?.name || "TBD"}</span>
+            <span className="font-bold">{blueTeam?.name || "TBD"}</span>
             {isEditing ? (
               <Input
                 type="number"
                 value={blueScore}
-                onChange={(e) => setblueScore(Number(e.target.value))}
+                onChange={(e) => setBlueScore(Number(e.target.value))}
                 className="w-16 mt-1 text-center"
                 min={0}
               />
             ) : (
-              <span className="text-2xl font-bold">{match.blueScore ?? 0}</span>
+              <span className="text-2xl font-bold">{initialBlueScore}</span>
             )}
           </div>
         </div>
