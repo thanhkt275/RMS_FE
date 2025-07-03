@@ -1,8 +1,10 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RMS_FE
+
+This is a [Next.js](https://nextjs.org) project, bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
 
-First, run the development server:
+To start the development server, run one of the following commands:
 
 ```bash
 npm run dev
@@ -14,23 +16,62 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Once running, open [http://localhost:3000](http://localhost:3000) in your browser to view the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+You can begin development by editing `src/app/page.tsx`. Changes are reflected automatically.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project Structure
 
-## Learn More
+```
+├── src/
+│   ├── app/                # Next.js app directory (routing, pages, layouts)
+│   ├── components/         # Reusable UI components (admin, auth, dialogs, features, fields, layout, stages, ui)
+│   ├── config/             # Configuration files (e.g., RBAC)
+│   ├── constants/          # App-wide constants (e.g., permissions)
+│   ├── hooks/              # Custom React hooks
+│   ├── lib/                # Utility libraries (API client, types, helpers)
+│   ├── services/           # Business logic and API services
+│   ├── types/              # TypeScript type definitions
+│   └── utils/              # Utility/helper functions
+├── public/                 # Static assets (images, icons, etc.)
+├── package.json            # Project metadata and scripts
+├── tsconfig.json           # TypeScript configuration
+└── ...                     # Other config and documentation files
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Main Features
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **User Authentication & RBAC**: Secure login, role-based access control, and protected routes.
+- **Tournament Management**: Create, edit, and manage tournaments, teams, matches, and stages.
+- **Admin Tools**: User management, bulk actions, and statistics for administrators.
+- **Audience Display**: Real-time audience view for tournament progress.
+- **Match Control**: Schedule, control, and monitor matches with dialogs and status indicators.
+- **Reusable UI Components**: Modular design for dialogs, forms, tables, and more.
+- **WebSocket Support**: Real-time updates for matches and audience display.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## How to Contribute
 
-## Deploy on Vercel
+1. Clone the repository and install dependencies:
+   ```bash
+   git clone <repo-url>
+   cd RMS_FE
+   pnpm install
+   # or npm/yarn/bun install
+   ```
+2. Create a new branch for your feature or bugfix.
+3. Follow the existing code style and structure.
+4. Submit a pull request with a clear description of your changes.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Resources
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Next.js Tutorial](https://nextjs.org/learn)
+- [Next.js GitHub](https://github.com/vercel/next.js)
+
+## Deployment
+
+Deploy your Next.js app easily on [Vercel](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme).
+
+For more information, see the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying).
+
+
