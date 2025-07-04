@@ -41,6 +41,27 @@ class ApiClient {
   }
 
   /**
+   * Makes a POST request with FormData (for file uploads)
+   */
+  async postFormData<T = any>(endpoint: string, formData: FormData): Promise<T> {
+    return this.requestFormData<T>('POST', endpoint, formData);
+  }
+
+  /**
+   * Makes a POST request that returns a Blob (for file downloads)
+   */
+  async postBlob(endpoint: string, data?: any): Promise<Blob> {
+    return this.requestBlob('POST', endpoint, data);
+  }
+
+  /**
+   * Makes a GET request that returns a Blob (for file downloads)
+   */
+  async getBlob(endpoint: string): Promise<Blob> {
+    return this.requestBlob('GET', endpoint);
+  }
+
+  /**
    * Makes a request to the API with the specified method
    */
   private async request<T>(
@@ -140,6 +161,135 @@ class ApiClient {
         
         throw new Error(`Network error: ${error.message}`);
       }
+      throw error;
+    }
+  }
+
+  /**
+   * Makes a request with FormData (for file uploads)
+   */
+  private async requestFormData<T>(
+    method: string,
+    endpoint: string,
+    formData: FormData
+  ): Promise<T> {
+    // Fix URL construction to prevent double slashes
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+    const url = `${API_URL}/${cleanEndpoint}`;
+    
+    const headers: HeadersInit = {};
+
+    // Add Authorization header if token exists in localStorage (client-side only)
+    const token = TokenManager.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const config: RequestInit = {
+      method,
+      headers,
+      credentials: 'include',
+      body: formData,
+    };
+
+    try {
+      console.log(`[API] ${method} ${url} (FormData)`);
+      
+      const response = await fetch(url, config);
+      
+      // Handle non-JSON responses
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (jsonError) {
+        responseData = { message: response.statusText || 'Request failed' };
+      }
+
+      console.log(`[API] ${method} ${url} -> ${response.status}`, responseData);
+
+      if (!response.ok) {
+        const error = new Error(
+          responseData.message || `HTTP ${response.status}: ${response.statusText}`
+        ) as Error & { status?: number; response?: { status: number; data: any } };
+        error.status = response.status;
+        error.response = {
+          status: response.status,
+          data: responseData
+        };
+        throw error;
+      }
+
+      return responseData;
+    } catch (error: any) {
+      if (!error.status) {
+        console.error(`[API] Network error while accessing: ${url}`, {
+          error: error.message,
+          url,
+          method
+        });
+        throw new Error(`Network error: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Makes a request that returns a Blob (for file downloads)
+   */
+  private async requestBlob(
+    method: string,
+    endpoint: string,
+    data?: any
+  ): Promise<Blob> {
+    // Fix URL construction to prevent double slashes
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+    const url = `${API_URL}/${cleanEndpoint}`;
+    
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    // Add Authorization header if token exists in localStorage (client-side only)
+    const token = TokenManager.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const config: RequestInit = {
+      method,
+      headers,
+      credentials: 'include',
+    };
+
+    if (data) {
+      config.body = JSON.stringify(data);
+    }
+
+    try {
+      console.log(`[API] ${method} ${url} (Blob response)`, data ? { data } : '');
+      
+      const response = await fetch(url, config);
+
+      if (!response.ok) {
+        // Try to get error message from response
+        let errorMessage;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+        } catch {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      return response.blob();
+    } catch (error: any) {
+      console.error(`[API] Error while accessing: ${url}`, {
+        error: error.message,
+        url,
+        method,
+        data
+      });
       throw error;
     }
   }

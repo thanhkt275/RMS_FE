@@ -245,23 +245,8 @@ class UserService {
       });
     }
 
-    // For file downloads, we need to use fetch directly to handle blob response
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-    const url = `${API_URL}/users/export?${searchParams}`;
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Export failed: ${response.statusText}`);
-    }
-
-    return response.blob();
+    // Use api-client for blob response
+    return apiClient.postBlob(`/users/export?${searchParams}`);
   }
 
   /**
@@ -271,22 +256,11 @@ class UserService {
     const formData = new FormData();
     formData.append('file', file);
 
-    // For file uploads, we need to use fetch directly to handle FormData
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-    const url = `${API_URL}/users/import`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      body: formData,
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Import failed' }));
-      throw new Error(error.message || `HTTP ${response.status}`);
-    }
-
-    return response.json();
+    // Use api-client for FormData upload
+    const response = await apiClient.postFormData<any>('/users/import', formData);
+    
+    // Handle backend response structure {success: true, data: {...}}
+    return response.data || response;
   }
 }
 

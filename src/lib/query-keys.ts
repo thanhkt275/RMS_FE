@@ -48,8 +48,11 @@ export const QueryKeys = {
   
   // User related queries
   users: {
-    all: () => ['users'],
+    all: (params?: Record<string, any>) => ['users', { params }],
     byId: (id: string) => ['users', id],
+    search: (query: string, limit?: number) => ['users', 'search', { query, limit }],
+    stats: () => ['users', 'stats'],
+    auditLogs: (userId: string) => ['users', userId, 'audit'],
   },
   
   // Swiss rankings related queries
