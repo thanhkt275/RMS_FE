@@ -88,14 +88,13 @@ export function useCreateUser() {
   return useMutation<User, Error, CreateUserRequest>({
     mutationFn: (userData) => userService.createUser(userData),
     onSuccess: (newUser) => {
-      // Add the new user to cache first
-      queryClient.setQueryData(QueryKeys.users.byId(newUser.id), newUser);
+      // Invalidate users list queries
+      queryClient.invalidateQueries({ queryKey: QueryKeys.users.all() });
+      // Force refetch stats to ensure immediate update
+      queryClient.refetchQueries({ queryKey: QueryKeys.users.stats() });
       
-      // Invalidate and refetch all users list queries for immediate update
-      queryClient.invalidateQueries({ 
-        queryKey: ['users'],
-        refetchType: 'active' // Only refetch currently active queries
-      });
+      // Add the new user to cache
+      queryClient.setQueryData(QueryKeys.users.byId(newUser.id), newUser);
       
       toast.success('User created successfully');
     },
@@ -115,14 +114,13 @@ export function useUpdateUser() {
   return useMutation<User, Error, { id: string; userData: UpdateUserRequest }>({
     mutationFn: ({ id, userData }) => userService.updateUser(id, userData),
     onSuccess: (updatedUser, { id }) => {
-      // Update the user in cache first
+      // Update the user in cache
       queryClient.setQueryData(QueryKeys.users.byId(id), updatedUser);
       
-      // Invalidate and refetch all users list queries for immediate update
-      queryClient.invalidateQueries({ 
-        queryKey: ['users'],
-        refetchType: 'active'
-      });
+      // Invalidate users list queries to ensure consistency
+      queryClient.invalidateQueries({ queryKey: QueryKeys.users.all() });
+      // Force refetch stats to ensure immediate update
+      queryClient.refetchQueries({ queryKey: QueryKeys.users.stats() });
       
       toast.success('User updated successfully');
     },
@@ -142,14 +140,12 @@ export function useDeleteUser() {
   return useMutation<{ message: string }, Error, string>({
     mutationFn: (id) => userService.deleteUser(id),
     onSuccess: (_, id) => {
-      // Remove user from cache first
+      // Remove user from cache
       queryClient.removeQueries({ queryKey: QueryKeys.users.byId(id) });
       
-      // Invalidate and refetch all users list queries for immediate update
-      queryClient.invalidateQueries({ 
-        queryKey: ['users'],
-        refetchType: 'active'
-      });
+      // Invalidate users list and force refetch stats
+      queryClient.invalidateQueries({ queryKey: QueryKeys.users.all() });
+      queryClient.refetchQueries({ queryKey: QueryKeys.users.stats() });
       
       toast.success('User deleted successfully');
     },
@@ -172,8 +168,10 @@ export function useChangeUserRole() {
       // Update the user in cache
       queryClient.setQueryData(QueryKeys.users.byId(id), updatedUser);
       
-      // Invalidate all users list and audit logs queries
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      // Invalidate users list queries
+      queryClient.invalidateQueries({ queryKey: QueryKeys.users.all() });
+      // Force refetch stats to ensure immediate update
+      queryClient.refetchQueries({ queryKey: QueryKeys.users.stats() });
       
       // Invalidate audit logs for this user
       queryClient.invalidateQueries({ queryKey: QueryKeys.users.auditLogs(id) });
@@ -201,8 +199,9 @@ export function useBulkDeleteUsers() {
         queryClient.removeQueries({ queryKey: QueryKeys.users.byId(id) });
       });
       
-      // Invalidate all users list queries
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      // Invalidate users list and force refetch stats
+      queryClient.invalidateQueries({ queryKey: QueryKeys.users.all() });
+      queryClient.refetchQueries({ queryKey: QueryKeys.users.stats() });
       
       toast.success(`Successfully deleted ${result.deleted} users`);
     },
@@ -228,8 +227,9 @@ export function useBulkChangeRole() {
         queryClient.invalidateQueries({ queryKey: QueryKeys.users.auditLogs(id) });
       });
       
-      // Invalidate all users list queries
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      // Invalidate users list and force refetch stats
+      queryClient.invalidateQueries({ queryKey: QueryKeys.users.all() });
+      queryClient.refetchQueries({ queryKey: QueryKeys.users.stats() });
       
       toast.success(`Successfully updated role for ${result.updated} users`);
     },
@@ -276,7 +276,9 @@ export function useImportUsers() {
     mutationFn: (file) => userService.importUsers(file),
     onSuccess: (result) => {
       // Invalidate all user-related queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: QueryKeys.users.all() });
+      // Force refetch stats to ensure immediate update
+      queryClient.refetchQueries({ queryKey: QueryKeys.users.stats() });
       
       if (result.errors.length > 0) {
         toast.warning(`Imported ${result.imported} users with ${result.errors.length} errors`);

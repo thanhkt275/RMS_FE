@@ -1,6 +1,6 @@
 /**
  * User Management Hook
- * Custom hook that manages user state and provides CRUD operations using TanStack Query
+ * Custom hook that manages user state and provides CRUD operations
  * 
  * Authentication and authorization are handled by middleware.ts
  * This hook focuses solely on user management business logic (Single Responsibility Principle)
@@ -17,17 +17,7 @@ import {
   UserRole,
   UserManagementState,
 } from '../types/user.types';
-import {
-  useUsers,
-  useUserStats,
-  useCreateUser,
-  useUpdateUser,
-  useDeleteUser,
-  useChangeUserRole,
-  useBulkDeleteUsers,
-  useBulkChangeRole,
-  useSearchUsers,
-} from './api/use-users';
+import { userService } from '../services/user.service';
 
 interface UseUserManagementReturn extends UserManagementState {
   // User CRUD operations
@@ -63,162 +53,218 @@ interface UseUserManagementReturn extends UserManagementState {
   clearError: () => void;
 }
 
-const initialFilters: UserFilters = {};
-
-const initialState = {
+const initialState: UserManagementState = {
+  users: [],
+  totalUsers: 0,
   currentPage: 1,
   pageSize: 10,
-  filters: initialFilters,
-  selectedUsers: [] as string[],
+  filters: {},
+  loading: false,
+  selectedUsers: [],
+  stats: null,
+  error: null,
   sortBy: 'createdAt',
-  sortOrder: 'desc' as 'asc' | 'desc',
+  sortOrder: 'desc',
 };
 
 export const useUserManagement = (): UseUserManagementReturn => {
-  const [localState, setLocalState] = useState(initialState);
-
-  // Build query parameters for TanStack Query
-  const queryParams: UserQueryParams = {
-    page: localState.currentPage,
-    limit: localState.pageSize,
-    sortBy: localState.sortBy as any,
-    sortOrder: localState.sortOrder,
-    ...localState.filters,
-  };
-
-  // TanStack Query hooks
-  const { 
-    data: usersResponse, 
-    isLoading: usersLoading, 
-    error: usersError,
-    refetch: refetchUsers 
-  } = useUsers(queryParams);
-
-  const { 
-    data: stats, 
-    isLoading: statsLoading, 
-    error: statsError,
-    refetch: refetchStats 
-  } = useUserStats();
-
-  // Mutation hooks
-  const createUserMutation = useCreateUser();
-  const updateUserMutation = useUpdateUser();
-  const deleteUserMutation = useDeleteUser();
-  const changeRoleMutation = useChangeUserRole();
-  const bulkDeleteMutation = useBulkDeleteUsers();
-  const bulkRoleMutation = useBulkChangeRole();
+  const [state, setState] = useState<UserManagementState>(initialState);
 
   /**
-   * Update local state safely
+   * Update state safely
    */
-  const updateLocalState = useCallback((updates: Partial<typeof localState>) => {
-    setLocalState(prev => ({ ...prev, ...updates }));
+  const updateState = useCallback((updates: Partial<UserManagementState>) => {
+    setState(prev => ({ ...prev, ...updates }));
   }, []);
 
   /**
-   * Get combined loading state
+   * Handle errors consistently
    */
-  const loading = usersLoading || 
-                 createUserMutation.isPending || 
-                 updateUserMutation.isPending || 
-                 deleteUserMutation.isPending || 
-                 changeRoleMutation.isPending ||
-                 bulkDeleteMutation.isPending ||
-                 bulkRoleMutation.isPending;
+  const handleError = useCallback((error: any, operation: string) => {
+    const message = error?.message || `Failed to ${operation}`;
+    updateState({ 
+      error: { code: 'OPERATION_FAILED', message },
+      loading: false 
+    });
+    console.error(`User management error: ${message}`);
+  }, [updateState]);
 
   /**
-   * Get combined error state
+   * Build query parameters from current state
    */
-  const error = usersError || statsError ? {
-    code: 'OPERATION_FAILED',
-    message: (usersError?.message || statsError?.message || 'An error occurred')
-  } : null;
+  const buildQueryParams = useCallback((): UserQueryParams => ({
+    page: state.currentPage,
+    limit: state.pageSize,
+    sortBy: state.sortBy as any,
+    sortOrder: state.sortOrder,
+    ...state.filters,
+  }), [state.currentPage, state.pageSize, state.sortBy, state.sortOrder, state.filters]);
+
+  /**
+   * Load users with current parameters
+   */
+  const loadUsers = useCallback(async () => {
+    try {
+      updateState({ loading: true, error: null });
+      const params = buildQueryParams();
+      console.log('Loading users with params:', params);
+      
+      const response = await userService.getUsers(params);
+      console.log('User service response:', response);
+      
+      // Handle response safely with fallbacks
+      const users = Array.isArray(response?.users) ? response.users : [];
+      const total = response?.pagination?.total ?? 0;
+      
+      updateState({
+        users,
+        totalUsers: total,
+        loading: false,
+      });
+    } catch (error) {
+      console.error('LoadUsers error:', error);
+      handleError(error, 'load users');
+    }
+  }, [buildQueryParams, updateState, handleError]);
+
+  /**
+   * Refresh users (reload current page)
+   */
+  const refreshUsers = useCallback(() => {
+    return loadUsers();
+  }, [loadUsers]);
 
   /**
    * Create new user
    */
   const createUser = useCallback(async (userData: CreateUserRequest) => {
-    await createUserMutation.mutateAsync(userData);
-  }, [createUserMutation]);
+    try {
+      updateState({ loading: true, error: null });
+      await userService.createUser(userData);
+      
+      console.log('User created successfully');
+      await loadUsers(); // Refresh the list
+      
+      // Refresh stats separately to avoid dependency issues
+      try {
+        const stats = await userService.getUserStats();
+        updateState({ stats });
+      } catch (statsError) {
+        console.error('Failed to refresh stats:', statsError);
+      }
+    } catch (error) {
+      handleError(error, 'create user');
+      throw error; // Re-throw for form handling
+    }
+  }, [updateState, handleError, loadUsers]);
 
   /**
    * Update existing user
    */
   const updateUser = useCallback(async (id: string, userData: UpdateUserRequest) => {
-    await updateUserMutation.mutateAsync({ id, userData });
-  }, [updateUserMutation]);
+    try {
+      updateState({ loading: true, error: null });
+      await userService.updateUser(id, userData);
+      
+      console.log('User updated successfully');
+      await loadUsers(); // Refresh the list
+    } catch (error) {
+      handleError(error, 'update user');
+      throw error; // Re-throw for form handling
+    }
+  }, [updateState, handleError, loadUsers]);
 
   /**
    * Delete user
    */
   const deleteUser = useCallback(async (id: string) => {
-    await deleteUserMutation.mutateAsync(id);
-    
-    // Clear selection if deleted user was selected
-    setLocalState(prev => ({
-      ...prev,
-      selectedUsers: prev.selectedUsers.filter((userId: string) => userId !== id),
-    }));
-  }, [deleteUserMutation]);
+    try {
+      updateState({ loading: true, error: null });
+      await userService.deleteUser(id);
+      
+      console.log('User deleted successfully');
+      
+      // Clear selection if deleted user was selected
+      setState(prev => ({
+        ...prev,
+        selectedUsers: prev.selectedUsers.filter((userId: string) => userId !== id),
+        loading: false,
+      }));
+      
+      await loadUsers(); // Refresh the list
+      
+      // Refresh stats since user count changed
+      try {
+        const stats = await userService.getUserStats();
+        updateState({ stats });
+      } catch (statsError) {
+        console.error('Failed to refresh stats:', statsError);
+      }
+    } catch (error) {
+      handleError(error, 'delete user');
+    }
+  }, [updateState, handleError, loadUsers]);
 
   /**
    * Change user role
    */
   const changeUserRole = useCallback(async (id: string, role: UserRole, reason: string) => {
-    await changeRoleMutation.mutateAsync({ id, roleData: { role, reason } });
-  }, [changeRoleMutation]);
-
-  /**
-   * Load users (refresh current query)
-   */
-  const loadUsers = useCallback(async () => {
-    await refetchUsers();
-  }, [refetchUsers]);
-
-  /**
-   * Refresh users (same as loadUsers for compatibility)
-   */
-  const refreshUsers = useCallback(async () => {
-    await refetchUsers();
-  }, [refetchUsers]);
+    try {
+      updateState({ loading: true, error: null });
+      await userService.changeUserRole(id, { role, reason });
+      
+      console.log('User role changed successfully');
+      await loadUsers(); // Refresh the list
+      
+      // Refresh stats since role distribution changed
+      try {
+        const stats = await userService.getUserStats();
+        updateState({ stats });
+      } catch (statsError) {
+        console.error('Failed to refresh stats:', statsError);
+      }
+    } catch (error) {
+      handleError(error, 'change user role');
+      throw error; // Re-throw for form handling
+    }
+  }, [updateState, handleError, loadUsers]);
 
   /**
    * Set current page
    */
   const setPage = useCallback((page: number) => {
-    updateLocalState({ currentPage: page });
-  }, [updateLocalState]);
+    updateState({ currentPage: page });
+  }, [updateState]);
 
   /**
    * Set page size
    */
   const setPageSize = useCallback((size: number) => {
-    updateLocalState({ pageSize: size, currentPage: 1 }); // Reset to first page
-  }, [updateLocalState]);
+    updateState({ pageSize: size, currentPage: 1 }); // Reset to first page
+  }, [updateState]);
 
   /**
    * Update filters
    */
   const setFilters = useCallback((filters: Partial<UserFilters>) => {
-    updateLocalState({ 
-      filters: { ...localState.filters, ...filters },
+    updateState({ 
+      filters: { ...state.filters, ...filters },
       currentPage: 1 // Reset to first page when filtering
     });
-  }, [updateLocalState, localState.filters]);
+  }, [updateState, state.filters]);
 
   /**
    * Set sorting
    */
   const setSorting = useCallback((field: string, direction: 'asc' | 'desc') => {
-    updateLocalState({ sortBy: field, sortOrder: direction });
-  }, [updateLocalState]);
+    updateState({ sortBy: field, sortOrder: direction });
+  }, [updateState]);
 
   /**
    * Select/deselect user
    */
   const selectUser = useCallback((userId: string) => {
-    setLocalState(prev => ({
+    setState(prev => ({
       ...prev,
       selectedUsers: prev.selectedUsers.includes(userId)
         ? prev.selectedUsers.filter((id: string) => id !== userId)
@@ -230,112 +276,138 @@ export const useUserManagement = (): UseUserManagementReturn => {
    * Select/deselect all users
    */
   const selectAllUsers = useCallback((selected: boolean) => {
-    const users = usersResponse?.users || [];
-    updateLocalState({
-      selectedUsers: selected ? users.map(user => user.id) : []
+    updateState({
+      selectedUsers: selected ? state.users.map(user => user.id) : []
     });
-  }, [updateLocalState, usersResponse?.users]);
+  }, [updateState, state.users]);
 
   /**
    * Clear selection
    */
   const clearSelection = useCallback(() => {
-    updateLocalState({ selectedUsers: [] });
-  }, [updateLocalState]);
+    updateState({ selectedUsers: [] });
+  }, [updateState]);
 
   /**
    * Bulk delete users
+   * Authentication and authorization are handled by middleware
    */
   const bulkDeleteUsers = useCallback(async (userIds: string[], reason?: string) => {
-    await bulkDeleteMutation.mutateAsync({ userIds, reason });
-    
-    // Clear selection after successful delete
-    updateLocalState({ selectedUsers: [] });
-  }, [bulkDeleteMutation, updateLocalState]);
+    try {
+      updateState({ loading: true, error: null });
+      
+      console.log('[UserManagement] Starting bulk delete:', { userIds, reason });
+      
+      const result = await userService.bulkDeleteUsers(userIds, reason);
+      
+      console.log(`${result.deleted} users deleted successfully`);
+      
+      // Clear selection and refresh
+      updateState({ selectedUsers: [] });
+      await loadUsers();
+      
+      // Refresh stats since user count changed
+      try {
+        const stats = await userService.getUserStats();
+        updateState({ stats });
+      } catch (statsError) {
+        console.error('Failed to refresh stats:', statsError);
+      }
+    } catch (error) {
+      handleError(error, 'bulk delete users');
+    }
+  }, [updateState, handleError, loadUsers]);
 
   /**
    * Bulk change role
+   * Authentication and authorization are handled by middleware
    */
   const bulkChangeRole = useCallback(async (userIds: string[], role: UserRole, reason?: string) => {
-    await bulkRoleMutation.mutateAsync({ userIds, role, reason });
-    
-    // Clear selection after successful role change
-    updateLocalState({ selectedUsers: [] });
-  }, [bulkRoleMutation, updateLocalState]);
+    try {
+      updateState({ loading: true, error: null });
+      
+      console.log('[UserManagement] Starting bulk role change:', { userIds, role, reason });
+      
+      const result = await userService.bulkChangeRole(userIds, role, reason);
+      
+      console.log(`${result.updated} users updated successfully`);
+      
+      // Clear selection and refresh
+      updateState({ selectedUsers: [] });
+      await loadUsers();
+      
+      // Refresh stats since role distribution changed
+      try {
+        const stats = await userService.getUserStats();
+        updateState({ stats });
+      } catch (statsError) {
+        console.error('Failed to refresh stats:', statsError);
+      }
+    } catch (error) {
+      handleError(error, 'bulk change role');
+    }
+  }, [updateState, handleError, loadUsers]);
 
   /**
    * Load user statistics
    */
   const loadStats = useCallback(async () => {
-    await refetchStats();
-  }, [refetchStats]);
+    try {
+      const stats = await userService.getUserStats();
+      updateState({ stats });
+    } catch (error) {
+      handleError(error, 'load statistics');
+    }
+  }, [updateState, handleError]);
 
   /**
-   * Search users - using a separate hook for search functionality
+   * Search users
    */
   const searchUsers = useCallback(async (query: string): Promise<User[]> => {
-    // For search, we would typically use a separate hook or implement it differently
-    // For now, returning empty array as this needs to be handled separately
-    console.warn('Search functionality needs to be implemented with useSearchUsers hook');
-    return [];
-  }, []);
+    try {
+      return await userService.searchUsers(query);
+    } catch (error) {
+      handleError(error, 'search users');
+      return [];
+    }
+  }, [handleError]);
 
   /**
-   * Clear error (for compatibility - TanStack Query handles this automatically)
+   * Clear error
    */
   const clearError = useCallback(() => {
-    // TanStack Query automatically handles error clearing on retry/refetch
-    console.log('Error clearing is handled automatically by TanStack Query');
-  }, []);
+    updateState({ error: null });
+  }, [updateState]);
 
-  // Extract data from TanStack Query responses
-  const users = usersResponse?.users || [];
-  const totalUsers = usersResponse?.pagination?.total || 0;
+  // Load users when query parameters change
+  useEffect(() => {
+    loadUsers();
+  }, [state.currentPage, state.pageSize, state.filters, state.sortBy, state.sortOrder]);
+
+  // Load statistics on mount
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   return {
-    // State
-    users,
-    totalUsers,
-    currentPage: localState.currentPage,
-    pageSize: localState.pageSize,
-    filters: localState.filters,
-    loading,
-    selectedUsers: localState.selectedUsers,
-    stats: stats || null,
-    error,
-    sortBy: localState.sortBy,
-    sortOrder: localState.sortOrder,
-
-    // User CRUD operations
+    ...state,
     createUser,
     updateUser,
     deleteUser,
     changeUserRole,
-    
-    // List management
     loadUsers,
     refreshUsers,
     setPage,
     setPageSize,
     setFilters,
     setSorting,
-    
-    // Selection management
     selectUser,
     selectAllUsers,
     clearSelection,
-    
-    // Bulk operations
     bulkDeleteUsers,
     bulkChangeRole,
-    
-    // Statistics
     loadStats,
-    
-    // Search
     searchUsers,
-    
-    // Error handling
     clearError,
   };
 };
