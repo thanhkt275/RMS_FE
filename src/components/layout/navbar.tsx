@@ -13,6 +13,7 @@ const navigationItems = [
   { name: "Matches", href: "/matches" },
   { name: "Match Control", href: "/control-match" },
   { name: "Audience Display", href: "/audience-display" },
+  {name: "Users", href: "/users" },
 ];
 
 export default function Navbar() {
