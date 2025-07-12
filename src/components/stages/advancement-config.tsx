@@ -87,7 +87,7 @@ export function AdvancementConfig({
   return (
     <div className={className}>
       <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
-        <CardHeader>
+        <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-gray-900">
             <Settings className="h-5 w-5 text-blue-600" />
             Advancement Configuration
@@ -103,8 +103,9 @@ export function AdvancementConfig({
             <AlertDescription>
               <div className="font-medium">Advancement Summary</div>
               <div className="text-sm mt-1">
-                {teamsToAdvance} out of {maxTeams} teams will advance to the next stage.
-                {maxTeams - teamsToAdvance} teams will be eliminated.
+                <span className="font-semibold text-blue-900">{teamsToAdvance}</span> out of <span className="font-semibold text-blue-900">{maxTeams}</span> teams will advance to the next stage.
+                <br />
+                <span className="text-red-600 font-medium">{maxTeams - teamsToAdvance}</span> teams will be eliminated.
               </div>
             </AlertDescription>
           </Alert>
@@ -112,12 +113,12 @@ export function AdvancementConfig({
           <Separator className="bg-gray-200" />
 
           {/* Next Stage Options */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-gray-900">Next Stage Options</h4>
+          <div className="space-y-6">
+            <h4 className="font-semibold text-gray-900 text-lg">Next Stage Options</h4>
             
             {/* Option 1: Select Existing Stage */}
-            <div className="space-y-2">
-              <Label className="text-gray-700 font-medium">Advance to Existing Stage</Label>
+            <div className="space-y-3">
+              <Label className="text-gray-700 font-medium text-base">Advance to Existing Stage</Label>
               <Select
                 value={nextStageId}
                 onValueChange={(value) => {
@@ -131,7 +132,7 @@ export function AdvancementConfig({
                 }}
                 disabled={createNextStage}
               >
-                <SelectTrigger className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg">
+                <SelectTrigger className={`bg-white border text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg transition-all duration-200 ${createNextStage ? 'border-gray-200 text-gray-400' : 'border-gray-300 hover:border-gray-400'}`}>
                   <SelectValue placeholder="Select an existing stage" />
                 </SelectTrigger>
                 <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
@@ -146,26 +147,27 @@ export function AdvancementConfig({
             </div>
 
             <div className="flex items-center justify-center">
-              <div className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">OR</div>
+              <div className="text-sm text-gray-500 bg-gray-100 px-4 py-2 rounded-full font-medium">OR</div>
             </div>
 
             {/* Option 2: Create New Stage */}
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
                 <Checkbox
                   id="createNextStage"
                   checked={createNextStage}
                   onCheckedChange={handleCreateNextStageChange}
+                  className="h-5 w-5"
                 />
-                <Label htmlFor="createNextStage" className="text-gray-700 font-medium">
+                <Label htmlFor="createNextStage" className="text-gray-700 font-medium text-base cursor-pointer">
                   Create new stage automatically
                 </Label>
               </div>
 
               {createNextStage && (
-                <div className="ml-6 space-y-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
+                <div className="ml-6 space-y-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-3">
                       <Label htmlFor="stageName" className="text-gray-700 font-medium">
                         Stage Name
                       </Label>
@@ -174,11 +176,11 @@ export function AdvancementConfig({
                         value={nextStageConfig.name}
                         onChange={(e) => handleNextStageConfigChange('name', e.target.value)}
                         placeholder="e.g., Playoff Bracket"
-                        className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg"
+                        className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg transition-all duration-200"
                       />
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <Label htmlFor="stageType" className="text-gray-700 font-medium">
                         Stage Type
                       </Label>
@@ -188,7 +190,7 @@ export function AdvancementConfig({
                           handleNextStageConfigChange('type', value)
                         }
                       >
-                        <SelectTrigger className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg">
+                        <SelectTrigger className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg transition-all duration-200">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
@@ -206,9 +208,9 @@ export function AdvancementConfig({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="startDate" className="text-gray-700 font-medium flex items-center gap-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="space-y-3">
+                      <Label htmlFor="startDate" className="text-gray-700 font-medium flex items-center gap-2">
                         <CalendarIcon className="h-4 w-4" />
                         Start Date & Time
                       </Label>
@@ -217,12 +219,12 @@ export function AdvancementConfig({
                         type="datetime-local"
                         value={formatDateForInput(nextStageConfig.startDate)}
                         onChange={(e) => handleNextStageConfigChange('startDate', new Date(e.target.value))}
-                        className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg"
+                        className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg transition-all duration-200"
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="endDate" className="text-gray-700 font-medium flex items-center gap-1">
+                    <div className="space-y-3">
+                      <Label htmlFor="endDate" className="text-gray-700 font-medium flex items-center gap-2">
                         <CalendarIcon className="h-4 w-4" />
                         End Date & Time
                       </Label>
@@ -231,29 +233,29 @@ export function AdvancementConfig({
                         type="datetime-local"
                         value={formatDateForInput(nextStageConfig.endDate)}
                         onChange={(e) => handleNextStageConfigChange('endDate', new Date(e.target.value))}
-                        className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg"
+                        className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg transition-all duration-200"
                       />
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="teamsPerAlliance" className="text-gray-700 font-medium">
-                      Teams per Alliance
-                    </Label>
-                    <Select
-                      value={nextStageConfig.teamsPerAlliance?.toString() || "2"}
-                      onValueChange={(value) => 
-                        handleNextStageConfigChange('teamsPerAlliance', parseInt(value))
-                      }
-                    >
-                      <SelectTrigger className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
-                        <SelectItem value="2" className="text-gray-900 hover:bg-gray-50">2 teams</SelectItem>
-                        <SelectItem value="3" className="text-gray-900 hover:bg-gray-50">3 teams</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-3 md:col-span-2 lg:col-span-1">
+                      <Label htmlFor="teamsPerAlliance" className="text-gray-700 font-medium">
+                        Teams per Alliance
+                      </Label>
+                      <Select
+                        value={nextStageConfig.teamsPerAlliance?.toString() || "2"}
+                        onValueChange={(value) => 
+                          handleNextStageConfigChange('teamsPerAlliance', parseInt(value))
+                        }
+                      >
+                        <SelectTrigger className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg w-full transition-all duration-200">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
+                          <SelectItem value="2" className="text-gray-900 hover:bg-gray-50">2 teams</SelectItem>
+                          <SelectItem value="3" className="text-gray-900 hover:bg-gray-50">3 teams</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
               )}

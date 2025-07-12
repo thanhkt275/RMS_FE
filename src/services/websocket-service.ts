@@ -96,6 +96,11 @@ class SocketIOConnection implements IWebSocketConnection, IWebSocketEventManager
       'timer_update',
       'match_state_change',
       'announcement',
+      'tempScoresResult',
+      'tempScoresSubmitted',
+      'tempScoresSubmissionFailed',
+      'finalScoresApproved',
+      'finalScoresApprovalFailed',
     ];
     events.forEach(eventName => {
       this.socket!.off(eventName);
@@ -152,6 +157,10 @@ class WebSocketService {
   startTimer(timerData: TimerData) { this.emit('timer_update', { ...timerData, startedAt: Date.now(), isRunning: true }); }
   pauseTimer(timerData: TimerData) { this.emit('timer_update', { ...timerData, isRunning: false }); }
   resetTimer(timerData: TimerData) { this.emit('timer_update', { ...timerData, isRunning: false, remaining: timerData.duration }); }
+  
+  // Temp scores methods
+  sendTempScores(tempScoreData: any) { this.emit('submitTempScores', tempScoreData); }
+  approveFinalScores(approveData: any) { this.emit('approveFinalScores', approveData); }
 }
 
 

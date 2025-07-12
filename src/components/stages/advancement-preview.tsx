@@ -45,7 +45,7 @@ export function AdvancementPreview({
   return (
     <div className={className}>
       <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
-        <CardHeader>
+        <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-gray-900">
             <Trophy className="h-5 w-5 text-yellow-600" />
             Advancement Preview
@@ -56,8 +56,8 @@ export function AdvancementPreview({
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Teams to Advance Input */}
-          <div className="space-y-2">
-            <Label htmlFor="teamsToAdvance" className="text-gray-700 font-medium">
+          <div className="space-y-3">
+            <Label htmlFor="teamsToAdvance" className="text-gray-700 font-medium text-base">
               Number of teams to advance
             </Label>
             <div className="flex items-center gap-4">
@@ -68,7 +68,7 @@ export function AdvancementPreview({
                 max={maxTeams}
                 value={teamsToAdvance}
                 onChange={(e) => handleTeamsToAdvanceChange(Number(e.target.value))}
-                className="w-32 bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg"
+                className="w-32 bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg transition-all duration-200"
               />
               <div className="text-sm text-gray-600">
                 out of {rankings.length} teams
@@ -87,7 +87,7 @@ export function AdvancementPreview({
                   variant="outline"
                   size="sm"
                   onClick={() => handleTeamsToAdvanceChange(value)}
-                  className={`border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 rounded-lg ${
+                  className={`border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 rounded-lg transition-all duration-200 ${
                     teamsToAdvance === value ? 'bg-blue-50 border-blue-300 text-blue-700' : ''
                   }`}
                 >
@@ -145,7 +145,7 @@ export function AdvancementPreview({
           {/* Rankings Table with Highlighting */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h4 className="font-semibold text-gray-900">Team Rankings</h4>
+              <h4 className="font-semibold text-gray-900 text-lg">Team Rankings</h4>
               <div className="flex gap-2">
                 <Badge className="bg-green-100 text-green-800 border-green-300">
                   Advancing
@@ -156,11 +156,12 @@ export function AdvancementPreview({
               </div>
             </div>
             
-            <RankingsTable 
-              rankings={rankings} 
-              highlightAdvancing={teamsToAdvance}
-              className="border border-gray-200 rounded-lg overflow-hidden"
-            />
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <RankingsTable 
+                rankings={rankings} 
+                highlightAdvancing={teamsToAdvance}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

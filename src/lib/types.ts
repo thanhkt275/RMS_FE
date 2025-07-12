@@ -260,7 +260,14 @@ export type WebSocketEvent =
   | 'scoreUpdateRealtime'
   | 'timer_update'
   | 'match_state_change'
-  | 'announcement';
+  | 'announcement'
+  | 'submitTempScores'
+  | 'approveFinalScores'
+  | 'tempScoresResult'
+  | 'tempScoresSubmitted'
+  | 'tempScoresSubmissionFailed'
+  | 'finalScoresApproved'
+  | 'finalScoresApprovalFailed';
 
 // --- Match Control Types ---
 export interface Match {

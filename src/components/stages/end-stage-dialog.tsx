@@ -229,18 +229,40 @@ export default function EndStageDialog({
   // Component render functions following Single Responsibility Principle
   const renderStepContent = () => {
     switch (currentStep) {
-      case "readiness":        return (
-          <div className="space-y-4">
+      case "readiness":
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full">
+                <Clock className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">Stage Readiness Check</h3>
+                <p className="text-gray-600">Verify that the stage is ready for advancement</p>
+              </div>
+            </div>
+            
             <ReadinessIndicator
               readiness={readinessData || { ready: false, reason: "Loading..." }}
               className=""
             />
+            
             {readinessData && !readinessData.ready && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Stage Not Ready</AlertTitle>
-                <AlertDescription>
+              <Alert variant="destructive" className="border-red-200 bg-red-50">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <AlertTitle className="text-red-800 font-semibold">Stage Not Ready</AlertTitle>
+                <AlertDescription className="text-red-700">
                   Complete all required matches before advancing teams.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {readinessData && readinessData.ready && (
+              <Alert className="border-green-200 bg-green-50">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <AlertTitle className="text-green-800 font-semibold">Stage Ready for Advancement</AlertTitle>
+                <AlertDescription className="text-green-700">
+                  All matches are completed and teams are ready to advance to the next stage.
                 </AlertDescription>
               </Alert>
             )}
@@ -249,43 +271,59 @@ export default function EndStageDialog({
 
       case "rankings":
         return (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-yellow-600" />
-              <h3 className="text-lg font-semibold">Current Team Rankings</h3>
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-full">
+                <Trophy className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">Current Team Rankings</h3>
+                <p className="text-gray-600">Review current team standings and performance</p>
+              </div>
             </div>
-            <Separator />
+            
             {rankingsLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent" />
+              <div className="flex justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+                  <p className="text-gray-600 font-medium">Loading team rankings...</p>
+                </div>
               </div>
             ) : rankingsError ? (
-              <Alert variant="destructive">
-                <XCircle className="h-4 w-4" />
-                <AlertTitle>Error Loading Rankings</AlertTitle>
-                <AlertDescription>
+              <Alert variant="destructive" className="border-red-200 bg-red-50">
+                <XCircle className="h-5 w-5 text-red-600" />
+                <AlertTitle className="text-red-800 font-semibold">Error Loading Rankings</AlertTitle>
+                <AlertDescription className="text-red-700">
                   Failed to load team rankings. Please try again.
                 </AlertDescription>
               </Alert>
             ) : (
-              <ScrollArea className="h-[400px]">
-                <RankingsTable 
-                  rankings={rankings || []} 
-                  highlightAdvancing={advancementOptions.teamsToAdvance}
-                />
-              </ScrollArea>
+              <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+                <ScrollArea className="h-[400px] lg:h-[450px]">
+                  <RankingsTable 
+                    rankings={rankings || []} 
+                    highlightAdvancing={advancementOptions.teamsToAdvance}
+                  />
+                </ScrollArea>
+              </div>
             )}
           </div>
         );
 
       case "config":
         return (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-blue-600" />
-              <h3 className="text-lg font-semibold">Advancement Configuration</h3>
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full">
+                <Target className="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">Advancement Configuration</h3>
+                <p className="text-gray-600">Configure how teams will advance to the next stage</p>
+              </div>
             </div>
-            <Separator />            <AdvancementConfig
+            
+            <AdvancementConfig
               initialOptions={advancementOptions}
               teamsToAdvance={advancementOptions.teamsToAdvance}
               maxTeams={rankings?.length || 0}
@@ -296,59 +334,119 @@ export default function EndStageDialog({
 
       case "preview":
         return (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-green-600" />
-              <h3 className="text-lg font-semibold">Advancement Preview</h3>
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full">
+                <Users className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">Advancement Preview</h3>
+                <p className="text-gray-600">Preview which teams will advance with current settings</p>
+              </div>
             </div>
-            <Separator />
+            
             {previewLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent" />
+              <div className="flex justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+                  <p className="text-gray-600 font-medium">Generating advancement preview...</p>
+                </div>
               </div>
             ) : previewError ? (
-              <Alert variant="destructive">
-                <XCircle className="h-4 w-4" />
-                <AlertTitle>Preview Error</AlertTitle>
-                <AlertDescription>
+              <Alert variant="destructive" className="border-red-200 bg-red-50">
+                <XCircle className="h-5 w-5 text-red-600" />
+                <AlertTitle className="text-red-800 font-semibold">Preview Error</AlertTitle>
+                <AlertDescription className="text-red-700">
                   Failed to generate advancement preview. Please check your configuration.
                 </AlertDescription>
               </Alert>
-            ) : (              <AdvancementPreview 
-                rankings={previewData || []}
-                initialTeamsToAdvance={advancementOptions.teamsToAdvance}
-                maxTeams={rankings?.length || 0}
-                onTeamsToAdvanceChange={(count) => 
-                  setAdvancementOptions(prev => ({ ...prev, teamsToAdvance: count }))
-                }
-              />
+            ) : (
+              <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+                <AdvancementPreview 
+                  rankings={previewData || []}
+                  initialTeamsToAdvance={advancementOptions.teamsToAdvance}
+                  maxTeams={rankings?.length || 0}
+                  onTeamsToAdvanceChange={(count) => 
+                    setAdvancementOptions(prev => ({ ...prev, teamsToAdvance: count }))
+                  }
+                />
+              </div>
             )}
           </div>
         );
 
       case "confirm":
         return (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <h3 className="text-lg font-semibold">Confirm Advancement</h3>
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">Confirm Advancement</h3>
+                <p className="text-gray-600">Confirm the advancement and create the next stage</p>
+              </div>
             </div>
-            <Separator />
-            <Alert>
-              <Crown className="h-4 w-4" />
-              <AlertTitle>Ready to Advance Teams</AlertTitle>              <AlertDescription>
+            
+            <Alert className="border-blue-200 bg-blue-50">
+              <Crown className="h-5 w-5 text-blue-600" />
+              <AlertTitle className="text-blue-800 font-semibold">Ready to Advance Teams</AlertTitle>
+              <AlertDescription className="text-blue-700">
                 This will advance {advancementOptions.teamsToAdvance} teams from "{stageName}" 
                 to a new "{advancementOptions.nextStageConfig?.name || 'Next Stage'}" stage. This action cannot be undone.
               </AlertDescription>
             </Alert>
+            
             {previewData && (
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Summary:</h4>                <ul className="text-sm space-y-1">
-                  <li>• Stage: {stageName} → {advancementOptions.nextStageConfig?.name || 'Next Stage'}</li>
-                  <li>• Type: {stageType} → {advancementOptions.nextStageConfig?.type || 'TBD'}</li>
-                  <li>• Teams advancing: {advancementOptions.teamsToAdvance}</li>
-                  <li>• Create new stage: {advancementOptions.createNextStage ? 'Yes' : 'No'}</li>
-                </ul>
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
+                <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  Advancement Summary
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Current Stage:</span>
+                      <span className="font-medium text-gray-900">{stageName}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Next Stage:</span>
+                      <span className="font-medium text-gray-900">{advancementOptions.nextStageConfig?.name || 'Next Stage'}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Stage Type:</span>
+                      <span className="font-medium text-gray-900">{stageType} → {advancementOptions.nextStageConfig?.type || 'TBD'}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Teams Advancing:</span>
+                      <span className="font-medium text-green-600">{advancementOptions.teamsToAdvance}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Teams Eliminated:</span>
+                      <span className="font-medium text-red-600">{(rankings?.length || 0) - advancementOptions.teamsToAdvance}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Create New Stage:</span>
+                      <span className="font-medium text-gray-900">{advancementOptions.createNextStage ? 'Yes' : 'No'}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-3 md:col-span-2 lg:col-span-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Total Teams:</span>
+                      <span className="font-medium text-gray-900">{rankings?.length || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Advancement Rate:</span>
+                      <span className="font-medium text-blue-600">{Math.round((advancementOptions.teamsToAdvance / (rankings?.length || 1)) * 100)}%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Stage Status:</span>
+                      <span className="font-medium text-green-600">Ready to Advance</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -356,27 +454,75 @@ export default function EndStageDialog({
 
       case "result":
         return (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <h3 className="text-lg font-semibold">Advancement Complete</h3>
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">Advancement Complete</h3>
+                <p className="text-gray-600">View the results of the advancement process</p>
+              </div>
             </div>
-            <Separator />
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertTitle>Success!</AlertTitle>
-              <AlertDescription>
+            
+            <Alert className="border-green-200 bg-green-50">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <AlertTitle className="text-green-800 font-semibold">Success!</AlertTitle>
+              <AlertDescription className="text-green-700">
                 Teams have been successfully advanced to the next stage.
               </AlertDescription>
             </Alert>
+            
             {advancementResult && (
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Results:</h4>
-                <ul className="text-sm space-y-1">
-                  <li>• New stage created: {advancementResult.nextStage?.name}</li>
-                  <li>• Teams advanced: {advancementResult.advancedTeams?.length || 0}</li>
-                  <li>• Next stage type: {advancementResult.nextStage?.type}</li>
-                </ul>
+              <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+                <h4 className="font-semibold text-green-900 mb-4 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  Advancement Results
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-green-700">New Stage Created:</span>
+                      <span className="font-medium text-green-900">{advancementResult.nextStage?.name}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-green-700">Stage Type:</span>
+                      <span className="font-medium text-green-900">{advancementResult.nextStage?.type}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-green-700">Stage ID:</span>
+                      <span className="font-medium text-green-900 font-mono text-sm">{advancementResult.nextStage?.id}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-green-700">Teams Advanced:</span>
+                      <span className="font-medium text-green-900">{advancementResult.advancedTeams?.length || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-green-700">Advancement Date:</span>
+                      <span className="font-medium text-green-900">{new Date().toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-green-700">Status:</span>
+                      <span className="font-medium text-green-900">Completed</span>
+                    </div>
+                  </div>
+                  <div className="space-y-3 md:col-span-2 lg:col-span-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-green-700">Advancement Time:</span>
+                      <span className="font-medium text-green-900">{new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-green-700">Success Rate:</span>
+                      <span className="font-medium text-green-900">100%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-green-700">Next Action:</span>
+                      <span className="font-medium text-green-900">Schedule Matches</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -389,40 +535,58 @@ export default function EndStageDialog({
 
   const renderStepIndicator = () => {
     const steps = [
-      { key: "readiness", label: "Readiness", icon: Clock },
-      { key: "rankings", label: "Rankings", icon: Trophy },
-      { key: "config", label: "Config", icon: Target },
-      { key: "preview", label: "Preview", icon: Users },
-      { key: "confirm", label: "Confirm", icon: CheckCircle },
+      { key: "readiness", label: "Readiness", icon: Clock, description: "Check stage completion" },
+      { key: "rankings", label: "Rankings", icon: Trophy, description: "Review team standings" },
+      { key: "config", label: "Configuration", icon: Target, description: "Set advancement options" },
+      { key: "preview", label: "Preview", icon: Users, description: "Review advancing teams" },
+      { key: "confirm", label: "Confirm", icon: CheckCircle, description: "Final confirmation" },
     ];
 
     return (
-      <div className="flex items-center justify-between mb-6">
-        {steps.map((step, index) => {
-          const isActive = currentStep === step.key;
-          const isCompleted = steps.slice(0, index).some(s => s.key === currentStep) || 
-                             (currentStep === "result" && step.key !== "result");
-          const Icon = step.icon;
+      <div className="mb-8">
+        <div className="flex items-center justify-between gap-4">
+          {steps.map((step, index) => {
+            const isActive = currentStep === step.key;
+            const isCompleted = currentStep === "result" || 
+                               steps.findIndex(s => s.key === currentStep) > index;
+            const Icon = step.icon;
 
-          return (
-            <div key={step.key} className="flex items-center">
-              <div className={`
-                flex items-center justify-center w-10 h-10 rounded-full transition-colors
-                ${isActive ? 'bg-blue-600 text-white' : 
-                  isCompleted ? 'bg-green-600 text-white' : 
-                  'bg-gray-200 text-gray-600'}
-              `}>
-                <Icon className="h-5 w-5" />
+            return (
+              <div key={step.key} className="flex flex-col items-center flex-1 min-w-0">
+                <div className="flex items-center w-full">
+                  <div className={`
+                    flex items-center justify-center w-12 h-12 rounded-full transition-all duration-200 border-2 flex-shrink-0
+                    ${isActive 
+                      ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110' 
+                      : isCompleted 
+                        ? 'bg-green-600 border-green-600 text-white shadow-md' 
+                        : 'bg-gray-100 border-gray-300 text-gray-500'
+                    }
+                  `}>
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  {index < steps.length - 1 && (
+                    <div className={`
+                      flex-1 h-1 mx-4 transition-colors duration-200
+                      ${isCompleted ? 'bg-green-600' : 'bg-gray-200'}
+                    `} />
+                  )}
+                </div>
+                <div className="mt-3 text-center min-w-0">
+                  <div className={`
+                    text-sm font-semibold transition-colors duration-200 truncate
+                    ${isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'}
+                  `}>
+                    {step.label}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1 hidden lg:block truncate">
+                    {step.description}
+                  </div>
+                </div>
               </div>
-              <div className="ml-2 text-xs font-medium">
-                {step.label}
-              </div>
-              {index < steps.length - 1 && (
-                <ArrowRight className="h-4 w-4 mx-2 text-gray-400" />
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -434,20 +598,24 @@ export default function EndStageDialog({
     const showClose = currentStep === "result";
 
     return (
-      <>
+      <div className="flex items-center justify-between w-full">
         {showPrevious && (
           <Button 
             variant="outline" 
             onClick={handlePrevious}
-            className="mr-auto"
+            className="flex items-center gap-2 px-6 py-3 border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 rounded-lg transition-all duration-200"
           >
-            <ArrowLeft className="h-4 w-4 mr-1" />
+            <ArrowLeft className="h-4 w-4" />
             Previous
           </Button>
         )}
         
-        <div className="flex gap-2 ml-auto">
-          <Button variant="outline" onClick={handleClose}>
+        <div className="flex gap-3 ml-auto">
+          <Button 
+            variant="outline" 
+            onClick={handleClose}
+            className="px-6 py-3 border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 rounded-lg transition-all duration-200"
+          >
             {showClose ? "Close" : "Cancel"}
           </Button>
           
@@ -455,9 +623,10 @@ export default function EndStageDialog({
             <Button 
               onClick={handleNext}
               disabled={!canProceedToNextStep()}
+              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
-              <ArrowRight className="h-4 w-4 ml-1" />
+              <ArrowRight className="h-4 w-4" />
             </Button>
           )}
           
@@ -465,45 +634,56 @@ export default function EndStageDialog({
             <Button 
               onClick={handleAdvanceTeams}
               disabled={isAdvancing || !canProceedToNextStep()}
-              className="bg-green-600 hover:bg-green-700"
+              className="flex items-center gap-2 px-8 py-3 bg-green-600 text-white hover:bg-green-700 focus:ring-2 focus:ring-green-400 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
             >
               {isAdvancing ? (
                 <>
-                  <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
+                  <div className="animate-spin h-5 w-5 border-2 border-current border-t-transparent rounded-full" />
                   Advancing...
                 </>
               ) : (
                 <>
-                  <Crown className="h-4 w-4 mr-1" />
+                  <Crown className="h-5 w-5" />
                   Advance Teams
                 </>
               )}
             </Button>
           )}
         </div>
-      </>
+      </div>
     );
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] bg-white">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold">
+      <DialogContent className="max-w-7xl w-[95vw] max-h-[95vh] bg-white border border-gray-200 shadow-2xl rounded-2xl flex flex-col">
+        <DialogHeader className="pb-6 flex-shrink-0">
+          <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-full">
+              <Crown className="h-5 w-5 text-blue-600" />
+            </div>
             End Stage: {stageName}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-gray-600 text-base">
             {getStepDescription(currentStep)}
           </DialogDescription>
         </DialogHeader>
 
-        {currentStep !== "result" && renderStepIndicator()}
+        {currentStep !== "result" && (
+          <div className="flex-shrink-0">
+            {renderStepIndicator()}
+          </div>
+        )}
 
-        <ScrollArea className="flex-1 px-1">
-          {renderStepContent()}
-        </ScrollArea>
+        <div className="flex-1 overflow-hidden min-h-[400px] max-h-[60vh]">
+          <ScrollArea className="h-full">
+            <div className="px-1 py-4">
+              {renderStepContent()}
+            </div>
+          </ScrollArea>
+        </div>
 
-        <DialogFooter className="flex items-center justify-between pt-4 border-t">
+        <DialogFooter className="flex items-center justify-between pt-6 border-t border-gray-200 bg-gray-50 -mx-6 -mb-6 px-6 py-4 flex-shrink-0">
           {renderFooterButtons()}
         </DialogFooter>
       </DialogContent>

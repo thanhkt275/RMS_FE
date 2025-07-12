@@ -24,6 +24,7 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
+
 interface ScoreControlProps {
   selectedMatch: any | null;
   selectedMatchId: string;
@@ -45,6 +46,7 @@ interface ScoreControlProps {
   setBlueMultiplier: (multiplier: number) => void;
   handleUpdateScores: () => void;
   handleSubmitScores: () => void;
+
   gameElementType: {
     element: string;
     count: number;
@@ -86,6 +88,7 @@ export default function ScoreControl({
   setBlueMultiplier,
   handleUpdateScores,
   handleSubmitScores,
+
   gameElementType,
   redGameElements,
   blueGameElements,
@@ -110,6 +113,8 @@ export default function ScoreControl({
     totalPoints: 0
   });
 
+
+
   // Debounce handleUpdateScores to avoid rapid/broken websocket updates
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const debouncedUpdateScores = () => {
@@ -123,6 +128,8 @@ export default function ScoreControl({
     debouncedUpdateScores();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [redAutoScore, redDriveScore, blueAutoScore, blueDriveScore]);
+
+
 
   return (
     <Card className="bg-gray-900 border-gray-700 shadow-lg">
@@ -795,10 +802,10 @@ export default function ScoreControl({
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between">
+      <CardFooter className="flex flex-wrap gap-2">
         <Button 
           onClick={handleUpdateScores} 
-          className="flex-1 mr-2"
+          className="flex-1"
           disabled={!selectedMatchId}
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -808,6 +815,10 @@ export default function ScoreControl({
           </svg>
           Update Scores
         </Button>
+        
+
+        
+        {/* Submit Final Scores - Available only to HEAD_REFEREE and ADMIN */}
         <Button 
           onClick={handleSubmitScores} 
           className="flex-1 bg-green-700 hover:bg-green-600 text-white font-bold"

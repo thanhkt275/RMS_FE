@@ -93,6 +93,7 @@ interface MatchControlTabsProps {
   getBlueTeams: (match: Match) => string[];
   handleUpdateScores: () => void;
   handleSubmitScores: () => void;
+
   handleSelectMatch: (match: {id: string; matchNumber: string | number}) => void;
   addRedGameElement: () => void;
   addBlueGameElement: () => void;
@@ -185,6 +186,7 @@ export default function MatchControlTabs({
   getBlueTeams,
   handleUpdateScores,
   handleSubmitScores,
+
   handleSelectMatch,
   addRedGameElement,
   addBlueGameElement,
@@ -293,6 +295,7 @@ export default function MatchControlTabs({
           setBlueMultiplier={setBlueMultiplier}
           handleUpdateScores={handleUpdateScores}
           handleSubmitScores={handleSubmitScores}
+
           gameElementType={gameElementType}
           redGameElements={redGameElements}
           blueGameElements={blueGameElements}

@@ -5,16 +5,32 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/common/use-auth";
 import { cn } from "@/lib/utils";
+import { UserRole } from "@/lib/types";
 
+// Define navigation items with role requirements
 const navigationItems = [
-  { name: "Tournaments", href: "/tournaments" },
-  { name: "Stages", href: "/stages" },
-  { name: "Teams", href: "/teams" },
-  { name: "Matches", href: "/matches" },
-  { name: "Match Control", href: "/control-match" },
-  { name: "Audience Display", href: "/audience-display" },
-  {name: "Users", href: "/users" },
+  { name: "Audience Display", href: "/audience-display", roles: [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER, UserRole.COMMON] },
+  { name: "Teams", href: "/teams", roles: [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER, UserRole.COMMON] },
+  { name: "Matches", href: "/matches", roles: [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER, UserRole.COMMON] },
+  { name: "Control Match", href: "/control-match", roles: [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE] },
+  { name: "Tournaments", href: "/tournaments", roles: [UserRole.ADMIN] },
+  { name: "Stages", href: "/stages", roles: [UserRole.ADMIN] },
+  { name: "Users", href: "/users", roles: [UserRole.ADMIN] },
 ];
+
+// Function to filter navigation items based on user role
+const getFilteredNavigationItems = (userRole: UserRole | null) => {
+  if (!userRole) {
+    // Not signed in - show only basic items
+    return navigationItems.filter(item => 
+      item.roles.includes(UserRole.COMMON)
+    );
+  }
+  
+  return navigationItems.filter(item => 
+    item.roles.includes(userRole)
+  );
+};
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -59,6 +75,9 @@ export default function Navbar() {
     }
   }, [pathname, isLoggingOut]);
 
+  // Get filtered navigation items based on user role
+  const filteredNavigationItems = getFilteredNavigationItems(user?.role || null);
+
   return (
     <nav className="bg-background border-b sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-4">
@@ -74,7 +93,7 @@ export default function Navbar() {
           {/* Desktop Navigation */}
           <div className="hidden lg:flex flex-1 justify-center">
             <div className="flex items-center space-x-2 xl:space-x-4">
-              {navigationItems.map((item) => {
+              {filteredNavigationItems.map((item) => {
                 const isActive = pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
                 return (
                   <Link
@@ -125,7 +144,7 @@ export default function Navbar() {
           {/* Mobile menu button */}
           <div className="lg:hidden flex items-center">
             <MobileMenu
-              navigationItems={navigationItems}
+              navigationItems={filteredNavigationItems}
               pathname={pathname}
               user={isMounted ? user : null}
               logout={handleLogout}
@@ -140,7 +159,7 @@ export default function Navbar() {
 }
 
 function MobileMenu({ navigationItems, pathname, user, logout, isMounted, isLoggingOut }: {
-  navigationItems: { name: string; href: string }[];
+  navigationItems: { name: string; href: string; roles: UserRole[] }[];
   pathname: string | null;
   user: any;
   logout: () => Promise<void>;

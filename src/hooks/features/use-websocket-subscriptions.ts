@@ -196,6 +196,8 @@ export function useWebSocketSubscriptions({
     };
   }, [selectedMatchId, subscribe, queryClient, selectedFieldId, onScoreUpdate, tournamentId]); // Added tournamentId
 
+
+
   // Listen for match updates from WebSocket
   useEffect(() => {
     if (!onMatchUpdate) return;    const handleMatchUpdate = (data: any) => {

@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/common/use-auth";
 import { useTournaments } from "@/hooks/api/use-tournaments";
 import { useStage, useDeleteStage, useStagesByTournament } from "@/hooks/api/use-stages";
 import { useMatchesByStage, useDeleteMatch } from "@/hooks/api/use-matches";
+import { useStageReadiness } from "@/hooks/use-stage-advancement";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -97,6 +98,13 @@ export default function StagesPage() {
         : [],
     [stageMatches, selectedStageId]
   );
+  
+  // Check if stage is ready for advancement using backend API
+  const {
+    data: stageReadiness,
+    isLoading: readinessLoading,
+    error: readinessError
+  } = useStageReadiness(selectedStageId, !!selectedStageId);
   
   const deleteMutation = useDeleteStage(selectedTournamentId);
   
@@ -292,6 +300,10 @@ export default function StagesPage() {
     allMatchesCompleted = matchesInLatestRound.length > 0 && matchesInLatestRound.every(m => m.status === 'COMPLETED');
   }
   
+  // Use backend readiness check for all stage types
+  const isStageReadyForAdvancement = stageReadiness?.ready === true;
+  const stageReadinessReason = stageReadiness?.reason;
+  
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
 
@@ -400,8 +412,10 @@ export default function StagesPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="border-green-300 text-green-600 hover:bg-green-50 hover:text-green-700 focus:ring-2 focus:ring-green-100 focus:border-green-400"
+                className={`border-green-300 text-green-600 hover:bg-green-50 hover:text-green-700 focus:ring-2 focus:ring-green-100 focus:border-green-400 ${!isStageReadyForAdvancement ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={() => setIsEndStageDialogOpen(true)}
+                disabled={!isStageReadyForAdvancement}
+                title={!isStageReadyForAdvancement ? stageReadinessReason || 'Stage not ready for advancement' : 'End stage and advance teams'}
               >
                 <Crown size={16} className="mr-1" />
                 End Stage
@@ -467,6 +481,26 @@ export default function StagesPage() {
             </CardContent>
           </Card>
 
+          {/* Stage Readiness Status */}
+          {!readinessLoading && stageReadiness && (
+            <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`w-3 h-3 rounded-full ${isStageReadyForAdvancement ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <span className="font-medium text-gray-900">
+                    {isStageReadyForAdvancement ? 'Ready for Advancement' : 'Not Ready for Advancement'}
+                  </span>
+                </div>
+                {!isStageReadyForAdvancement && stageReadinessReason && (
+                  <p className="text-sm text-gray-600">{stageReadinessReason}</p>
+                )}
+                {isStageReadyForAdvancement && (
+                  <p className="text-sm text-gray-600">All matches are completed and teams are ready to advance to the next stage.</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Matches List */}
           <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
             <CardHeader>
@@ -488,8 +522,8 @@ export default function StagesPage() {
                     <PlusIcon size={16} />
                     Schedule Matches
                   </Button>
-                  {/* Show Generate Next Swiss Round button if all matches in latest round are completed */}
-                  {isSwissStage && allMatchesCompleted && (
+                  {/* Show Generate Next Swiss Round button if stage is ready for advancement */}
+                  {isSwissStage && isStageReadyForAdvancement && (
                     <Button
                       onClick={() => {
                         setIsMatchSchedulerDialogOpen(true);

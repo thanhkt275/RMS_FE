@@ -3,7 +3,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Minus, Save, CheckCircle } from "lucide-react";
+import { Plus, Minus, Save, CheckCircle, Send } from "lucide-react";
+import { useAuth } from "@/hooks/common/use-auth";
+import { UserRole } from "@/types/user.types";
 
 interface GameElement {
   element: string;
@@ -53,6 +55,7 @@ interface ScoringPanelProps {
   // Actions
   onUpdateScores: () => void;
   onSubmitScores: () => void;
+
   addRedGameElement: () => void;
   addBlueGameElement: () => void;
   removeGameElement: (alliance: "red" | "blue", index: number) => void;
@@ -88,6 +91,7 @@ export function ScoringPanel({
   setIsAddingBlueElement,
   onUpdateScores,
   onSubmitScores,
+
   addRedGameElement,
   addBlueGameElement,
   removeGameElement,
@@ -101,7 +105,11 @@ export function ScoringPanel({
   setRedPenalty,
   setBluePenalty,
 }: ScoringPanelProps) {
+  const { user } = useAuth();
   const isDisabled = disabled || !selectedMatchId || isLoading;
+  const isAllianceReferee = user?.role === UserRole.ALLIANCE_REFEREE;
+  const isHeadReferee = user?.role === UserRole.HEAD_REFEREE;
+  const isAdmin = user?.role === UserRole.ADMIN;
 
   return (
     <Card className="bg-white border border-gray-200 shadow-lg rounded-xl p-8 text-gray-700">
@@ -573,6 +581,7 @@ export function ScoringPanel({
 
           {/* Action Buttons */}
           <div className="flex justify-center gap-4 pt-6 border-t border-gray-200">
+            {/* Update Scores - Available to all roles */}
             <Button
               onClick={onUpdateScores}
               disabled={isDisabled}
@@ -583,15 +592,20 @@ export function ScoringPanel({
               Update Scores
             </Button>
             
-            <Button
-              onClick={onSubmitScores}
-              disabled={isDisabled}
-              className="bg-green-500 hover:bg-green-600 text-white font-bold shadow-md"
-              size="lg"
-            >
-              <CheckCircle className="w-5 h-5 mr-2" />
-              Submit Final Scores
-            </Button>
+
+            
+            {/* Submit Final Scores - Available only to HEAD_REFEREE and ADMIN */}
+            {(isHeadReferee || isAdmin) && (
+              <Button
+                onClick={onSubmitScores}
+                disabled={isDisabled}
+                className="bg-green-500 hover:bg-green-600 text-white font-bold shadow-md"
+                size="lg"
+              >
+                <CheckCircle className="w-5 h-5 mr-2" />
+                Submit Final Scores
+              </Button>
+            )}
           </div>
         </div>
       )}

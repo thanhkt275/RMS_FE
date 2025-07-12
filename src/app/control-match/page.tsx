@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMatch, useUpdateMatchStatus, useMatches } from "@/hooks/api/use-matches";
 import { useMatchesByTournament } from "@/hooks/features/use-matches-by-tournament";
 import { MatchStatus } from "@/lib/types";
@@ -29,6 +29,7 @@ import { useScoringControl } from "@/hooks/features/use-scoring-control";
 import { useWebSocketSubscriptions } from "@/hooks/features/use-websocket-subscriptions";
 import { useDisplayControl } from "@/hooks/features/use-display-control";
 
+
 // Import components
 import { TimerControlPanel } from "@/components/features/control-match/timer-control-panel";
 import { MatchSelector } from "@/components/features/control-match/match-selector";
@@ -38,6 +39,8 @@ import { MatchStatusDisplay } from "@/components/features/control-match/match-st
 
 
 export default function ControlMatchPage() {
+  const queryClient = useQueryClient();
+  
   // Tournament selection state
   const { data: tournaments = [], isLoading: tournamentsLoading } =
     useTournaments();
@@ -78,6 +81,8 @@ export default function ControlMatchPage() {
 
   // State for selected match
   const [selectedMatchId, setSelectedMatchId] = useState<string>("");
+
+
   // Fetch matches based on tournament selection
   const { data: allMatchesData = [], isLoading: isLoadingMatches } = 
     selectedTournamentId === "all" || !selectedTournamentId
@@ -244,6 +249,8 @@ export default function ControlMatchPage() {
     onMatchUpdate: handleMatchUpdate,
     onMatchStateChange: handleMatchStateChange,
   });
+
+
   // Initialize timer control hook
   const {
     timerDuration,
@@ -359,6 +366,8 @@ export default function ControlMatchPage() {
       toast.error("Failed to submit scores");
     }
   };
+
+
 
   // Handle sending an announcement
   const handleSendAnnouncement = () => {
