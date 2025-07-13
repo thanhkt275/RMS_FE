@@ -1,0 +1,53 @@
+node_modules
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Build output
+.next
+out
+dist
+
+# Environment files
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test and coverage
+coverage
+test
+*.spec.tsx
+*.spec.ts
+*.test.tsx
+*.test.ts
+__tests__
+
+# Editor and IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Docker
+Dockerfile
+docker-compose*
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+*.md
+docs/
+
+# Logs
+logs
+*.log
+
+# Stress tests
+stress-tests/ 
