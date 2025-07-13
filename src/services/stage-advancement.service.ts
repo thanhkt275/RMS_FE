@@ -40,11 +40,32 @@ export class StageAdvancementService {
    */
   static async previewAdvancement(stageId: string, teamsToAdvance?: number): Promise<TeamRanking[]> {
     const queryParam = teamsToAdvance ? `?teamsToAdvance=${teamsToAdvance}` : '';
-    const response = await apiClient.get<ApiResponse<TeamRanking[]>>(`/stages/${stageId}/advancement-preview${queryParam}`);
-    if (!response.success) {
-      throw new Error(response.message || 'Failed to preview advancement');
+    const response = await apiClient.get<any>(`/stages/${stageId}/advancement-preview${queryParam}`);
+    
+    console.log('[StageAdvancementService] Preview response:', response);
+    
+    // Handle both response formats: wrapped and direct
+    if (response.success !== undefined) {
+      // Wrapped response format
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to preview advancement');
+      }
+      
+      // Handle the new response format with teamsToAdvance and remainingTeams
+      if (response.data && response.data.teamsToAdvance) {
+        return response.data.teamsToAdvance;
+      }
+      
+      return response.data;
+    } else {
+      // Direct response format - handle the new structure
+      if (response && response.teamsToAdvance) {
+        return response.teamsToAdvance;
+      }
+      
+      // Assume the response is the data directly
+      return Array.isArray(response) ? response : [];
     }
-    return response.data;
   }
 
   /**

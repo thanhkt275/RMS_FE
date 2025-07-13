@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,25 +16,52 @@ import { RankingsTable } from "./rankings-table";
 import { Users, Trophy, ArrowRight } from "lucide-react";
 
 interface AdvancementPreviewProps {
-  rankings: TeamRanking[];
+  rankings?:
+    | TeamRanking[]
+    | {
+        teamsToAdvance: TeamRanking[];
+        remainingTeams: TeamRanking[];
+        totalTeams: number;
+        advancementPercentage: number;
+      };
   initialTeamsToAdvance?: number;
   maxTeams?: number;
   onTeamsToAdvanceChange?: (count: number) => void;
   className?: string;
+  isLoading?: boolean;
 }
 
 /**
  * Component to preview which teams would advance
  * Implements Single Responsibility Principle - only handles advancement preview
  */
-export function AdvancementPreview({ 
-  rankings, 
-  initialTeamsToAdvance = Math.ceil(rankings.length / 2),
-  maxTeams = rankings.length,
+export function AdvancementPreview({
+  rankings,
+  initialTeamsToAdvance = Math.ceil(
+    (Array.isArray(rankings) ? rankings?.length : 0) / 2
+  ),
+  maxTeams = Array.isArray(rankings) ? rankings?.length || 0 : 0,
   onTeamsToAdvanceChange,
-  className = "" 
+  className = "",
+  isLoading = false,
 }: AdvancementPreviewProps) {
-  
+  // Ensure rankings is an array - handle both array and object formats
+  let safeRankings: TeamRanking[] = [];
+  if (Array.isArray(rankings)) {
+    safeRankings = rankings;
+  } else if (
+    rankings &&
+    typeof rankings === "object" &&
+    rankings.teamsToAdvance
+  ) {
+    // Handle the case where rankings is an object with teamsToAdvance property
+    safeRankings = Array.isArray(rankings.teamsToAdvance)
+      ? rankings.teamsToAdvance
+      : [];
+  }
+
+
+
   const [teamsToAdvance, setTeamsToAdvance] = useState(
     Math.min(initialTeamsToAdvance, maxTeams)
   );
@@ -39,25 +72,41 @@ export function AdvancementPreview({
     onTeamsToAdvanceChange?.(validCount);
   };
 
-  const advancingTeams = rankings.slice(0, teamsToAdvance);
-  const eliminatedTeams = rankings.slice(teamsToAdvance);
+  const advancingTeams = safeRankings.slice(0, teamsToAdvance);
+  const eliminatedTeams = safeRankings.slice(teamsToAdvance);
+
+  // Show loading state if data is loading or rankings is empty
+  if (isLoading || safeRankings.length === 0) {
+    return (
+      <div className={className}>
+        <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
+          <CardContent className="space-y-6">
+            <div className="flex justify-center py-16">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-14 w-14 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+                <p className="text-gray-700 font-semibold text-lg">
+                  {isLoading
+                    ? "Loading advancement preview..."
+                    : "No teams available for preview"}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className={className}>
       <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-gray-900">
-            <Trophy className="h-5 w-5 text-yellow-600" />
-            Advancement Preview
-          </CardTitle>
-          <CardDescription className="text-gray-600">
-            Preview which teams will advance to the next stage
-          </CardDescription>
-        </CardHeader>
         <CardContent className="space-y-6">
           {/* Teams to Advance Input */}
           <div className="space-y-3">
-            <Label htmlFor="teamsToAdvance" className="text-gray-700 font-medium text-base">
+            <Label
+              htmlFor="teamsToAdvance"
+              className="text-gray-700 font-medium text-base"
+            >
               Number of teams to advance
             </Label>
             <div className="flex items-center gap-4">
@@ -67,20 +116,31 @@ export function AdvancementPreview({
                 min={1}
                 max={maxTeams}
                 value={teamsToAdvance}
-                onChange={(e) => handleTeamsToAdvanceChange(Number(e.target.value))}
+                onChange={(e) =>
+                  handleTeamsToAdvanceChange(Number(e.target.value))
+                }
                 className="w-32 bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg transition-all duration-200"
               />
               <div className="text-sm text-gray-600">
-                out of {rankings.length} teams
+                out of {safeRankings.length} teams
               </div>
             </div>
-            
+
             {/* Quick selection buttons */}
             <div className="flex gap-2 flex-wrap">
               {[
-                { label: "Top 25%", value: Math.ceil(rankings.length * 0.25) },
-                { label: "Top 50%", value: Math.ceil(rankings.length * 0.5) },
-                { label: "Top 75%", value: Math.ceil(rankings.length * 0.75) },
+                {
+                  label: "Top 25%",
+                  value: Math.ceil(safeRankings.length * 0.25),
+                },
+                {
+                  label: "Top 50%",
+                  value: Math.ceil(safeRankings.length * 0.5),
+                },
+                {
+                  label: "Top 75%",
+                  value: Math.ceil(safeRankings.length * 0.75),
+                },
               ].map(({ label, value }) => (
                 <Button
                   key={label}
@@ -88,7 +148,9 @@ export function AdvancementPreview({
                   size="sm"
                   onClick={() => handleTeamsToAdvanceChange(value)}
                   className={`border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 rounded-lg transition-all duration-200 ${
-                    teamsToAdvance === value ? 'bg-blue-50 border-blue-300 text-blue-700' : ''
+                    teamsToAdvance === value
+                      ? "bg-blue-50 border-blue-300 text-blue-700"
+                      : ""
                   }`}
                 >
                   {label} ({value})
@@ -104,38 +166,59 @@ export function AdvancementPreview({
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-1">
                 <Users className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-medium text-green-800">Advancing</span>
+                <span className="text-sm font-medium text-green-800">
+                  Advancing
+                </span>
               </div>
-              <div className="text-2xl font-bold text-green-900">{advancingTeams.length}</div>
+              <div className="text-2xl font-bold text-green-900">
+                {advancingTeams.length}
+              </div>
               <div className="text-xs text-green-700">
-                {((advancingTeams.length / rankings.length) * 100).toFixed(1)}% of teams
+                {safeRankings.length > 0
+                  ? (
+                      (advancingTeams.length / safeRankings.length) *
+                      100
+                    ).toFixed(1)
+                  : "0"}
+                % of teams
               </div>
             </div>
 
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-1">
                 <Users className="h-4 w-4 text-red-600" />
-                <span className="text-sm font-medium text-red-800">Eliminated</span>
+                <span className="text-sm font-medium text-red-800">
+                  Eliminated
+                </span>
               </div>
-              <div className="text-2xl font-bold text-red-900">{eliminatedTeams.length}</div>
+              <div className="text-2xl font-bold text-red-900">
+                {eliminatedTeams.length}
+              </div>
               <div className="text-xs text-red-700">
-                {((eliminatedTeams.length / rankings.length) * 100).toFixed(1)}% of teams
+                {safeRankings.length > 0
+                  ? (
+                      (eliminatedTeams.length / safeRankings.length) *
+                      100
+                    ).toFixed(1)
+                  : "0"}
+                % of teams
               </div>
             </div>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-1">
                 <ArrowRight className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-800">Cut Line</span>
+                <span className="text-sm font-medium text-blue-800">
+                  Cut Line
+                </span>
               </div>
               <div className="text-sm font-bold text-blue-900">
                 After Rank #{teamsToAdvance}
               </div>
               <div className="text-xs text-blue-700">
-                {teamsToAdvance < rankings.length ? 
-                  `Next: ${rankings[teamsToAdvance]?.teamNumber || 'N/A'}` : 
-                  'All teams advance'
-                }
+                {teamsToAdvance < safeRankings.length
+                  ? `Next: ${safeRankings[teamsToAdvance]?.teamNumber || "N/A"}`
+                  : "All teams advance"}
               </div>
             </div>
           </div>
@@ -145,23 +228,28 @@ export function AdvancementPreview({
           {/* Rankings Table with Highlighting */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h4 className="font-semibold text-gray-900 text-lg">Team Rankings</h4>
+              <h4 className="font-semibold text-gray-900 text-lg">
+                Team Rankings
+              </h4>
               <div className="flex gap-2">
                 <Badge className="bg-green-100 text-green-800 border-green-300">
                   Advancing
                 </Badge>
-                <Badge variant="outline" className="border-gray-300 text-gray-600">
+                <Badge
+                  variant="outline"
+                  className="border-gray-300 text-gray-600"
+                >
                   Eliminated
                 </Badge>
               </div>
             </div>
-            
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <RankingsTable 
-                rankings={rankings} 
+
+                        <RankingsTable 
+                rankings={safeRankings} 
                 highlightAdvancing={teamsToAdvance}
-              />
-            </div>
+                showSorting={true}
+                showFilters={false}
+            />
           </div>
         </CardContent>
       </Card>

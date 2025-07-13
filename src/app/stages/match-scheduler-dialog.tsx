@@ -75,29 +75,39 @@ export default function MatchSchedulerDialog({
       setError(null);
     }
   }, [isOpen, stageType]);
-  // Fetch teams by tournament ID - only when teams view is active AND not Swiss
+  // Fetch teams by stage ID - only when teams view is active AND not Swiss
   const { 
     data: teams = [], 
     isLoading: isLoadingTeams, 
     refetch: refetchTeams 
   } = useQuery({
-    queryKey: QueryKeys.teams.byTournament(tournamentId),
+    queryKey: ["stage-teams", stageId],
     queryFn: async () => {
       try {
-        const data = await apiClient.get<Team[]>(`/teams?tournamentId=${tournamentId}`);
-        return data;
+        // Fetch only teams assigned to this stage
+        const response = await apiClient.get<any>(`/stages/${stageId}/teams`);
+        // The response is expected to be { success, data: Team[] }
+        if (response.success && Array.isArray(response.data)) {
+          return response.data.map((t: any) => ({
+            id: t.teamId,
+            teamNumber: t.teamNumber,
+            name: t.teamName,
+            organization: t.organization || undefined,
+          }));
+        }
+        return [];
       } catch (error: any) {
-        console.error("Error fetching teams:", error);
+        console.error("Error fetching stage teams:", error);
         toast.error(`Failed to load teams: ${error.message}`);
         return [];
       }
     },
-    enabled: !!tournamentId && isOpen && activeView === "teams" && schedulerType !== "swiss",
+    enabled: !!stageId && isOpen && activeView === "teams" && schedulerType !== "swiss",
     staleTime: 1000 * 60,
   });
 
   // Filter teams based on search query
-  const filteredTeams = teams.filter(team => {
+  const filteredTeams = teams.filter((team: Team) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -120,17 +130,17 @@ export default function MatchSchedulerDialog({
   const handleSelectAllFiltered = () => {
     if (filteredTeams.length === 0) return;
     
-    const filteredIds = filteredTeams.map(team => team.id);
-    const allSelected = filteredIds.every(id => selectedTeams.includes(id));
+    const filteredIds = filteredTeams.map((team: Team) => team.id);
+    const allSelected = filteredIds.every((id: string) => selectedTeams.includes(id));
     
     if (allSelected) {
       // Deselect all filtered teams
-      setSelectedTeams(prev => prev.filter(id => !filteredIds.includes(id)));
+      setSelectedTeams(prev => prev.filter((id: string) => !filteredIds.includes(id)));
     } else {
       // Select all filtered teams
       setSelectedTeams(prev => {
         const newSelection = [...prev];
-        filteredIds.forEach(id => {
+        filteredIds.forEach((id: string) => {
           if (!newSelection.includes(id)) newSelection.push(id);
         });
         return newSelection;
@@ -361,7 +371,7 @@ export default function MatchSchedulerDialog({
             ) : (
               <ScrollArea className="h-[300px] border border-gray-200 rounded-lg">
                 <div className="p-2">
-                  {filteredTeams.map(team => (
+                  {filteredTeams.map((team: Team) => (
                     <div
                       key={team.id}
                       className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors ${

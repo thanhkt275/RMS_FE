@@ -97,6 +97,71 @@ export function AdvancementConfig({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Teams Selection */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-900 text-lg">Teams to Advance</h4>
+            <div className="space-y-3">
+              <Label htmlFor="teamsToAdvance" className="text-gray-700 font-medium">
+                Number of teams to advance
+              </Label>
+              <div className="flex items-center gap-4">
+                <Input
+                  id="teamsToAdvance"
+                  type="number"
+                  min={1}
+                  max={maxTeams}
+                  value={teamsToAdvance}
+                  onChange={(e) => {
+                    const newCount = Math.max(1, Math.min(Number(e.target.value), maxTeams));
+                    const options: AdvancementOptions = {
+                      teamsToAdvance: newCount,
+                      ...(nextStageId && { nextStageId }),
+                      createNextStage,
+                      ...(createNextStage && { nextStageConfig }),
+                    };
+                    onOptionsChange?.(options);
+                  }}
+                  className="w-32 bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg transition-all duration-200"
+                />
+                <div className="text-sm text-gray-600">
+                  out of {maxTeams} teams
+                </div>
+              </div>
+              
+              {/* Quick selection buttons */}
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  { label: "Top 25%", value: Math.ceil(maxTeams * 0.25) },
+                  { label: "Top 50%", value: Math.ceil(maxTeams * 0.5) },
+                  { label: "Top 75%", value: Math.ceil(maxTeams * 0.75) },
+                  { label: "All Teams", value: maxTeams },
+                ].map(({ label, value }) => (
+                  <Button
+                    key={label}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const options: AdvancementOptions = {
+                        teamsToAdvance: value,
+                        ...(nextStageId && { nextStageId }),
+                        createNextStage,
+                        ...(createNextStage && { nextStageConfig }),
+                      };
+                      onOptionsChange?.(options);
+                    }}
+                    className={`border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 rounded-lg transition-all duration-200 ${
+                      teamsToAdvance === value ? 'bg-blue-50 border-blue-300 text-blue-700' : ''
+                    }`}
+                  >
+                    {label} ({value})
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <Separator className="bg-gray-200" />
+
           {/* Teams Summary */}
           <Alert className="bg-blue-50 border-blue-200 text-blue-800">
             <AlertTriangle className="h-4 w-4" />
@@ -106,6 +171,8 @@ export function AdvancementConfig({
                 <span className="font-semibold text-blue-900">{teamsToAdvance}</span> out of <span className="font-semibold text-blue-900">{maxTeams}</span> teams will advance to the next stage.
                 <br />
                 <span className="text-red-600 font-medium">{maxTeams - teamsToAdvance}</span> teams will be eliminated.
+                <br />
+                <span className="text-blue-600 font-medium">Advancement Rate: {Math.round((teamsToAdvance / maxTeams) * 100)}%</span>
               </div>
             </AlertDescription>
           </Alert>
