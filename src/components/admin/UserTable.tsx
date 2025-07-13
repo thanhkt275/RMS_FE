@@ -44,12 +44,12 @@ interface UserTableProps {
 
 // Role badge configuration
 const ROLE_CONFIG: Record<UserRole, { color: string; label: string }> = {
-  [UserRole.ADMIN]: { color: 'bg-red-100 text-red-800', label: 'Admin' },
-  [UserRole.HEAD_REFEREE]: { color: 'bg-orange-100 text-orange-800', label: 'Head Referee' },
-  [UserRole.ALLIANCE_REFEREE]: { color: 'bg-blue-100 text-blue-800', label: 'Alliance Referee' },
-  [UserRole.TEAM_LEADER]: { color: 'bg-green-100 text-green-800', label: 'Team Leader' },
-  [UserRole.TEAM_MEMBER]: { color: 'bg-cyan-100 text-cyan-800', label: 'Team Member' },
-  [UserRole.COMMON]: { color: 'bg-gray-100 text-gray-800', label: 'Common' },
+  [UserRole.ADMIN]: { color: 'bg-red-100 text-red-800 border-red-200', label: 'Admin' },
+  [UserRole.HEAD_REFEREE]: { color: 'bg-orange-100 text-orange-800 border-orange-200', label: 'Head Referee' },
+  [UserRole.ALLIANCE_REFEREE]: { color: 'bg-blue-100 text-blue-800 border-blue-200', label: 'Alliance Referee' },
+  [UserRole.TEAM_LEADER]: { color: 'bg-green-100 text-green-800 border-green-200', label: 'Team Leader' },
+  [UserRole.TEAM_MEMBER]: { color: 'bg-cyan-100 text-cyan-800 border-cyan-200', label: 'Team Member' },
+  [UserRole.COMMON]: { color: 'bg-gray-100 text-gray-800 border-gray-200', label: 'Common' },
 };
 
 // Table header component
@@ -66,15 +66,15 @@ const TableHeaderCell: React.FC<{
   return (
     <TableHead
       className={cn(
-        sortable && 'cursor-pointer hover:bg-gray-50 select-none',
-        'font-semibold'
+        sortable && 'cursor-pointer hover:bg-gray-50 select-none transition-colors duration-200',
+        'font-semibold text-gray-900 bg-gray-50'
       )}
       onClick={sortable ? () => onSort(field) : undefined}
     >
       <div className="flex items-center space-x-1">
         <span>{label}</span>
         {sortable && (
-          <span className="ml-1">
+          <span className="ml-1 text-gray-500">
             {direction === 'asc' ? '↑' : direction === 'desc' ? '↓' : '↕'}
           </span>
         )}
@@ -96,65 +96,76 @@ const UserRow: React.FC<{
   const roleConfig = ROLE_CONFIG[user.role];
 
   return (
-    <TableRow className={cn(isSelected && 'bg-blue-50')}>
-      <TableCell>
+    <TableRow className={cn(
+      isSelected && 'bg-blue-50 border-blue-200',
+      'hover:bg-gray-50 transition-colors duration-200 border-b border-gray-200'
+    )}>
+      <TableCell className="py-4">
         <Checkbox
           checked={isSelected}
           onCheckedChange={() => onSelect(user.id)}
         />
       </TableCell>
-      <TableCell>
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+      <TableCell className="py-4">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-semibold text-sm">
             {user.username.charAt(0).toUpperCase()}
           </div>
           <div>
-            <div className="font-medium">{user.username}</div>
+            <div className="font-semibold text-gray-900">{user.username}</div>
             {user.email && (
-              <div className="text-sm text-gray-500">{user.email}</div>
+              <div className="text-sm text-gray-600">{user.email}</div>
             )}
           </div>
         </div>
       </TableCell>
-      <TableCell>
-        <Badge className={roleConfig.color}>
+      <TableCell className="py-4">
+        <Badge className={cn(roleConfig.color, 'border font-medium')}>
           {roleConfig.label}
         </Badge>
       </TableCell>
-      <TableCell>
-        <Badge variant={user.isActive ? 'default' : 'secondary'}>
+      <TableCell className="py-4">
+        <Badge 
+          variant={user.isActive ? 'default' : 'secondary'}
+          className={cn(
+            user.isActive 
+              ? 'bg-green-100 text-green-800 border-green-200' 
+              : 'bg-gray-100 text-gray-600 border-gray-200',
+            'border font-medium'
+          )}
+        >
           {user.isActive ? 'Active' : 'Inactive'}
         </Badge>
       </TableCell>
-      <TableCell className="text-sm text-gray-500">
+      <TableCell className="text-sm text-gray-600 py-4">
         {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
       </TableCell>
-      <TableCell className="text-sm text-gray-500">
+      <TableCell className="text-sm text-gray-600 py-4">
         {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never'}
       </TableCell>
-      <TableCell>
+      <TableCell className="py-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreHorizontal className="h-4 w-4" />
+            <Button variant="ghost" size="sm" className="hover:bg-gray-100">
+              <MoreHorizontal className="h-4 w-4 text-gray-600" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onViewProfile(user)}>
-              <Eye className="h-4 w-4 mr-2" />
+          <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg">
+            <DropdownMenuItem onClick={() => onViewProfile(user)} className="hover:bg-gray-50">
+              <Eye className="h-4 w-4 mr-2 text-gray-600" />
               View Profile
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onEdit(user)}>
-              <Edit className="h-4 w-4 mr-2" />
+            <DropdownMenuItem onClick={() => onEdit(user)} className="hover:bg-gray-50">
+              <Edit className="h-4 w-4 mr-2 text-gray-600" />
               Edit User
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onChangeRole(user)}>
-              <Edit className="h-4 w-4 mr-2" />
+            <DropdownMenuItem onClick={() => onChangeRole(user)} className="hover:bg-gray-50">
+              <Edit className="h-4 w-4 mr-2 text-gray-600" />
               Change Role
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => onDelete(user)}
-              className="text-red-600"
+              className="text-red-600 hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete User
@@ -169,9 +180,9 @@ const UserRow: React.FC<{
 // Empty state component
 const EmptyState: React.FC<{ message: string }> = ({ message }) => (
   <TableRow>
-    <TableCell colSpan={7} className="text-center py-8">
+    <TableCell colSpan={7} className="text-center py-12">
       <div className="text-gray-500">
-        <div className="text-lg font-medium mb-2">No users found</div>
+        <div className="text-lg font-semibold mb-2 text-gray-700">No users found</div>
         <div className="text-sm">{message}</div>
       </div>
     </TableCell>
@@ -182,22 +193,22 @@ const EmptyState: React.FC<{ message: string }> = ({ message }) => (
 const LoadingRows: React.FC = () => (
   <>
     {[...Array(5)].map((_, index) => (
-      <TableRow key={index}>
-        <TableCell><div className="w-4 h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
-        <TableCell>
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse" />
+      <TableRow key={index} className="border-b border-gray-200">
+        <TableCell className="py-4"><div className="w-4 h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
+        <TableCell className="py-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
             <div>
-              <div className="w-24 h-4 bg-gray-200 rounded animate-pulse mb-1" />
+              <div className="w-24 h-4 bg-gray-200 rounded animate-pulse mb-2" />
               <div className="w-32 h-3 bg-gray-200 rounded animate-pulse" />
             </div>
           </div>
         </TableCell>
-        <TableCell><div className="w-20 h-6 bg-gray-200 rounded animate-pulse" /></TableCell>
-        <TableCell><div className="w-16 h-6 bg-gray-200 rounded animate-pulse" /></TableCell>
-        <TableCell><div className="w-20 h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
-        <TableCell><div className="w-20 h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
-        <TableCell><div className="w-8 h-8 bg-gray-200 rounded animate-pulse" /></TableCell>
+        <TableCell className="py-4"><div className="w-20 h-6 bg-gray-200 rounded animate-pulse" /></TableCell>
+        <TableCell className="py-4"><div className="w-16 h-6 bg-gray-200 rounded animate-pulse" /></TableCell>
+        <TableCell className="py-4"><div className="w-20 h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
+        <TableCell className="py-4"><div className="w-20 h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
+        <TableCell className="py-4"><div className="w-8 h-8 bg-gray-200 rounded animate-pulse" /></TableCell>
       </TableRow>
     ))}
   </>
@@ -221,11 +232,11 @@ export const UserTable: React.FC<UserTableProps> = ({
   const someSelected = selectedUsers.length > 0 && selectedUsers.length < users.length;
 
   return (
-    <div className="border rounded-lg">
+    <div className="overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead className="w-12">
+          <TableRow className="bg-gray-50 border-b border-gray-200">
+            <TableHead className="w-12 bg-gray-50">
               <Checkbox
                 checked={allSelected}
                 onCheckedChange={onSelectAll}
@@ -244,18 +255,18 @@ export const UserTable: React.FC<UserTableProps> = ({
               sortConfig={sortConfig}
               onSort={onSort}
             />
-            <TableHead>Status</TableHead>
+            <TableHead className="font-semibold text-gray-900 bg-gray-50">Status</TableHead>
             <TableHeaderCell
               field="createdAt"
               label="Created"
               sortConfig={sortConfig}
               onSort={onSort}
             />
-            <TableHead>Last Login</TableHead>
-            <TableHead className="w-16">Actions</TableHead>
+            <TableHead className="font-semibold text-gray-900 bg-gray-50">Last Login</TableHead>
+            <TableHead className="w-16 bg-gray-50">Actions</TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody className="bg-white">
           {loading ? (
             <LoadingRows />
           ) : users.length === 0 ? (

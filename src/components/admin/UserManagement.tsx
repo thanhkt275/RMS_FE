@@ -150,11 +150,11 @@ export const UserManagement: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-              <p className="mt-1 text-sm text-gray-600">
+              <p className="mt-2 text-gray-700 font-medium">
                 Manage users, roles, and permissions across your tournament system
               </p>
             </div>
@@ -163,7 +163,7 @@ export const UserManagement: React.FC = () => {
               <button
                 onClick={refreshUsers}
                 disabled={loading}
-                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                className="flex items-center px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 transition-all duration-200 shadow-sm"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -173,7 +173,7 @@ export const UserManagement: React.FC = () => {
               
               <button
                 onClick={handleCreateUser}
-                className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                className="flex items-center px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -186,19 +186,19 @@ export const UserManagement: React.FC = () => {
 
         {/* Error Alert */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-xl p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <svg className="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-red-800">{error.message}</span>
+                <span className="text-red-800 font-medium">{error.message}</span>
               </div>
               <button
                 onClick={clearError}
-                className="text-red-400 hover:text-red-600"
+                className="text-red-400 hover:text-red-600 transition-colors"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -207,17 +207,19 @@ export const UserManagement: React.FC = () => {
         )}
 
         {/* Statistics */}
-        <UserStats stats={stats || {
-          ADMIN: 0,
-          HEAD_REFEREE: 0,
-          ALLIANCE_REFEREE: 0,
-          TEAM_LEADER: 0,
-          TEAM_MEMBER: 0,
-          COMMON: 0,
-        }} loading={loading} />
+        <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <UserStats stats={stats || {
+            ADMIN: 0,
+            HEAD_REFEREE: 0,
+            ALLIANCE_REFEREE: 0,
+            TEAM_LEADER: 0,
+            TEAM_MEMBER: 0,
+            COMMON: 0,
+          }} loading={loading} />
+        </div>
 
         {/* Search and Filters */}
-        <div className="mb-6">
+        <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <AdvancedUserSearch
             value={searchQuery}
             onChange={setSearchQuery}
@@ -231,7 +233,7 @@ export const UserManagement: React.FC = () => {
         </div>
 
         {/* Bulk Actions */}
-        <div className="mb-4">
+        <div className="mb-4 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
           <BulkActions
             selectedUsers={selectedUsers}
             onBulkDelete={bulkDeleteUsers}
@@ -241,24 +243,26 @@ export const UserManagement: React.FC = () => {
         </div>
 
         {/* Users Table */}
-        <UserTable
-          users={users}
-          selectedUsers={selectedUsers}
-          sortConfig={sortBy ? { field: sortBy as keyof User, direction: sortOrder } : null}
-          loading={loading}
-          onSelectUser={selectUser}
-          onSelectAll={selectAllUsers}
-          onSort={handleSort}
-          onEdit={handleEditUser}
-          onDelete={handleDeleteUser}
-          onViewProfile={handleViewProfile}
-          onChangeRole={handleChangeRole}
-        />
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <UserTable
+            users={users}
+            selectedUsers={selectedUsers}
+            sortConfig={sortBy ? { field: sortBy as keyof User, direction: sortOrder } : null}
+            loading={loading}
+            onSelectUser={selectUser}
+            onSelectAll={selectAllUsers}
+            onSort={handleSort}
+            onEdit={handleEditUser}
+            onDelete={handleDeleteUser}
+            onViewProfile={handleViewProfile}
+            onChangeRole={handleChangeRole}
+          />
+        </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6">
-            <div className="text-sm text-gray-700">
+          <div className="flex items-center justify-between mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="text-sm text-gray-700 font-medium">
               Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalUsers)} of {totalUsers} users
             </div>
             
@@ -266,7 +270,7 @@ export const UserManagement: React.FC = () => {
               <button
                 onClick={() => setPage(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 Previous
               </button>
@@ -280,10 +284,10 @@ export const UserManagement: React.FC = () => {
                   <button
                     key={page}
                     onClick={() => setPage(page)}
-                    className={`px-3 py-2 text-sm font-medium rounded-md ${
+                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
                       page === currentPage
-                        ? 'text-white bg-blue-600'
-                        : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                        ? 'text-white bg-blue-600 shadow-md'
+                        : 'text-gray-600 bg-white border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
                     }`}
                   >
                     {page}
@@ -294,7 +298,7 @@ export const UserManagement: React.FC = () => {
               <button
                 onClick={() => setPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 Next
               </button>

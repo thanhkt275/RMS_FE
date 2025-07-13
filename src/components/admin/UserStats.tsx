@@ -27,11 +27,11 @@ const ROLE_LABELS = {
 export const UserStats: React.FC<UserStatsProps> = ({ stats, loading }) => {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="bg-white rounded-lg shadow-sm border p-4">
+          <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="animate-pulse">
-              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded mb-3"></div>
               <div className="h-8 bg-gray-200 rounded mb-2"></div>
               <div className="h-3 bg-gray-200 rounded"></div>
             </div>
@@ -43,8 +43,8 @@ export const UserStats: React.FC<UserStatsProps> = ({ stats, loading }) => {
 
   if (!stats || typeof stats !== 'object') {
     return (
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-        <p className="text-yellow-800">Unable to load user statistics</p>
+      <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 shadow-sm">
+        <p className="text-yellow-800 font-medium">Unable to load user statistics</p>
       </div>
     );
   }
@@ -58,7 +58,7 @@ export const UserStats: React.FC<UserStatsProps> = ({ stats, loading }) => {
   const totalUsers = Object.values(validStats).reduce((sum, count) => sum + count, 0);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       {Object.entries(validStats).map(([role, count]) => {
         const roleKey = role as UserRole;
         const percentage = totalUsers > 0 ? Math.round((count / totalUsers) * 100) : 0;
@@ -66,16 +66,16 @@ export const UserStats: React.FC<UserStatsProps> = ({ stats, loading }) => {
         return (
           <div
             key={role}
-            className="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200 hover:border-gray-300"
           >
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
               <div className={`w-3 h-3 rounded-full ${ROLE_COLORS[roleKey]}`}></div>
               <span className="text-2xl font-bold text-gray-900">{count}</span>
             </div>
-            <h3 className="text-sm font-medium text-gray-600 mb-1">
+            <h3 className="text-sm font-semibold text-gray-800 mb-1">
               {ROLE_LABELS[roleKey]}
             </h3>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-600 font-medium">
               {percentage}% of total
             </p>
           </div>
@@ -83,13 +83,13 @@ export const UserStats: React.FC<UserStatsProps> = ({ stats, loading }) => {
       })}
       
       {/* Total Users Card */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow-sm p-4 text-white">
-        <div className="flex items-center justify-between mb-2">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-md p-4 text-white border border-blue-500">
+        <div className="flex items-center justify-between mb-3">
           <div className="w-3 h-3 rounded-full bg-white bg-opacity-30"></div>
           <span className="text-2xl font-bold">{totalUsers}</span>
         </div>
-        <h3 className="text-sm font-medium mb-1">Total Users</h3>
-        <p className="text-xs opacity-80">All roles</p>
+        <h3 className="text-sm font-semibold mb-1">Total Users</h3>
+        <p className="text-xs opacity-90 font-medium">All roles</p>
       </div>
     </div>
   );
