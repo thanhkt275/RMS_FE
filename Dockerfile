@@ -5,6 +5,17 @@ WORKDIR /app
 
 # Add build arguments for environment variables
 ARG NODE_ENV=production
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_WS_URL
+ARG NEXT_PUBLIC_BACKEND_URL
+ARG JWT_SECRET
+
+# Set environment variables for the build
+ENV NODE_ENV=$NODE_ENV
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+ENV JWT_SECRET=$JWT_SECRET
 
 COPY package.json package-lock.json* ./
 RUN npm ci
@@ -15,12 +26,26 @@ WORKDIR /app
 
 # Add build arguments for environment variables
 ARG NODE_ENV=production
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_WS_URL
+ARG NEXT_PUBLIC_BACKEND_URL
+ARG JWT_SECRET
+
+# Set environment variables for the build
+ENV NODE_ENV=$NODE_ENV
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+ENV JWT_SECRET=$JWT_SECRET
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Copy .env file if it exists
+# Copy .env file if it exists (after copying source files)
 COPY .env* ./
+
+# Install dependencies again to ensure everything is available
+RUN npm ci --only=production
 
 RUN npm run build
 
@@ -29,6 +54,17 @@ FROM node:20-alpine AS runner
 
 # Add build arguments for environment variables
 ARG NODE_ENV=production
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_WS_URL
+ARG NEXT_PUBLIC_BACKEND_URL
+ARG JWT_SECRET
+
+# Set environment variables for runtime
+ENV NODE_ENV=$NODE_ENV
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+ENV JWT_SECRET=$JWT_SECRET
 
 # Enable standalone mode
 WORKDIR /app
