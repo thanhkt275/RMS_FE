@@ -2,18 +2,33 @@
 # Install dependencies only when needed
 FROM node:20-alpine AS deps
 WORKDIR /app
+
+# Add build arguments for environment variables
+ARG NODE_ENV=production
+
 COPY package.json package-lock.json* ./
 RUN npm ci
 
 # Rebuild the source code only when needed
 FROM node:20-alpine AS builder
 WORKDIR /app
+
+# Add build arguments for environment variables
+ARG NODE_ENV=production
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Copy .env file if it exists
+COPY .env* ./
+
 RUN npm run build
 
 # Production image
 FROM node:20-alpine AS runner
+
+# Add build arguments for environment variables
+ARG NODE_ENV=production
 
 # Enable standalone mode
 WORKDIR /app
@@ -24,6 +39,8 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
+# Copy .env file from builder stage
+COPY --from=builder /app/.env* ./
 
 # Port your Next.js app runs on
 EXPOSE 3000
