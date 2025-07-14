@@ -1,4 +1,4 @@
-import { Team } from "./team.types";
+import { Team } from "../../types/team.types";
 
 export interface Tournament {
   id: string;

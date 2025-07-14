@@ -1,83 +1,117 @@
 /**
  * RBAC Configuration - Centralized Security Settings
- * 
+ *
  * This configuration file centralizes all Role-Based Access Control settings
  * following the Single Responsibility Principle and making the system
  * easily configurable and maintainable.
- * 
+ *
  * Features:
  * - Centralized route protection rules
  * - Environment-specific configurations
  * - Type-safe configuration objects
  * - Easy extensibility for new routes and roles
- * 
+ *
  * @author Robotics Tournament Management System
  * @version 1.0.0
  */
 
-import { UserRole } from '@/types/types';
+import { UserRole } from "@/types/types";
 
 /**
  * Route Protection Configuration
- * 
+ *
  * Defines which routes require authentication and what roles are allowed.
  * Organized by feature area for better maintainability.
  */
 export const ROUTE_PROTECTION_CONFIG = {
   // Administrative Routes
   admin: {
-    '/admin': [UserRole.ADMIN],
-    '/admin/dashboard': [UserRole.ADMIN],
-    '/admin/users': [UserRole.ADMIN],
-    '/admin/system': [UserRole.ADMIN],
-    '/system-settings': [UserRole.ADMIN],
-    '/user-management': [UserRole.ADMIN],
-    '/users': [UserRole.ADMIN], // User Management Dashboard
+    "/admin": [UserRole.ADMIN],
+    "/admin/dashboard": [UserRole.ADMIN],
+    "/admin/users": [UserRole.ADMIN],
+    "/admin/system": [UserRole.ADMIN],
+    "/system-settings": [UserRole.ADMIN],
+    "/user-management": [UserRole.ADMIN],
+    "/users": [UserRole.ADMIN], // User Management Dashboard
   },
 
   // Tournament Management
   tournament: {
-    '/tournaments': [UserRole.ADMIN, UserRole.HEAD_REFEREE],
-    '/tournament-management': [UserRole.ADMIN, UserRole.HEAD_REFEREE],
-    '/stages': [UserRole.ADMIN],
-    '/stages/create': [UserRole.ADMIN],
-    '/stages/edit': [UserRole.ADMIN],
+    //"/tournaments": [UserRole.ADMIN, UserRole.HEAD_REFEREE],
+    "/tournament-management": [UserRole.ADMIN, UserRole.HEAD_REFEREE],
+    "/stages": [UserRole.ADMIN],
+    "/stages/create": [UserRole.ADMIN],
+    "/stages/edit": [UserRole.ADMIN],
   },
 
   // Match and Scoring
   scoring: {
-    '/scoring': [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE],
-    '/scoring/live': [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE],
-    '/scoring/history': [UserRole.ADMIN, UserRole.HEAD_REFEREE],
-    '/matches/score': [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE],
+    "/scoring": [
+      UserRole.ADMIN,
+      UserRole.HEAD_REFEREE,
+      UserRole.ALLIANCE_REFEREE,
+    ],
+    "/scoring/live": [
+      UserRole.ADMIN,
+      UserRole.HEAD_REFEREE,
+      UserRole.ALLIANCE_REFEREE,
+    ],
+    "/scoring/history": [UserRole.ADMIN, UserRole.HEAD_REFEREE],
+    "/matches/score": [
+      UserRole.ADMIN,
+      UserRole.HEAD_REFEREE,
+      UserRole.ALLIANCE_REFEREE,
+    ],
   },
 
   // Referee Panel
   referee: {
-    '/referee-panel': [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE],
-    '/referee/dashboard': [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE],
-    '/referee/assignments': [UserRole.ADMIN, UserRole.HEAD_REFEREE],
+    "/referee-panel": [
+      UserRole.ADMIN,
+      UserRole.HEAD_REFEREE,
+      UserRole.ALLIANCE_REFEREE,
+    ],
+    "/referee/dashboard": [
+      UserRole.ADMIN,
+      UserRole.HEAD_REFEREE,
+      UserRole.ALLIANCE_REFEREE,
+    ],
+    "/referee/assignments": [UserRole.ADMIN, UserRole.HEAD_REFEREE],
   },
 
   // Team Management
   teams: {
-    '/team-management': [UserRole.ADMIN, UserRole.TEAM_LEADER],
-    '/team/create': [UserRole.ADMIN, UserRole.TEAM_LEADER],
-    '/team/edit': [UserRole.ADMIN, UserRole.TEAM_LEADER],
-    '/team/dashboard': [UserRole.ADMIN, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER],
-    '/team/members': [UserRole.ADMIN, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER],
+    "/team-management": [UserRole.ADMIN, UserRole.TEAM_LEADER],
+    "/team/create": [UserRole.ADMIN, UserRole.TEAM_LEADER],
+    "/team/edit": [UserRole.ADMIN, UserRole.TEAM_LEADER],
+    "/team/dashboard": [
+      UserRole.ADMIN,
+      UserRole.TEAM_LEADER,
+      UserRole.TEAM_MEMBER,
+    ],
+    "/team/members": [
+      UserRole.ADMIN,
+      UserRole.TEAM_LEADER,
+      UserRole.TEAM_MEMBER,
+    ],
   },
 
   // Analytics and Reports
   analytics: {
-    '/analytics': [UserRole.ADMIN, UserRole.HEAD_REFEREE],
-    '/reports': [UserRole.ADMIN, UserRole.HEAD_REFEREE],
-    '/rankings': [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER],
+    "/analytics": [UserRole.ADMIN, UserRole.HEAD_REFEREE],
+    "/reports": [UserRole.ADMIN, UserRole.HEAD_REFEREE],
+    "/rankings": [
+      UserRole.ADMIN,
+      UserRole.HEAD_REFEREE,
+      UserRole.ALLIANCE_REFEREE,
+      UserRole.TEAM_LEADER,
+      UserRole.TEAM_MEMBER,
+    ],
   },
 
   // Score Config Admin (NEW)
   scoreConfig: {
-    '/score-config': [UserRole.ADMIN],
+    "/score-config": [UserRole.ADMIN],
   },
 } as const;
 
@@ -99,79 +133,93 @@ export const PROTECTED_ROUTES: Record<string, readonly UserRole[]> = {
  */
 export const AUTH_CONFIG = {
   // Cookie settings - Updated to match backend cookie name
-  cookieName: 'token', // Backend sets 'token', not 'auth_token'
+  cookieName: "token", // Backend sets 'token', not 'auth_token'
   cookieMaxAge: 7 * 24 * 60 * 60, // 7 days in seconds
-  
+
   // Route settings
-  accessDeniedPath: '/access-denied',
-  loginPath: '/login', // Updated to match standardized login page
-  logoutPath: '/auth/logout',
-  
+  accessDeniedPath: "/access-denied",
+  loginPath: "/login", // Updated to match standardized login page
+  logoutPath: "/auth/logout",
+
   // JWT settings
-  jwtAlgorithm: 'HS256' as const,
-  jwtIssuer: 'robotics-tournament-system',
-  
+  jwtAlgorithm: "HS256" as const,
+  jwtIssuer: "robotics-tournament-system",
+
   // Security settings
-  requireHttps: process.env.NODE_ENV === 'production',
+  requireHttps: process.env.NODE_ENV === "production",
   tokenRefreshThreshold: 60 * 60, // 1 hour in seconds
 } as const;
 
 /**
  * Dashboard Route Mapping
- * 
+ *
  * Maps user roles to their appropriate dashboard routes.
  * Used for redirects after login and from access denied page.
  */
 export const DASHBOARD_ROUTES: Record<UserRole, string> = {
-  [UserRole.ADMIN]: '/admin/dashboard',
-  [UserRole.HEAD_REFEREE]: '/referee/dashboard',
-  [UserRole.ALLIANCE_REFEREE]: '/referee/dashboard',
-  [UserRole.TEAM_LEADER]: '/team/dashboard',
-  [UserRole.TEAM_MEMBER]: '/team/dashboard',
-  [UserRole.COMMON]: '/dashboard', // Fallback for common users
+  [UserRole.ADMIN]: "/admin/dashboard",
+  [UserRole.HEAD_REFEREE]: "/referee/dashboard",
+  [UserRole.ALLIANCE_REFEREE]: "/referee/dashboard",
+  [UserRole.TEAM_LEADER]: "/team/dashboard",
+  [UserRole.TEAM_MEMBER]: "/team/dashboard",
+  [UserRole.COMMON]: "/dashboard", // Fallback for common users
 };
 
 /**
  * Public Routes Configuration
- * 
+ *
  * Routes that don't require authentication and should be accessible to everyone.
  */
 export const PUBLIC_ROUTES = [
-  '/',
-  '/about',
-  '/contact',
-  '/auth/login',
-  '/auth/register',
-  '/auth/forgot-password',
-  '/auth/reset-password',
-  '/access-denied',
-  '/api/health',
-  '/api/public/*',
+  "/",
+  "/about",
+  "/contact",
+  "/auth/login",
+  "/auth/register",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+  "/access-denied",
+  "/api/health",
+  "/api/public/*",
 ] as const;
 
 /**
  * API Routes Configuration
- * 
+ *
  * Special handling for API routes that may have different authentication requirements.
  */
 export const API_ROUTE_CONFIG = {
   // Public API endpoints
   public: [
-    '/api/health',
-    '/api/public/*',
-    '/api/auth/login',
-    '/api/auth/register',
-    '/api/auth/refresh',
+    "/api/health",
+    "/api/public/*",
+    "/api/auth/login",
+    "/api/auth/register",
+    "/api/auth/refresh",
+    "/api/tournaments/*",
   ],
-  
+
   // Protected API endpoints with role requirements
   protected: {
-    '/api/admin/*': [UserRole.ADMIN],
-    '/api/users/*': [UserRole.ADMIN], // User management API endpoints
-    '/api/tournaments/*': [UserRole.ADMIN, UserRole.HEAD_REFEREE],
-    '/api/teams/*': [UserRole.ADMIN, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER],
-    '/api/scoring/*': [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE],
-    '/api/user/*': [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER],
+    "/api/admin/*": [UserRole.ADMIN],
+    "/api/users/*": [UserRole.ADMIN], // User management API endpoints
+    "/api/teams/*": [
+      UserRole.ADMIN,
+      UserRole.TEAM_LEADER,
+      UserRole.TEAM_MEMBER,
+    ],
+    "/api/scoring/*": [
+      UserRole.ADMIN,
+      UserRole.HEAD_REFEREE,
+      UserRole.ALLIANCE_REFEREE,
+    ],
+    "/api/user/*": [
+      UserRole.ADMIN,
+      UserRole.HEAD_REFEREE,
+      UserRole.ALLIANCE_REFEREE,
+      UserRole.TEAM_LEADER,
+      UserRole.TEAM_MEMBER,
+    ],
   },
 } as const;
 
@@ -183,19 +231,19 @@ export const SECURITY_LOGGING_CONFIG = {
   events: {
     accessDenied: true,
     authenticationFailed: true,
-    routeAccess: process.env.NODE_ENV === 'development',
+    routeAccess: process.env.NODE_ENV === "development",
     tokenRefresh: true,
     roleChange: true,
   },
-  
+
   // Log levels
   levels: {
-    info: 'info',
-    warning: 'warning',
-    error: 'error',
-    critical: 'critical',
+    info: "info",
+    warning: "warning",
+    error: "error",
+    critical: "critical",
   } as const,
-  
+
   // External services (for production)
   services: {
     sentry: process.env.SENTRY_DSN,
@@ -206,7 +254,7 @@ export const SECURITY_LOGGING_CONFIG = {
 
 /**
  * Rate Limiting Configuration
- * 
+ *
  * Configuration for rate limiting authentication attempts and API calls.
  */
 export const RATE_LIMIT_CONFIG = {
@@ -216,7 +264,7 @@ export const RATE_LIMIT_CONFIG = {
     windowMs: 15 * 60 * 1000, // 15 minutes
     blockDurationMs: 60 * 60 * 1000, // 1 hour
   },
-  
+
   // API rate limits by user role
   api: {
     [UserRole.ADMIN]: {
@@ -244,17 +292,17 @@ export const RATE_LIMIT_CONFIG = {
 
 /**
  * Feature Flags Configuration
- * 
+ *
  * Toggle features based on environment or user role.
  */
 export const FEATURE_FLAGS = {
   // Development features
   development: {
-    debugLogging: process.env.NODE_ENV === 'development',
-    mockData: process.env.MOCK_DATA === 'true',
-    bypassAuth: process.env.BYPASS_AUTH === 'true',
+    debugLogging: process.env.NODE_ENV === "development",
+    mockData: process.env.MOCK_DATA === "true",
+    bypassAuth: process.env.BYPASS_AUTH === "true",
   },
-  
+
   // Role-based features
   roleFeatures: {
     [UserRole.ADMIN]: {
@@ -287,14 +335,14 @@ export const FEATURE_FLAGS = {
  * Environment Configuration
  */
 export const ENVIRONMENT_CONFIG = {
-  isDevelopment: process.env.NODE_ENV === 'development',
-  isProduction: process.env.NODE_ENV === 'production',
-  isTest: process.env.NODE_ENV === 'test',
-  
+  isDevelopment: process.env.NODE_ENV === "development",
+  isProduction: process.env.NODE_ENV === "production",
+  isTest: process.env.NODE_ENV === "test",
+
   // API endpoints
-  apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
-  wsUrl: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3000',
-  
+  apiUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000",
+  wsUrl: process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3000",
+
   // External services
   sentry: {
     dsn: process.env.SENTRY_DSN,
