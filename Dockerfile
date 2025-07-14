@@ -3,6 +3,13 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 
+# Add build arguments for environment variables
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_WS_URL
+ARG NEXT_PUBLIC_BACKEND_URL
+ARG JWT_SECRET
+ARG NODE_ENV
+
 COPY package.json package-lock.json* ./
 RUN npm ci
 
@@ -10,11 +17,22 @@ RUN npm ci
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Add build arguments for environment variables
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_WS_URL
+ARG NEXT_PUBLIC_BACKEND_URL
+ARG JWT_SECRET
+ARG NODE_ENV
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Copy .env file created by GitHub Actions (this will override any local .env)
-COPY .env ./
+# Create .env file from build arguments
+RUN echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" > .env && \
+    echo "NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL" >> .env && \
+    echo "NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL" >> .env && \
+    echo "JWT_SECRET=$JWT_SECRET" >> .env && \
+    echo "NODE_ENV=$NODE_ENV" >> .env
 
 RUN npm run build
 
