@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import type { Team } from "@/types/types";
+import type { Team } from "@/types/team.types";
 import { QueryKeys } from "@/lib/query-keys";
 import TeamService from "@/services/team.service";
 import { CreateTeamRequest, UpdateTeamRequest } from "@/types/team.types";
