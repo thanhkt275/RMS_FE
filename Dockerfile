@@ -13,7 +13,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Copy .env file created by GitHub Actions
+# Copy .env file created by GitHub Actions (this will override any local .env)
 COPY .env ./
 
 RUN npm run build

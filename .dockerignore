@@ -8,9 +8,9 @@ pnpm-debug.log
 out
 dist
 
-# Environment files (commented out to allow GitHub Actions to create .env)
-# .env
-# .env.*
+# Environment files (exclude local .env files)
+.env
+.env.*
 
 # OS files
 .DS_Store
