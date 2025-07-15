@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMatch, useUpdateMatchStatus, useMatches } from "@/hooks/api/use-matches";
-import { useMatchesByTournament } from "@/hooks/features/use-matches-by-tournament";
-import { MatchStatus } from "@/lib/types";
-import { useTournaments } from "@/hooks/api/use-tournaments";
-import { MatchData } from "@/lib/types";
+import { useMatch, useUpdateMatchStatus, useMatches } from "@/hooks/matches/use-matches";
+import { useMatchesByTournament } from "@/hooks/matches/use-matches-by-tournament";
+import { MatchStatus } from "@/types/types";
+import { useTournaments } from "@/hooks/tournaments/use-tournaments";
+import { MatchData } from "@/types/types";
 import { webSocketService } from "@/lib/websocket";
 import { Card } from "@/components/ui/card";
 
@@ -19,15 +19,15 @@ import {
 } from "@/components/ui/select";
 import ConnectionStatus from "../../components/features/control-match/connection-status";
 import { toast } from "sonner";
-import DynamicFieldSelectDropdown from "@/components/fields/DynamicFieldSelectDropdown";
+import DynamicFieldSelectDropdown from "@/components/features/fields/DynamicFieldSelectDropdown";
 import { QueryKeys } from "@/lib/query-keys";
 import { apiClient } from "@/lib/api-client";
 
 // Import custom hooks
-import { useTimerControl } from "@/hooks/features/use-timer-control";
-import { useScoringControl } from "@/hooks/features/use-scoring-control";
-import { useWebSocketSubscriptions } from "@/hooks/features/use-websocket-subscriptions";
-import { useDisplayControl } from "@/hooks/features/use-display-control";
+import { useTimerControl } from "@/hooks/control-match/use-timer-control";
+import { useScoringControl } from "@/hooks/control-match/use-scoring-control";
+import { useWebSocketSubscriptions } from "@/hooks/websocket/use-websocket-subscriptions";
+import { useDisplayControl } from "@/hooks/control-match/use-display-control";
 
 
 // Import components

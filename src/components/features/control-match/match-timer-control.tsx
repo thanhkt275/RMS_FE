@@ -19,8 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useUpdateMatchStatus } from "@/hooks/api/use-matches";
-import { MatchStatus } from "@/lib/types";
+import { useUpdateMatchStatus } from "@/hooks/matches/use-matches";
+import { MatchStatus } from "@/types/types";
 
 interface CombinedMatchTimerControlProps {
   selectedMatchId: string;

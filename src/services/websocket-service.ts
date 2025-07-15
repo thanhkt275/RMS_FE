@@ -8,7 +8,7 @@ import type {
   EventCallback,
   WebSocketEvent,
   AudienceDisplaySettings,
-} from '@/lib/types';
+} from '@/types/types';
 
 //  Interface for WebSocket connection strategy
 interface IWebSocketConnection {

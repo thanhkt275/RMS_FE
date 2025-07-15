@@ -1,7 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useTournaments} from '@/hooks/api/use-tournaments';
-import type { Tournament } from '@/lib/types';
+import { useTournaments} from '@/hooks/tournaments/use-tournaments';
+import type { Tournament } from '@/types/types';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';

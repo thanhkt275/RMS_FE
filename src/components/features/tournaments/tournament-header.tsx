@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Calendar, MapPin, User, Trophy, Edit, Save, X } from 'lucide-react';
 import { format } from 'date-fns';
-import type { Tournament } from '@/lib/types/tournament.types';
+import type { Tournament } from '@/types/tournament.types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TournamentEditForm } from './tournament-edit-form';

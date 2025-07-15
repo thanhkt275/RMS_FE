@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Settings, Eye, Crown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Field } from '@/lib/types/tournament.types';
-import type { AvailableReferee } from '@/lib/types/referee.types';
+import type { Field } from '@/types/tournament.types';
+import type { AvailableReferee } from '@/types/referee.types';
 
 interface FieldCardProps {
   field: Field;

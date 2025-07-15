@@ -1,57 +1,41 @@
-
-# Install dependencies only when needed
-FROM node:20-alpine AS deps
+# --- Dependencies Stage ---
+# --- Dependencies Stage ---
+FROM node:18-alpine AS deps
 WORKDIR /app
-
-# Add build arguments for environment variables
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_WS_URL
-ARG NEXT_PUBLIC_BACKEND_URL
-ARG JWT_SECRET
-ARG NODE_ENV
-
-COPY package.json package-lock.json* ./
-RUN npm ci
-
-# Rebuild the source code only when needed
-FROM node:20-alpine AS builder
+COPY package.json package-lock.json ./
+COPY .env.production .env.production
+RUN npm ci --legacy-peer-deps
+ENV NODE_ENV=production
+    # Install dependencies for 'sharp' (for image optimization)
+RUN apk add --no-cache libc6-compat
+    
+    # --- Build Stage ---
+FROM node:18-alpine AS build
 WORKDIR /app
-
-# Add build arguments for environment variables
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_WS_URL
-ARG NEXT_PUBLIC_BACKEND_URL
-ARG JWT_SECRET
-ARG NODE_ENV
-
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Create .env file from build arguments
-RUN echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" > .env && \
-    echo "NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL" >> .env && \
-    echo "NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL" >> .env && \
-    echo "JWT_SECRET=$JWT_SECRET" >> .env && \
-    echo "NODE_ENV=$NODE_ENV" >> .env
-
+COPY .env.production .env.production 
+ENV NODE_ENV=production
 RUN npm run build
-
-# Production image
-FROM node:20-alpine AS runner
-
-# Enable standalone mode
+    
+    # --- Production Stage ---
+FROM node:18-alpine AS production
 WORKDIR /app
-
-# Only copy necessary files for production
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-
-# Copy .env file from builder stage
-COPY --from=builder /app/.env ./
-
-# Port your Next.js app runs on
+ENV NODE_ENV=production
+    
+    # Install only production dependencies
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --legacy-peer-deps
+    
+    # Copy built assets and public folder
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/public ./public
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/package.json ./package.json
+    
+    # Copy env file
+COPY --from=build /app/.env.production .env.production
+    
 EXPOSE 3000
-
 CMD ["npm", "start"]
+    

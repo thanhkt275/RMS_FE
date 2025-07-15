@@ -24,13 +24,13 @@ import {
   CheckCircle,
   Loader2 
 } from 'lucide-react';
-import { FieldReferee } from '@/lib/types/tournament.types';
-import { AvailableReferee } from '@/lib/types/referee.types';
+import { FieldReferee } from '@/types/tournament.types';
+import { AvailableReferee } from '@/types/referee.types';
 import { 
   useFieldReferees, 
   useAssignFieldReferees, 
   useRemoveFieldReferee 
-} from '@/hooks/api/use-field-referees';
+} from '@/hooks/tournaments/use-field-referees';
 
 interface FieldRefereeDialogProps {
   open: boolean;

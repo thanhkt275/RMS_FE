@@ -10,7 +10,8 @@ dist
 
 # Environment files (exclude local .env files)
 .env
-.env.*
+.env.example
+
 
 # OS files
 .DS_Store

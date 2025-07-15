@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/common/use-auth";
 import { cn } from "@/lib/utils";
-import { UserRole } from "@/lib/types";
+import { UserRole } from "@/types/types";
 
 // Define navigation items with role requirements
 const navigationItems = [

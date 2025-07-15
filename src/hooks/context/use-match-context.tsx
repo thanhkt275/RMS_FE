@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode } from 'react';
-import { MatchContextType } from '@/lib/types';
+import { MatchContextType } from '@/types/types';
 
 
 const MatchContext = createContext<MatchContextType | undefined>(undefined);

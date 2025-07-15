@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api-client";
-import { Match, MatchScores, MatchStatus } from "@/lib/types";
+import { Match, MatchScores, MatchStatus } from "@/types/types";
 
 export class MatchService {
   static async getAllMatches(filter?: { fieldId?: string | null }): Promise<Match[]> {

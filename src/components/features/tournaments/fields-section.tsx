@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, Users } from 'lucide-react';
-import type { Field } from '@/lib/types/tournament.types';
-import type { AvailableReferee } from '@/lib/types/referee.types';
-import { useFieldReferees } from '@/hooks/api/use-field-referees';
+import type { Field } from '@/types/tournament.types';
+import type { AvailableReferee } from '@/types/referee.types';
+import { useFieldReferees } from '@/hooks/tournaments/use-field-referees';
 import { FieldCard } from './field-card';
 import { FieldRefereeDialog } from './field-referee-dialog';
 import { BulkRefereeAssignDialog } from './bulk-referee-assign-dialog';

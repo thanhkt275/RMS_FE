@@ -9,9 +9,9 @@ import { LeaderboardTable } from "@/components/features/leaderboard/leaderboard-
 import { LeaderboardFilters } from "@/components/features/leaderboard/leaderboard-filters";
 import { teamLeaderboardColumns, TeamLeaderboardRow } from "@/components/features/leaderboard/team-leaderboard-columns";
 import { TeamStatsRecalculateButton } from "@/components/features/admin/team-stats-recalculate-button";
-import { useTeams } from "@/hooks/api/use-teams";
-import { useTeamsPageData } from "@/hooks/features/use-teams-page-data";
-import { useTeamManagement } from "@/hooks/features/use-team-management";
+import { useTeams } from "@/hooks/teams/use-teams";
+import { useTeamsPageData } from "@/hooks/teams/use-teams-page-data";
+import { useTeamManagement } from "@/hooks/teams/use-team-management";
 
 export default function TeamsPage() {
   // Teams page data hook - handles all the complex selection and data fetching logic

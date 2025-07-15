@@ -15,7 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { RefreshCw, Calculator, Trophy, AlertCircle } from "lucide-react";
-import { useTeamStatsRecalculation, useUpdateRankings } from "@/hooks/api/use-team-stats-recalculation";
+import { useTeamStatsRecalculation, useUpdateRankings } from "@/hooks/teams/use-team-stats-recalculation";
 
 interface TeamStatsRecalculateButtonProps {
   tournamentId: string | undefined;

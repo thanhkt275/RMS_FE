@@ -1,26 +1,26 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useTournament } from "@/hooks/api/use-tournaments";
-import { useTournamentFields } from "@/components/fields/FieldSelectDropdown";
-import { useWebSocket } from "@/hooks/common/use-websocket";
-import { useRealtimeScores } from "@/hooks/features/use-realtime-scores";
+import { useTournament } from "@/hooks/tournaments/use-tournaments";
+import { useTournamentFields } from "@/components/features/fields/FieldSelectDropdown";
+import { useWebSocket } from "@/hooks/websocket/use-websocket";
+import { useRealtimeScores } from "@/hooks/websocket/use-realtime-scores";
 import { webSocketService } from "@/lib/websocket";
-import { AudienceDisplaySettings } from "@/lib/types";
+import { AudienceDisplaySettings } from "@/types/types";
 import TeamsDisplay from "../../../../components/features/audience-display/displays/teams-display";
 import ScheduleDisplay, {
   Match,
 } from "../../../../components/features/audience-display/displays/schedule-display";
-import { useTeams } from "@/hooks/api/use-teams";
+import { useTeams } from "@/hooks/teams/use-teams";
 import { apiClient } from "@/lib/api-client";
-import { useInjectTextShadowStyle } from "../../../../hooks/features/use-inject-text-shadow-style";
-import { useAnnouncement } from "../../../../hooks/features/use-announcement";
+import { useInjectTextShadowStyle } from "../../../../hooks/common/use-inject-text-shadow-style";
+import { useAnnouncement } from "../../../../hooks/control-match/use-announcement";
 import { AnnouncementOverlay } from "../../../../components/features/audience-display/overlays/announcement-overlay";
 import { FieldNotFound } from "../../../../components/features/audience-display/states/field-not-found";
 import { LoadingDisplay } from "../../../../components/features/audience-display/states/loading-display";
 import { ConnectionStatus } from "../../../../components/features/audience-display/states/connection-status";
 import { MatchDisplay } from "../../../../components/features/audience-display/displays/match-display";
-import { useMatchesByTournament } from "@/hooks/features/use-matches-by-tournament";
+import { useMatchesByTournament } from "@/hooks/matches/use-matches-by-tournament";
 import { SwissRankingsDisplay } from "../../../../components/features/audience-display/displays/swiss-rankings-display";
 import { formatDateRange, formatTimeMsPad } from '@/lib/utils';
 

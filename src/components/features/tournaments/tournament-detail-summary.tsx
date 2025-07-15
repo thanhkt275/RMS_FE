@@ -17,7 +17,7 @@ import {
   Info
 } from 'lucide-react';
 import { format, formatDistanceToNow, isAfter, isBefore } from 'date-fns';
-import { Tournament } from '@/lib/types/tournament.types';
+import { Tournament } from '@/types/tournament.types';
 
 interface TournamentDetailSummaryProps {
   tournament: Tournament;

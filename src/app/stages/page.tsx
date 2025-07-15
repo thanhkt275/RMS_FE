@@ -4,10 +4,10 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/common/use-auth";
-import { useTournaments } from "@/hooks/api/use-tournaments";
-import { useStage, useDeleteStage, useStagesByTournament } from "@/hooks/api/use-stages";
-import { useMatchesByStage, useDeleteMatch } from "@/hooks/api/use-matches";
-import { useStageReadiness } from "@/hooks/use-stage-advancement";
+import { useTournaments } from "@/hooks/tournaments/use-tournaments";
+import { useStage, useDeleteStage, useStagesByTournament } from "@/hooks/stages/use-stages";
+import { useMatchesByStage, useDeleteMatch } from "@/hooks/matches/use-matches";
+import { useStageReadiness } from "@/hooks/stages/use-stage-advancement";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { UserRole } from "@/lib/types";
+import { UserRole } from "@/types/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   AlertDialog,
@@ -51,8 +51,8 @@ import { toast } from "sonner";
 import { PlusIcon, PencilIcon, TrashIcon, InfoIcon, CalendarIcon, ArrowLeftIcon, ListIcon, ClipboardIcon, BarChart3Icon, AlarmClock, Medal, Crown } from "lucide-react";
 import StageDialog from "./stage-dialog";
 import MatchSchedulerDialog from "./match-scheduler-dialog";
-import EndStageDialog from "@/components/stages/end-stage-dialog";
-import DeleteMatchDialog from "@/components/stages/delete-match-dialog";
+import EndStageDialog from "@/components/features/stages/end-stage-dialog";
+import DeleteMatchDialog from "@/components/features/stages/delete-match-dialog";
 import { MatchService } from "@/services/match-service";
 
 export default function StagesPage() {

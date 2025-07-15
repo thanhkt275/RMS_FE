@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useMatch, useMatchScores } from "@/hooks/api/use-matches";
+import { useMatch, useMatchScores } from "@/hooks/matches/use-matches";
 import { cn } from "@/lib/utils";
-import { MatchStatus } from "@/lib/types";
+import { MatchStatus } from "@/types/types";
 import { format, parseISO } from "date-fns";
-import type { Alliance, TeamAlliance } from "@/lib/types";
+import type { Alliance, TeamAlliance } from "@/types/types";
 
 // Components
 import { Spinner } from "@/components/ui/spinner";

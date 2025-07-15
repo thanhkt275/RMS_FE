@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import UserManagement from '@/components/admin/UserManagement';
-import AuthGuard from '@/components/auth/AuthGuard';
-import { UserRole } from '@/lib/types';
+import UserManagement from '@/components/features/admin/UserManagement';
+import AuthGuard from '@/components/features/auth/AuthGuard';
+import { UserRole } from '@/types/types';
 
 /**
  * Admin User Management Page

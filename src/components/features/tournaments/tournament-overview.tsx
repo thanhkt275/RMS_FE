@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { Trophy, MapPin, Users, Shield, Edit2 } from 'lucide-react';
-import type { Tournament, TournamentStats } from '@/lib/types/tournament.types';
-import { useUpdateTournament } from '@/hooks/api/use-tournament-mutations';
+import type { Tournament, TournamentStats } from '@/types/tournament.types';
+import { useUpdateTournament } from '@/hooks/tournaments/use-tournament-mutations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

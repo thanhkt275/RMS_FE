@@ -15,7 +15,7 @@
  * @version 1.0.0
  */
 
-import { UserRole } from '@/lib/types';
+import { UserRole } from '@/types/types';
 
 /**
  * Route Protection Configuration

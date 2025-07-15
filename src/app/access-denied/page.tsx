@@ -17,7 +17,7 @@
 "use client";
 
 import { useAuth } from '@/hooks/common/use-auth';
-import { UserRole } from '@/lib/types';
+import { UserRole } from '@/types/types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ReactElement } from 'react';

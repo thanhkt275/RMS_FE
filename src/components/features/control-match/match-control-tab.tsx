@@ -14,7 +14,7 @@ import type {
   ScoreData, 
   MatchStateData,
   AnnouncementData 
-} from "@/lib/types";
+} from "@/types/types";
 
 // Define interface for props using proper types
 interface MatchControlTabsProps {

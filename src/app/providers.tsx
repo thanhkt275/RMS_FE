@@ -7,7 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/hooks/common/use-auth";
 import { MatchProvider } from "@/hooks/context/use-match-context";
-import { AuthErrorBoundary } from "@/components/auth/AuthErrorBoundary";
+import { AuthErrorBoundary } from "@/components/features/auth/AuthErrorBoundary";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   // Create a client for React Query

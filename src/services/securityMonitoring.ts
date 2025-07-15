@@ -19,7 +19,7 @@ import {
   ISecurityEvent, 
   SecurityEventType, 
   SecurityEventSeverity 
-} from '@/utils/rbacLogger';
+} from '@/config/rbacLogger';
 
 /**
  * Interface for security monitoring services

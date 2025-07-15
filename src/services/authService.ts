@@ -33,9 +33,9 @@
  * @version 1.0.0
  */
 
-import { User, UserRole } from '@/lib/types';
+import { User, UserRole } from '@/types/types';
 import { apiClient } from '@/lib/api-client';
-import { rbacLogger } from '@/utils/rbacLogger';
+import { rbacLogger } from '@/config/rbacLogger';
 import TokenManager from '@/lib/tokenManager';
 
 // Define ApiClient type locally to avoid circular reference

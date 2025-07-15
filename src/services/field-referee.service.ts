@@ -3,7 +3,7 @@ import type {
   AssignRefereesDto, 
   BatchAssignRefereesDto,
   FieldReferee 
-} from '@/lib/types/referee.types';
+} from '@/types/referee.types';
 import { apiClient } from '@/lib/api-client';
 
 export class FieldRefereeService {

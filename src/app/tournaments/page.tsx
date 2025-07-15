@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/common/use-auth";
-import { useTournaments, useDeleteTournament } from "@/hooks/api/use-tournaments";
+import { useTournaments, useDeleteTournament } from "@/hooks/tournaments/use-tournaments";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { UserRole } from "@/lib/types";
+import { UserRole } from "@/types/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   AlertDialog,

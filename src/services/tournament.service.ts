@@ -1,4 +1,4 @@
-import type { Tournament, UpdateTournamentDto, CreateStageDto } from '@/lib/types/tournament.types';
+import type { Tournament, UpdateTournamentDto, CreateStageDto } from '@/types/tournament.types';
 import { apiClient } from '@/lib/api-client';
 
 export class TournamentService {

@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useState } from 'react';
-import { useTournamentManagement } from '@/hooks/api/use-tournament-management';
+import { useTournamentManagement } from '@/hooks/tournaments/use-tournament-management';
 import { TournamentHeader } from '@/components/features/tournaments/tournament-header';
 import { TournamentOverview } from '@/components/features/tournaments/tournament-overview';
 import { StagesSection } from '@/components/features/tournaments/stages-section';

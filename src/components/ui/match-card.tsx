@@ -5,9 +5,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Match, MatchStatus } from "@/lib/types";
+import { Match, MatchStatus } from "@/types/types";
 import { formatDate, getMatchStatusColor } from "@/lib/utils";
-import { useUpdateMatchScores } from "@/hooks/api/use-matches";
+import { useUpdateMatchScores } from "@/hooks/matches/use-matches";
 
 interface MatchCardProps {
   match: Match;

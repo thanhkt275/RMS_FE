@@ -12,8 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CalendarIcon, Save, X, Loader2, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { Tournament } from '@/lib/types/tournament.types';
-import { useUpdateTournament } from '@/hooks/api/use-tournament-mutations';
+import { Tournament } from '@/types/tournament.types';
+import { useUpdateTournament } from '@/hooks/tournaments/use-tournament-mutations';
 
 const tournamentSchema = z.object({
   name: z.string().min(1, 'Tournament name is required').max(100, 'Name must be less than 100 characters'),

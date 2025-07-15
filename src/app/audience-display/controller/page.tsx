@@ -7,10 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useScheduledMatches, useActiveMatch } from "@/hooks/features/use-match-control";
-import { useAudienceDisplaySettings, useUpdateAudienceDisplay } from "@/hooks/features/use-audience-display";
+import { useScheduledMatches, useActiveMatch } from "@/hooks/control-match/use-match-control";
+import { useAudienceDisplaySettings, useUpdateAudienceDisplay } from "@/hooks/audience-display/use-audience-display";
 import { toast } from "sonner";
-import type { DisplayMode } from "@/lib/types";
+import type { DisplayMode } from "@/types/types";
 
 export default function AudienceDisplayController() {
   const [displayMode, setDisplayMode] = useState<string>("intro");

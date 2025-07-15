@@ -17,9 +17,9 @@ import {
   CheckCircle2,
   Info
 } from 'lucide-react';
-import { Field } from '@/lib/types/tournament.types';
-import { AvailableReferee } from '@/lib/types/referee.types';
-import { useBatchAssignReferees } from '@/hooks/api/use-field-referees';
+import { Field } from '@/types/tournament.types';
+import { AvailableReferee } from '@/types/referee.types';
+import { useBatchAssignReferees } from '@/hooks/tournaments/use-field-referees';
 
 interface BulkRefereeAssignDialogProps {
   open: boolean;

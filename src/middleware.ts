@@ -20,9 +20,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
-import { UserRole } from '@/lib/types';
+import { UserRole } from '@/types/types';
 import { AUTH_CONFIG } from '@/config/rbac';
-import { PERMISSIONS, PermissionService, type IPermissionDefinition } from '@/constants/permissions';
+import { PERMISSIONS, PermissionService, type IPermissionDefinition } from '@/config/permissions';
 
 /**
  * Interface for JWT token verification

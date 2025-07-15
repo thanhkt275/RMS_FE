@@ -3,9 +3,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { useWebSocket } from '@/hooks/common/use-websocket';
+import { useWebSocket } from '@/hooks/websocket/use-websocket';
 import websocketService from '@/lib/websocket';
-import { MatchStatus } from '@/lib/types';
+import { MatchStatus } from '@/types/types';
 
 interface TimerControlProps {
   matchId: string;

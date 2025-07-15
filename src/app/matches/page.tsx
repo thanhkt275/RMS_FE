@@ -7,11 +7,11 @@ import {
   useMatches,
   useAllMatchScores,
   useDeleteMatch,
-} from "@/hooks/api/use-matches";
-import { MatchStatus, Alliance } from "@/lib/types";
+} from "@/hooks/matches/use-matches";
+import { MatchStatus, Alliance } from "@/types/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import DeleteMatchDialog from "@/components/stages/delete-match-dialog";
+import DeleteMatchDialog from "@/components/features/stages/delete-match-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
