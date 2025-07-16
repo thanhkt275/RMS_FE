@@ -37,8 +37,8 @@ export function FieldsSection({ tournamentId, fields }: FieldsSectionProps) {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Tournament Fields</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-2xl font-bold text-slate-100">Tournament Fields</h2>
+          <p className="text-slate-400 mt-1">
             Manage fields and assign referees (3-4 referees per field, 1 head referee)
           </p>
         </div>
@@ -47,11 +47,15 @@ export function FieldsSection({ tournamentId, fields }: FieldsSectionProps) {
             variant="outline"
             onClick={() => setShowBulkAssign(true)}
             disabled={!availableReferees?.length || isRefereesLoading}
+            className="text-slate-200 border-slate-600 hover:bg-slate-700 hover:text-white"
           >
             <Users className="h-4 w-4 mr-2" />
             Bulk Assign
           </Button>
-          <Button onClick={() => {/* TODO: Add field creation */}}>
+          <Button 
+            onClick={() => {/* TODO: Add field creation */}}
+            className="text-slate-200 bg-gray-800 hover:bg-slate-700 hover:text-white border-slate-600"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Add Field
           </Button>
@@ -72,15 +76,18 @@ export function FieldsSection({ tournamentId, fields }: FieldsSectionProps) {
       
       {/* Empty State */}
       {fields.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-gray-400 mb-4">
+        <div className="text-center py-12 bg-gray-900 rounded-lg">
+          <div className="text-slate-600 mb-4">
             <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No fields configured</h3>
-          <p className="text-gray-500 mb-4">Get started by adding your first tournament field.</p>
-          <Button onClick={() => {/* TODO: Add field creation */}}>
+          <h3 className="text-lg font-medium text-slate-100 mb-2">No fields configured</h3>
+          <p className="text-slate-400 mb-4">Get started by adding your first tournament field.</p>
+          <Button 
+            onClick={() => {/* TODO: Add field creation */}}
+            className="text-slate-200 bg-gray-800 hover:bg-slate-700 hover:text-white border-slate-600"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Create First Field
           </Button>

@@ -74,6 +74,11 @@ export const ROUTE_PROTECTION_CONFIG = {
     '/reports': [UserRole.ADMIN, UserRole.HEAD_REFEREE],
     '/rankings': [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER],
   },
+
+  // Score Config Admin (NEW)
+  scoreConfig: {
+    '/score-config': [UserRole.ADMIN],
+  },
 } as const;
 
 /**
@@ -86,6 +91,7 @@ export const PROTECTED_ROUTES: Record<string, readonly UserRole[]> = {
   ...ROUTE_PROTECTION_CONFIG.referee,
   ...ROUTE_PROTECTION_CONFIG.teams,
   ...ROUTE_PROTECTION_CONFIG.analytics,
+  ...ROUTE_PROTECTION_CONFIG.scoreConfig,
 };
 
 /**

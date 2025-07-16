@@ -18,22 +18,22 @@ interface StagesSectionProps {
 
 const stageStatusConfig = {
   [StageStatus.PENDING]: {
-    color: 'bg-gray-100 text-gray-800',
+    color: 'bg-gray-700 text-gray-200',
     icon: Calendar,
     label: 'Pending'
   },
   [StageStatus.ACTIVE]: {
-    color: 'bg-blue-100 text-blue-800',
+    color: 'bg-blue-800 text-blue-100',
     icon: Play,
     label: 'Active'
   },
   [StageStatus.PAUSED]: {
-    color: 'bg-yellow-100 text-yellow-800',
+    color: 'bg-yellow-800 text-yellow-100',
     icon: Pause,
     label: 'Paused'
   },
   [StageStatus.COMPLETED]: {
-    color: 'bg-green-100 text-green-800',
+    color: 'bg-green-800 text-green-100',
     icon: CheckCircle,
     label: 'Completed'
   }
@@ -63,8 +63,8 @@ export function StagesSection({ tournamentId, stages, detailedStages }: StagesSe
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Tournament Stages</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-2xl font-bold text-gray-900">Tournament Stages</h2>
+          <p className="text-gray-700 mt-1">
             Manage tournament stages and track competition progress
           </p>
         </div>
@@ -86,7 +86,7 @@ export function StagesSection({ tournamentId, stages, detailedStages }: StagesSe
               <Card 
                 key={stage.id}
                 className={cn(
-                  "cursor-pointer transition-all duration-200 hover:shadow-md",
+                  "cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20 bg-gray-800 border-gray-700",
                   selectedStage?.id === stage.id && "ring-2 ring-blue-500"
                 )}
                 onClick={() => setSelectedStage(stage)}
@@ -94,8 +94,8 @@ export function StagesSection({ tournamentId, stages, detailedStages }: StagesSe
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <CardTitle className="text-lg line-clamp-1">{stage.name}</CardTitle>
-                      <p className="text-sm text-gray-600 mt-1">
+                      <CardTitle className="text-lg line-clamp-1 text-slate-100">{stage.name}</CardTitle>
+                      <p className="text-sm text-slate-400 mt-1">
                         {formatDateRange(stage.startDate, stage.endDate)}
                       </p>
                     </div>
@@ -109,7 +109,7 @@ export function StagesSection({ tournamentId, stages, detailedStages }: StagesSe
                 <CardContent className="space-y-4">
                   {/* Stage Description */}
                   {stage.description && (
-                    <p className="text-sm text-gray-700 line-clamp-2">
+                    <p className="text-sm text-slate-300 line-clamp-2">
                       {stage.description}
                     </p>
                   )}
@@ -117,14 +117,14 @@ export function StagesSection({ tournamentId, stages, detailedStages }: StagesSe
                   {/* Statistics */}
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center gap-2">
-                      <Trophy className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-600">
+                      <Trophy className="h-4 w-4 text-slate-500" />
+                      <span className="text-slate-400">
                         {stage._count?.matches || 0} matches
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-600">
+                      <Users className="h-4 w-4 text-slate-500" />
+                      <span className="text-slate-400">
                         {stage.maxTeams || 'Unlimited'} teams
                       </span>
                     </div>
@@ -134,8 +134,8 @@ export function StagesSection({ tournamentId, stages, detailedStages }: StagesSe
                   {stage.status === StageStatus.ACTIVE && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Progress</span>
-                        <span className="text-gray-900 font-medium">
+                        <span className="text-slate-400">Progress</span>
+                        <span className="text-slate-100 font-medium">
                           {Math.round(progress)}%
                         </span>
                       </div>
@@ -146,23 +146,23 @@ export function StagesSection({ tournamentId, stages, detailedStages }: StagesSe
                   {/* Stage-specific badges */}
                   <div className="flex flex-wrap gap-1">
                     {stage.isElimination && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs text-slate-300 border-slate-600">
                         Elimination
                       </Badge>
                     )}
                     {stage.advancementRules && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs text-slate-300 border-slate-600">
                         Advancement Rules
                       </Badge>
                     )}
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2 pt-2 border-t">
+                  <div className="flex gap-2 pt-2 border-t border-slate-700">
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="flex-1"
+                      className="flex-1 text-slate-300 border-slate-600 hover:bg-slate-700 hover:text-white"
                       onClick={(e) => {
                         e.stopPropagation();
                         // Handle view matches
@@ -173,6 +173,7 @@ export function StagesSection({ tournamentId, stages, detailedStages }: StagesSe
                     <Button 
                       size="sm" 
                       variant="outline"
+                      className="text-slate-300 border-slate-600 hover:bg-slate-700 hover:text-white"
                       onClick={(e) => {
                         e.stopPropagation();
                         // Handle edit stage
@@ -187,12 +188,12 @@ export function StagesSection({ tournamentId, stages, detailedStages }: StagesSe
           })}
         </div>
       ) : (
-        <Card className="p-8 text-center">
+        <Card className="p-8 text-center bg-gray-800 border-gray-700">
           <div className="flex flex-col items-center space-y-4">
-            <Trophy className="h-12 w-12 text-gray-400" />
+            <Trophy className="h-12 w-12 text-slate-600" />
             <div>
-              <h3 className="text-lg font-medium text-gray-900">No stages yet</h3>
-              <p className="text-gray-600 mt-1">
+              <h3 className="text-lg font-medium text-slate-100">No stages yet</h3>
+              <p className="text-slate-400 mt-1">
                 Create your first tournament stage to get started
               </p>
             </div>

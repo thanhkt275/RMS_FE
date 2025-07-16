@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { format, formatDistanceToNow, isAfter, isBefore } from 'date-fns';
 import { Tournament } from '@/types/tournament.types';
+import { useScoreConfigByTournamentId } from '@/hooks/score-config/useScoreConfigs';
 
 interface TournamentDetailSummaryProps {
   tournament: Tournament;
@@ -77,6 +78,8 @@ export function TournamentDetailSummary({
     return `${Math.ceil(days / 30)} month${Math.ceil(days / 30) > 1 ? 's' : ''}`;
   };
 
+  const { data: scoreConfig, isLoading: scoreConfigLoading } = useScoreConfigByTournamentId(tournament.id);
+
   return (
     <Card>
       <CardHeader>
@@ -116,31 +119,49 @@ export function TournamentDetailSummary({
             </p>
           </div>
         )}
-        
+        {/* Score Config */}
+        <div className="bg-gray-900 rounded-lg p-4">
+          <h3 className="font-semibold flex items-center gap-2 text-slate-100">
+            <Trophy className="h-4 w-4 text-yellow-400" />
+            Score Configuration
+          </h3>
+          {scoreConfigLoading ? (
+            <p className="text-slate-300 text-sm">Loading score config...</p>
+          ) : scoreConfig ? (
+            <div className="space-y-1">
+              <div className="text-base font-medium text-white">{scoreConfig.name}</div>
+              {scoreConfig.description && (
+                <div className="text-sm text-slate-300">{scoreConfig.description}</div>
+              )}
+            </div>
+          ) : (
+            <p className="text-slate-300 text-sm">No score config assigned to this tournament.</p>
+          )}
+        </div>
         {/* Key Information Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Schedule */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
+          <div className="space-y-4 bg-gray-900 rounded-lg p-4">
+            <h3 className="font-semibold flex items-center gap-2 text-slate-100">
+              <Calendar className="h-4 w-4 text-blue-400" />
               Schedule
             </h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Start Date</span>
-                <span className="text-sm font-medium">
+                <span className="text-sm text-slate-300">Start Date</span>
+                <span className="text-sm font-medium text-white">
                   {format(startDate, 'PPP')}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">End Date</span>
-                <span className="text-sm font-medium">
+                <span className="text-sm text-slate-300">End Date</span>
+                <span className="text-sm font-medium text-white">
                   {format(endDate, 'PPP')}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Duration</span>
-                <Badge variant="outline" className="text-xs">
+                <span className="text-sm text-slate-300">Duration</span>
+                <Badge variant="outline" className="text-xs text-slate-100 border-slate-400">
                   {getDurationText()}
                 </Badge>
               </div>
@@ -148,38 +169,36 @@ export function TournamentDetailSummary({
           </div>
           
           {/* Tournament Details */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <Info className="h-4 w-4" />
+          <div className="space-y-4 bg-gray-900 rounded-lg p-4">
+            <h3 className="font-semibold flex items-center gap-2 text-slate-100">
+              <Info className="h-4 w-4 text-cyan-300" />
               Details
             </h3>
             <div className="space-y-3">
               {tournament.location && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
+                  <span className="text-sm text-slate-300 flex items-center gap-1">
+                    <MapPin className="h-3 w-3 text-slate-200" />
                     Location
                   </span>
-                  <span className="text-sm font-medium text-right max-w-[200px] truncate">
+                  <span className="text-sm font-medium text-right max-w-[200px] truncate text-white">
                     {tournament.location}
                   </span>
                 </div>
               )}
-              
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 flex items-center gap-1">
-                  <User className="h-3 w-3" />
+                <span className="text-sm text-slate-300 flex items-center gap-1">
+                  <User className="h-3 w-3 text-slate-200" />
                   Administrator
                 </span>
                 <div className="text-right">
-                  <p className="text-sm font-medium">{tournament.admin.username}</p>
-                  <p className="text-xs text-gray-500">{tournament.admin.email}</p>
+                  <p className="text-sm font-medium text-white">{tournament.admin.username}</p>
+                  <p className="text-xs text-slate-400">{tournament.admin.email}</p>
                 </div>
               </div>
-              
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Competition Fields</span>
-                <Badge variant="secondary">
+                <span className="text-sm text-slate-300">Competition Fields</span>
+                <Badge variant="secondary" className="text-slate-100 bg-slate-700 border-slate-500">
                   {tournament.numberOfFields} field{tournament.numberOfFields !== 1 ? 's' : ''}
                 </Badge>
               </div>

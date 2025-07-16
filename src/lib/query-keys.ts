@@ -78,3 +78,8 @@ export const QueryKeys = {
     byTournament: (tournamentId: string) => ['tournament-stats', tournamentId],
   },
 };
+
+export const scoreConfigKeys = {
+  all: ['score-configs'] as const,
+  detail: (id: string) => [...scoreConfigKeys.all, id] as const,
+};
