@@ -45,9 +45,9 @@ const ScoreConfigPage = () => {
   const payload = {
     name: data.name,
     description: data.description,
-    scoreElements: data.elements,
-    bonusConditions: (data.bonusPenalties || []).filter((x: any) => x.type === 'bonus'),
-    penaltyConditions: (data.bonusPenalties || []).filter((x: any) => x.type === 'penalty'),
+    scoreElements: data.scoreElements,
+    bonusConditions: data.bonusConditions,
+    penaltyConditions: data.penaltyConditions,
   };
   if (selectedConfigForEdit) {
     update.mutate({ id: (selectedConfigForEdit as any).id, data: payload }, {
