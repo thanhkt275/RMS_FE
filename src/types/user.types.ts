@@ -19,12 +19,13 @@ export enum UserRole {
 }
 
 export interface User {
+  name: string;
   id: string;
   username: string;
   email: string | null;
   role: UserRole;
   phoneNumber: string | null;
-  gender: boolean | null;
+  gender: Gender;
   DateOfBirth: Date | null;
   avatar: string | null;
   isActive: boolean;
@@ -37,20 +38,22 @@ export interface User {
 }
 
 export interface CreateUserRequest {
+  name: string;
   username: string;
   password: string;
   email?: string;
   role: UserRole;
   phoneNumber?: string;
-  gender?: boolean;
+  gender?: Gender;
   DateOfBirth?: Date;
 }
 
 export interface UpdateUserRequest {
+  name?:string;
   username?: string;
   email?: string;
   phoneNumber?: string;
-  gender?: boolean;
+  gender?: Gender;
   DateOfBirth?: Date;
   avatar?: string;
   isActive?: boolean;

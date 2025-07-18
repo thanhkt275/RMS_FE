@@ -1,28 +1,33 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { User, UserRole, CreateUserRequest, UpdateUserRequest } from '@/types/user.types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
+import React, { useState, useEffect } from "react";
+import {
+  User,
+  UserRole,
+  CreateUserRequest,
+  UpdateUserRequest,
+} from "@/types/user.types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Eye, EyeOff } from 'lucide-react';
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Gender } from "@/types/user.types";
 
 // Types
 interface UserFormProps {
@@ -34,6 +39,7 @@ interface UserFormProps {
 }
 
 interface FormData {
+  name: string;
   username: string;
   email: string;
   password: string;
@@ -41,8 +47,8 @@ interface FormData {
   role: UserRole;
   isActive: boolean;
   phoneNumber: string;
-  gender: boolean | null;
-  DateOfBirth: Date | null;
+  gender: Gender | null; // Fixed: Changed from Gender to Gender | null
+  DateOfBirth: string | null;
 }
 
 interface FormErrors {
@@ -56,12 +62,12 @@ interface FormErrors {
 
 // Constants
 const ROLE_OPTIONS = [
-  { value: UserRole.ADMIN, label: 'Admin' },
-  { value: UserRole.HEAD_REFEREE, label: 'Head Referee' },
-  { value: UserRole.ALLIANCE_REFEREE, label: 'Alliance Referee' },
-  { value: UserRole.TEAM_LEADER, label: 'Team Leader' },
-  { value: UserRole.TEAM_MEMBER, label: 'Team Member' },
-  { value: UserRole.COMMON, label: 'Common' },
+  { value: UserRole.ADMIN, label: "Admin" },
+  { value: UserRole.HEAD_REFEREE, label: "Head Referee" },
+  { value: UserRole.ALLIANCE_REFEREE, label: "Alliance Referee" },
+  { value: UserRole.TEAM_LEADER, label: "Team Leader" },
+  { value: UserRole.TEAM_MEMBER, label: "Team Member" },
+  { value: UserRole.COMMON, label: "Common" },
 ];
 
 // Utility functions
@@ -73,19 +79,19 @@ const validateEmail = (email: string): boolean => {
 const validatePassword = (password: string): string[] => {
   const errors: string[] = [];
   if (password.length < 8) {
-    errors.push('Password must be at least 8 characters long');
+    errors.push("Password must be at least 8 characters long");
   }
   if (!/(?=.*[a-z])/.test(password)) {
-    errors.push('Password must contain at least one lowercase letter');
+    errors.push("Password must contain at least one lowercase letter");
   }
   if (!/(?=.*[A-Z])/.test(password)) {
-    errors.push('Password must contain at least one uppercase letter');
+    errors.push("Password must contain at least one uppercase letter");
   }
   if (!/(?=.*\d)/.test(password)) {
-    errors.push('Password must contain at least one number');
+    errors.push("Password must contain at least one number");
   }
   if (!/(?=.*[@$!%*?&])/.test(password)) {
-    errors.push('Password must contain at least one special character');
+    errors.push("Password must contain at least one special character");
   }
   return errors;
 };
@@ -129,11 +135,11 @@ const PasswordField: React.FC<{
       <div className="relative">
         <Input
           id={id}
-          type={showPassword ? 'text' : 'password'}
+          type={showPassword ? "text" : "password"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className={error ? 'border-red-500' : ''}
+          className={error ? "border-red-500" : ""}
         />
         <Button
           type="button"
@@ -165,13 +171,14 @@ export const UserForm: React.FC<UserFormProps> = ({
 
   // Form state
   const [formData, setFormData] = useState<FormData>({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    name: "",
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
     role: UserRole.COMMON,
     isActive: true,
-    phoneNumber: '',
+    phoneNumber: "",
     gender: null,
     DateOfBirth: null,
   });
@@ -183,25 +190,29 @@ export const UserForm: React.FC<UserFormProps> = ({
   useEffect(() => {
     if (user) {
       setFormData({
+        name: user.name,
         username: user.username,
-        email: user.email || '',
-        password: '',
-        confirmPassword: '',
+        email: user.email || "",
+        password: "",
+        confirmPassword: "",
         role: user.role,
         isActive: user.isActive,
-        phoneNumber: user.phoneNumber || '',
+        phoneNumber: user.phoneNumber || "",
         gender: user.gender ?? null,
-        DateOfBirth: user.DateOfBirth ?? null,
+        DateOfBirth: user.DateOfBirth
+          ? new Date(user.DateOfBirth).toISOString().split("T")[0]
+          : null,
       });
     } else {
       setFormData({
-        username: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
+        name: "",
+        username: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
         role: UserRole.COMMON,
         isActive: true,
-        phoneNumber: '',
+        phoneNumber: "",
         gender: null,
         DateOfBirth: null,
       });
@@ -216,24 +227,25 @@ export const UserForm: React.FC<UserFormProps> = ({
 
     // Username validation
     if (!formData.username.trim()) {
-      newErrors.username = 'Username is required';
+      newErrors.username = "Username is required";
     } else if (formData.username.length < 3) {
-      newErrors.username = 'Username must be at least 3 characters long';
+      newErrors.username = "Username must be at least 3 characters long";
     } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-      newErrors.username = 'Username can only contain letters, numbers, and underscores';
+      newErrors.username =
+        "Username can only contain letters, numbers, and underscores";
     }
 
     // Email validation
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
     } else if (!validateEmail(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Please enter a valid email address";
     }
 
     // Password validation (only for create mode or when password is provided)
     if (!isEditMode || formData.password) {
       if (!formData.password) {
-        newErrors.password = 'Password is required';
+        newErrors.password = "Password is required";
       } else {
         const passwordErrors = validatePassword(formData.password);
         if (passwordErrors.length > 0) {
@@ -243,13 +255,13 @@ export const UserForm: React.FC<UserFormProps> = ({
 
       // Confirm password validation
       if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = 'Passwords do not match';
+        newErrors.confirmPassword = "Passwords do not match";
       }
     }
 
     // Role validation
     if (!formData.role) {
-      newErrors.role = 'Role is required';
+      newErrors.role = "Role is required";
     }
 
     setErrors(newErrors);
@@ -258,9 +270,9 @@ export const UserForm: React.FC<UserFormProps> = ({
 
   // Handlers
   const handleInputChange = (field: keyof FormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field as keyof FormErrors]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
 
@@ -278,26 +290,34 @@ export const UserForm: React.FC<UserFormProps> = ({
           email: formData.email,
           phoneNumber: formData.phoneNumber,
           gender: formData.gender ?? undefined,
-          DateOfBirth: formData.DateOfBirth ?? undefined,
+          DateOfBirth: formData.DateOfBirth
+            ? new Date(formData.DateOfBirth)
+            : undefined,
           isActive: formData.isActive,
         };
         await onSubmit(updateData);
       } else {
         const createData: CreateUserRequest = {
+          name: formData.username,
           username: formData.username,
           email: formData.email,
           password: formData.password,
           role: formData.role,
           phoneNumber: formData.phoneNumber,
           gender: formData.gender ?? undefined,
-          DateOfBirth: formData.DateOfBirth ?? undefined,
+          DateOfBirth: formData.DateOfBirth
+            ? new Date(formData.DateOfBirth)
+            : undefined,
         };
         await onSubmit(createData);
       }
       onClose();
     } catch (error) {
       setErrors({
-        general: error instanceof Error ? error.message : 'An error occurred while saving the user',
+        general:
+          error instanceof Error
+            ? error.message
+            : "An error occurred while saving the user",
       });
     }
   };
@@ -313,7 +333,7 @@ export const UserForm: React.FC<UserFormProps> = ({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isEditMode ? 'Edit User' : 'Create New User'}
+            {isEditMode ? "Edit User" : "Create New User"}
           </DialogTitle>
         </DialogHeader>
 
@@ -329,13 +349,20 @@ export const UserForm: React.FC<UserFormProps> = ({
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField id="username" label="Username" error={errors.username} required>
+              <FormField
+                id="username"
+                label="Username"
+                error={errors.username}
+                required
+              >
                 <Input
                   id="username"
                   value={formData.username}
-                  onChange={(e) => handleInputChange('username', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("username", e.target.value)
+                  }
                   placeholder="Enter username"
-                  className={errors.username ? 'border-red-500' : ''}
+                  className={errors.username ? "border-red-500" : ""}
                 />
               </FormField>
               <FormField id="email" label="Email" error={errors.email} required>
@@ -343,27 +370,31 @@ export const UserForm: React.FC<UserFormProps> = ({
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
                   placeholder="Enter email address"
-                  className={errors.email ? 'border-red-500' : ''}
+                  className={errors.email ? "border-red-500" : ""}
                 />
               </FormField>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <PasswordField
                 id="password"
-                label={isEditMode ? 'New Password (optional)' : 'Password'}
+                label={isEditMode ? "New Password (optional)" : "Password"}
                 value={formData.password}
-                onChange={(value) => handleInputChange('password', value)}
+                onChange={(value) => handleInputChange("password", value)}
                 error={errors.password}
-                placeholder={isEditMode ? 'Leave blank to keep current' : 'Enter password'}
+                placeholder={
+                  isEditMode ? "Leave blank to keep current" : "Enter password"
+                }
                 required={!isEditMode}
               />
               <PasswordField
                 id="confirmPassword"
                 label="Confirm Password"
                 value={formData.confirmPassword}
-                onChange={(value) => handleInputChange('confirmPassword', value)}
+                onChange={(value) =>
+                  handleInputChange("confirmPassword", value)
+                }
                 error={errors.confirmPassword}
                 placeholder="Confirm password"
                 required={!isEditMode || !!formData.password}
@@ -374,19 +405,31 @@ export const UserForm: React.FC<UserFormProps> = ({
                 <Input
                   id="phoneNumber"
                   value={formData.phoneNumber}
-                  onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("phoneNumber", e.target.value)
+                  }
                   placeholder="Enter phone number"
                 />
               </FormField>
               <FormField id="gender" label="Gender">
-                <Select value={formData.gender === null ? 'not-specified' : formData.gender ? 'male' : 'female'} onValueChange={(value) => handleInputChange('gender', value === 'not-specified' ? null : value === 'male') }>
+                {/* FIXED: Gender Select Component */}
+                <Select
+                  value={formData.gender || "not-specified"}
+                  onValueChange={(value) =>
+                    handleInputChange(
+                      "gender",
+                      value === "not-specified" ? null : (value as Gender)
+                    )
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="not-specified">Not specified</SelectItem>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="MALE">Male</SelectItem>
+                    <SelectItem value="FEMALE">Female</SelectItem>
+                    <SelectItem value="OTHER">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </FormField>
@@ -395,8 +438,10 @@ export const UserForm: React.FC<UserFormProps> = ({
               <Input
                 id="DateOfBirth"
                 type="date"
-                value={formData.DateOfBirth ? new Date(formData.DateOfBirth).toISOString().split('T')[0] : ''}
-                onChange={(e) => handleInputChange('DateOfBirth', e.target.value ? new Date(e.target.value) : null)}
+                value={formData.DateOfBirth || ""}
+                onChange={(e) =>
+                  handleInputChange("DateOfBirth", e.target.value || null)
+                }
               />
             </FormField>
           </div>
@@ -406,8 +451,15 @@ export const UserForm: React.FC<UserFormProps> = ({
             <h3 className="text-lg font-medium">Role and Status</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField id="role" label="Role" error={errors.role} required>
-                <Select value={formData.role} onValueChange={(value) => handleInputChange('role', value as UserRole)}>
-                  <SelectTrigger className={errors.role ? 'border-red-500' : ''}>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value) =>
+                    handleInputChange("role", value as UserRole)
+                  }
+                >
+                  <SelectTrigger
+                    className={errors.role ? "border-red-500" : ""}
+                  >
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -425,10 +477,12 @@ export const UserForm: React.FC<UserFormProps> = ({
                   <Switch
                     id="isActive"
                     checked={formData.isActive}
-                    onCheckedChange={(checked) => handleInputChange('isActive', checked)}
+                    onCheckedChange={(checked) =>
+                      handleInputChange("isActive", checked)
+                    }
                   />
                   <Label htmlFor="isActive" className="text-sm">
-                    {formData.isActive ? 'Active' : 'Inactive'}
+                    {formData.isActive ? "Active" : "Inactive"}
                   </Label>
                 </div>
               </div>
@@ -445,7 +499,11 @@ export const UserForm: React.FC<UserFormProps> = ({
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : isEditMode ? 'Update User' : 'Create User'}
+              {loading
+                ? "Saving..."
+                : isEditMode
+                ? "Update User"
+                : "Create User"}
             </Button>
           </DialogFooter>
         </form>
