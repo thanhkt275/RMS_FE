@@ -43,10 +43,11 @@ export interface CreateUserRequest {
 export interface UpdateUserRequest {
   username?: string;
   email?: string;
+  password?: string;
+  role?: UserRole;
   phoneNumber?: string;
   gender?: boolean;
   DateOfBirth?: Date;
-  avatar?: string;
   isActive?: boolean;
 }
 

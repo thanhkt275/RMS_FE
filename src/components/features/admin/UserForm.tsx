@@ -5,7 +5,7 @@ import { User, UserRole, CreateUserRequest, UpdateUserRequest } from '@/types/us
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+
 import { Switch } from '@/components/ui/switch';
 import {
   Select,
@@ -273,14 +273,19 @@ export const UserForm: React.FC<UserFormProps> = ({
     try {
       setErrors({});
       if (isEditMode) {
+        // Only include email if it was changed from the original user value
         const updateData: UpdateUserRequest = {
           username: formData.username,
-          email: formData.email,
+          role: formData.role, 
           phoneNumber: formData.phoneNumber,
           gender: formData.gender ?? undefined,
           DateOfBirth: formData.DateOfBirth ?? undefined,
           isActive: formData.isActive,
+          ...(formData.password && { password: formData.password }),
         };
+        if (user && formData.email !== (user.email || '')) {
+          updateData.email = formData.email;
+        }
         await onSubmit(updateData);
       } else {
         const createData: CreateUserRequest = {
