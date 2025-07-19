@@ -35,7 +35,9 @@ export function useTeamsMutations() {
         })
       );
     },
-    onError: (error: Error) => {},
+    onError: (error: Error) => {
+      toast.error(`Failed to create team: ${error.message}`);
+    },
   });
 
   const updateTeam = useMutation({
@@ -53,6 +55,9 @@ export function useTeamsMutations() {
           queryKey: QueryKeys.teams.byTournament(data.tournamentId),
         });
       }
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update team: ${error.message}`);
     },
   });
 

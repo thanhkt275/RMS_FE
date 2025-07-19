@@ -17,7 +17,7 @@ export interface TeamMember {
   id: string;
   name: string;
   gender?: Gender | null;
-  phone?: string;
+  phoneNumber?: string;
   email?: string;
   province: string;
   ward: string;

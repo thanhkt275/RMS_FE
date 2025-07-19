@@ -59,7 +59,7 @@ export interface IAuthCredentials {
 export interface IRegistrationData extends IAuthCredentials {
   readonly email: string;
   readonly name: string;
-  readonly phone: string;
+  readonly phoneNumber: string;
   readonly role?: UserRole; // For admin-created accounts
 }
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useParams, useRouter } from "next/navigation";
+import { useForm, useFieldArray, useFormState } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
@@ -35,14 +35,14 @@ import { useTeamsMutations } from "@/hooks/api/use-teams";
 
 const TeamMemberSchema = z.object({
   id: z.string().optional(),
-  name: z.string().min(11, "Full name must be at least 11 characters"),
+  name: z.string().min(1, "Full name is required"),
   gender: z
     .nativeEnum(Gender, {
       errorMap: () => ({ message: "Invalid gender" }),
     })
     .nullable()
     .optional(),
-  phone: z.string().optional(),
+  phoneNumber: z.string().optional(),
   email: z
     .string()
     .optional()
@@ -83,6 +83,7 @@ export default function TeamForm({
 }: {
   defaultValues?: FormValues;
 }) {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const params = useParams();
   const { createTeam, updateTeam } = useTeamsMutations();
@@ -97,7 +98,7 @@ export default function TeamForm({
         {
           name: "",
           gender: null,
-          phone: "",
+          phoneNumber: "",
           email: "",
           province: "",
           ward: "",
@@ -114,12 +115,12 @@ export default function TeamForm({
     name: "teamMembers",
     control: form.control,
   });
+  const { dirtyFields } = useFormState({ control: form.control });
 
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     try {
       if (isEditMode && defaultValues?.id) {
-        const dirtyFields = form.formState.dirtyFields;
         const payload: any = {
           id: defaultValues.id,
         };
@@ -158,6 +159,7 @@ export default function TeamForm({
         if (dirtyMembers.length > 0) {
           payload.teamMembers = dirtyMembers;
         }
+        console.log("Submitting update with payload:", payload);
 
         await updateTeam.mutateAsync(payload);
       } else {
@@ -167,6 +169,7 @@ export default function TeamForm({
           referralSource: data.referralSource,
           teamMembers: data.teamMembers || [],
         });
+        router.push("/tournaments");
       }
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -279,7 +282,7 @@ export default function TeamForm({
 
                         <FormField
                           control={form.control}
-                          name={`teamMembers.${index}.phone`}
+                          name={`teamMembers.${index}.phoneNumber`}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Phone Number</FormLabel>
@@ -371,7 +374,7 @@ export default function TeamForm({
                   append({
                     name: "",
                     gender: null,
-                    phone: "",
+                    phoneNumber: "",
                     email: "",
                     province: "",
                     ward: "",

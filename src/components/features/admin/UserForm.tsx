@@ -48,7 +48,7 @@ interface FormData {
   isActive: boolean;
   phoneNumber: string;
   gender: Gender | null; // Fixed: Changed from Gender to Gender | null
-  DateOfBirth: string | null;
+  dateOfBirth: string | null;
 }
 
 interface FormErrors {
@@ -180,7 +180,7 @@ export const UserForm: React.FC<UserFormProps> = ({
     isActive: true,
     phoneNumber: "",
     gender: null,
-    DateOfBirth: null,
+    dateOfBirth: null,
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -199,8 +199,8 @@ export const UserForm: React.FC<UserFormProps> = ({
         isActive: user.isActive,
         phoneNumber: user.phoneNumber || "",
         gender: user.gender ?? null,
-        DateOfBirth: user.DateOfBirth
-          ? new Date(user.DateOfBirth).toISOString().split("T")[0]
+        dateOfBirth: user.dateOfBirth
+          ? new Date(user.dateOfBirth).toISOString().split("T")[0]
           : null,
       });
     } else {
@@ -214,7 +214,7 @@ export const UserForm: React.FC<UserFormProps> = ({
         isActive: true,
         phoneNumber: "",
         gender: null,
-        DateOfBirth: null,
+        dateOfBirth: null,
       });
     }
     setErrors({});
@@ -285,16 +285,21 @@ export const UserForm: React.FC<UserFormProps> = ({
     try {
       setErrors({});
       if (isEditMode) {
+        // Only include email if it was changed from the original user value
         const updateData: UpdateUserRequest = {
           username: formData.username,
-          email: formData.email,
+          role: formData.role,
           phoneNumber: formData.phoneNumber,
           gender: formData.gender ?? undefined,
-          DateOfBirth: formData.DateOfBirth
-            ? new Date(formData.DateOfBirth)
+          dateOfBirth: formData.dateOfBirth
+            ? new Date(formData.dateOfBirth)
             : undefined,
           isActive: formData.isActive,
+          ...(formData.password && { password: formData.password }),
         };
+        if (user && formData.email !== (user.email || "")) {
+          updateData.email = formData.email;
+        }
         await onSubmit(updateData);
       } else {
         const createData: CreateUserRequest = {
@@ -305,8 +310,8 @@ export const UserForm: React.FC<UserFormProps> = ({
           role: formData.role,
           phoneNumber: formData.phoneNumber,
           gender: formData.gender ?? undefined,
-          DateOfBirth: formData.DateOfBirth
-            ? new Date(formData.DateOfBirth)
+          dateOfBirth: formData.dateOfBirth
+            ? new Date(formData.dateOfBirth)
             : undefined,
         };
         await onSubmit(createData);
@@ -434,13 +439,13 @@ export const UserForm: React.FC<UserFormProps> = ({
                 </Select>
               </FormField>
             </div>
-            <FormField id="DateOfBirth" label="Date of Birth">
+            <FormField id="dateOfBirth" label="Date of Birth">
               <Input
-                id="DateOfBirth"
+                id="dateOfBirth"
                 type="date"
-                value={formData.DateOfBirth || ""}
+                value={formData.dateOfBirth || ""}
                 onChange={(e) =>
-                  handleInputChange("DateOfBirth", e.target.value || null)
+                  handleInputChange("dateOfBirth", e.target.value || null)
                 }
               />
             </FormField>

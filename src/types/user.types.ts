@@ -26,7 +26,7 @@ export interface User {
   role: UserRole;
   phoneNumber: string | null;
   gender: Gender;
-  DateOfBirth: Date | null;
+  dateOfBirth: Date | null;
   avatar: string | null;
   isActive: boolean;
   lastLoginAt: Date | null;
@@ -45,16 +45,18 @@ export interface CreateUserRequest {
   role: UserRole;
   phoneNumber?: string;
   gender?: Gender;
-  DateOfBirth?: Date;
+  dateOfBirth?: Date;
 }
 
 export interface UpdateUserRequest {
-  name?:string;
+  name?: string;
   username?: string;
   email?: string;
+  password?: string;
+  role?: UserRole;
   phoneNumber?: string;
   gender?: Gender;
-  DateOfBirth?: Date;
+  dateOfBirth?: Date;
   avatar?: string;
   isActive?: boolean;
 }
