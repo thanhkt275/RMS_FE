@@ -35,7 +35,7 @@ import { useTeamsMutations } from "@/hooks/api/use-teams";
 
 const TeamMemberSchema = z.object({
   id: z.string().optional(),
-  name: z.string().min(11, "Full name must be at least 11 characters"),
+  name: z.string().min(1, "Full name is required"),
   gender: z
     .nativeEnum(Gender, {
       errorMap: () => ({ message: "Invalid gender" }),
