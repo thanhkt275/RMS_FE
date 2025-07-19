@@ -31,7 +31,7 @@ const formSchema = z
       ),
     name: z.string().min(1, "Name is required"),
     email: z.string().email("Please provide a valid email address").min(1),
-    phone: z
+    phoneNumber: z
       .string()
       .min(10, "Phone number must be at least 10 digits")
       .max(15, "Phone number must be at most 15 digits")
@@ -60,7 +60,7 @@ export default function RegisterForm() {
     defaultValues: {
       username: "",
       name: "",
-      phone: "",
+      phoneNumber: "",
       password: "",
       confirmPassword: "",
       email: "",
@@ -77,7 +77,7 @@ export default function RegisterForm() {
         values.password,
         values.email,
         values.name,
-        values.phone
+        values.phoneNumber
       );
       setTimeout(() => {
         router.replace("/login");
@@ -170,7 +170,7 @@ export default function RegisterForm() {
           <div className="flex-1">
             <FormField
               control={form.control}
-              name="phone"
+              name="phoneNumber"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Phone</FormLabel>

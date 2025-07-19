@@ -39,7 +39,7 @@ interface AuthContextType {
     password: string,
     email: string,
     name: string,
-    phone: string
+    phoneNumber: string
   ) => Promise<void>;
   verifyEmail: (token: string) => Promise<void>;
 }
@@ -91,14 +91,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
     email: string,
     name: string,
-    phone: string
+    phoneNumber: string
   ): Promise<void> => {
     try {
       setIsLoading(true);
       setError(null);
       console.log("[AuthProvider] Attempting registration for:", username);
 
-      await authService.register({ username, password, email, phone, name });
+      await authService.register({
+        username,
+        password,
+        email,
+        phoneNumber,
+        name,
+      });
     } catch (err) {
       console.error("[AuthProvider] Registration failed:", err);
       setError(err as Error);
