@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/common/use-auth";
 
-export default function VerifyPage() {
+function VerifyPage() {
   const { verifyEmail, user, isLoading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -51,5 +51,13 @@ export default function VerifyPage() {
         </p>
       )}
     </div>
+  );
+}
+
+export default function VerifyPageWrapper() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <VerifyPage />
+    </Suspense>
   );
 }

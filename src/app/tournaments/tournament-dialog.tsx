@@ -28,6 +28,7 @@ import {
 import { useCreateTournament, useUpdateTournament } from "@/hooks/tournaments/use-tournaments";
 import { Tournament } from "@/types/types";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/common/use-auth"; // Assuming you have a useAuth hook to get the current user
 
 // Define the form schema for validation
 const tournamentFormSchema = z.object({
@@ -67,6 +68,7 @@ export default function TournamentDialog({
   mode, 
   tournament 
 }: TournamentDialogProps) {
+  const { user } = useAuth(); // Assuming you have a useAuth hook to get the current user
   const [isSubmitting, setIsSubmitting] = useState(false);
   const createMutation = useCreateTournament();
   const updateMutation = useUpdateTournament(tournament?.id || '');
@@ -114,6 +116,7 @@ export default function TournamentDialog({
         ...values,
         startDate: new Date(`${values.startDate}T00:00:00`).toISOString(),
         endDate: new Date(`${values.endDate}T23:59:59`).toISOString(),
+        adminId: user?.id ?? "",
       };
 
       if (mode === 'create') {
@@ -267,3 +270,4 @@ export default function TournamentDialog({
     </Dialog>
   );
 }
+
