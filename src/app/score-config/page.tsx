@@ -45,6 +45,9 @@ const ScoreConfigPage = () => {
   const payload = {
     name: data.name,
     description: data.description,
+    totalScoreFormula: data.totalScoreFormula,
+    scoreSections: data.scoreSections,
+    // Legacy fields for backward compatibility
     scoreElements: data.scoreElements,
     bonusConditions: data.bonusConditions,
     penaltyConditions: data.penaltyConditions,
