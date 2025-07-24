@@ -13,7 +13,7 @@ const navigationItems = [
   { name: "Teams", href: "/teams", roles: [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER, UserRole.COMMON] },
   { name: "Matches", href: "/matches", roles: [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER, UserRole.COMMON] },
   { name: "Control Match", href: "/control-match", roles: [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE] },
-  { name: "Tournaments", href: "/tournaments", roles: [UserRole.ADMIN] },
+  { name: "Tournaments", href: "/tournaments", roles: [UserRole.ADMIN, UserRole.COMMON] },
   { name: "Stages", href: "/stages", roles: [UserRole.ADMIN] },
   { name: "Users", href: "/users", roles: [UserRole.ADMIN] },
 ];

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import type { Team } from "@/types/types";
+import type { Team } from "@/types/team.types";
 import { QueryKeys } from "@/lib/query-keys";
 import TeamService from "@/services/team.service";
 import { CreateTeamRequest, UpdateTeamRequest } from "@/types/team.types";
@@ -35,9 +35,7 @@ export function useTeamsMutations() {
         })
       );
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to create team: ${error.message}`);
-    },
+    onError: (error: Error) => {},
   });
 
   const updateTeam = useMutation({
@@ -55,9 +53,6 @@ export function useTeamsMutations() {
           queryKey: QueryKeys.teams.byTournament(data.tournamentId),
         });
       }
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to update team: ${error.message}`);
     },
   });
 

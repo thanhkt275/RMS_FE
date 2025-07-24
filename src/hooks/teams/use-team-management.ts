@@ -53,7 +53,7 @@ export function useTeamManagement() {
   const exportTeams = useCallback((teams: Team[]) => {
     const csv = [
       ["Team Number", "Name", "Organization", "Description"],
-      ...teams.map((t) => [t.teamNumber, t.name, t.organization || "", t.description || ""]),
+      ...teams.map((t) => [t.teamNumber, t.name]),
     ]
       .map((row) => row.map((v) => `"${(v ?? "").replace(/"/g, '""')}"`).join(","))
       .join("\n");

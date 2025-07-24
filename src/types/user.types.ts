@@ -3,23 +3,30 @@
  * Defines interfaces and types for user management functionality
  */
 
+export enum Gender {
+  MALE = "MALE",
+  FEMALE = "FEMALE",
+  OTHER = "OTHER",
+}
+
 export enum UserRole {
-  ADMIN = 'ADMIN',
-  HEAD_REFEREE = 'HEAD_REFEREE',
-  ALLIANCE_REFEREE = 'ALLIANCE_REFEREE',
-  TEAM_LEADER = 'TEAM_LEADER',
-  TEAM_MEMBER = 'TEAM_MEMBER',
-  COMMON = 'COMMON'
+  ADMIN = "ADMIN",
+  HEAD_REFEREE = "HEAD_REFEREE",
+  ALLIANCE_REFEREE = "ALLIANCE_REFEREE",
+  TEAM_LEADER = "TEAM_LEADER",
+  TEAM_MEMBER = "TEAM_MEMBER",
+  COMMON = "COMMON",
 }
 
 export interface User {
+  name: string;
   id: string;
   username: string;
   email: string | null;
   role: UserRole;
   phoneNumber: string | null;
-  gender: boolean | null;
-  DateOfBirth: Date | null;
+  gender: Gender;
+  dateOfBirth: Date | null;
   avatar: string | null;
   isActive: boolean;
   lastLoginAt: Date | null;
@@ -31,23 +38,26 @@ export interface User {
 }
 
 export interface CreateUserRequest {
+  name: string;
   username: string;
   password: string;
   email?: string;
   role: UserRole;
   phoneNumber?: string;
-  gender?: boolean;
-  DateOfBirth?: Date;
+  gender?: Gender;
+  dateOfBirth?: Date;
 }
 
 export interface UpdateUserRequest {
+  name?: string;
   username?: string;
   email?: string;
   password?: string;
   role?: UserRole;
   phoneNumber?: string;
-  gender?: boolean;
-  DateOfBirth?: Date;
+  gender?: Gender;
+  dateOfBirth?: Date;
+  avatar?: string;
   isActive?: boolean;
 }
 
@@ -58,7 +68,7 @@ export interface ChangeRoleRequest {
 
 export interface BulkOperationRequest {
   userIds: string[];
-  action: 'delete' | 'changeRole';
+  action: "delete" | "changeRole";
   role?: UserRole;
   reason?: string;
 }
@@ -74,8 +84,8 @@ export interface UserFilters {
 export interface UserQueryParams extends UserFilters {
   page: number;
   limit: number;
-  sortBy?: 'username' | 'email' | 'role' | 'createdAt' | 'lastLoginAt';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "username" | "email" | "role" | "createdAt" | "lastLoginAt";
+  sortOrder?: "asc" | "desc";
 }
 
 export interface UserListResponse {
@@ -120,7 +130,7 @@ export interface UserTableProps {
   selectedUsers: string[];
   onSelectUser: (userId: string) => void;
   onSelectAll: (selected: boolean) => void;
-  onSort: (field: string, direction: 'asc' | 'desc') => void;
+  onSort: (field: string, direction: "asc" | "desc") => void;
   onEdit: (user: User) => void;
   onDelete: (userId: string) => void;
   onChangeRole: (userId: string) => void;
@@ -142,7 +152,11 @@ export interface UserStatsProps {
 export interface BulkActionsProps {
   selectedUsers: string[];
   onBulkDelete: (userIds: string[], reason?: string) => Promise<void>;
-  onBulkChangeRole: (userIds: string[], role: UserRole, reason?: string) => Promise<void>;
+  onBulkChangeRole: (
+    userIds: string[],
+    role: UserRole,
+    reason?: string
+  ) => Promise<void>;
   disabled: boolean;
 }
 
@@ -190,5 +204,5 @@ export interface UserManagementState {
   stats: UserStats | null;
   error: UserManagementError | null;
   sortBy: string;
-  sortOrder: 'asc' | 'desc';
+  sortOrder: "asc" | "desc";
 }
