@@ -6,6 +6,8 @@ import ScoreConfigForm, { ScoreConfigFormValues } from "@/components/features/sc
 import AssignConfigDialog from "@/components/features/score-config/AssignConfigDialog";
 
 import { useScoreConfig } from "@/hooks/score-config/useScoreConfigs";
+import { useTournaments } from "@/hooks/tournaments/use-tournaments";
+import { toast } from "sonner";
 
 const ScoreConfigPage = () => {
   // State management
@@ -22,7 +24,11 @@ const ScoreConfigPage = () => {
     update,
     remove,
     assign,
+    unassign,
   } = useScoreConfig();
+  
+  // Fetch tournaments for quick assignment
+  const { data: tournaments = [] } = useTournaments();
 
   // Handlers
   const handleNew = () => {
@@ -40,6 +46,37 @@ const ScoreConfigPage = () => {
     setSelectedConfigForAssignment(config);
     setIsAssignDialogOpen(true);
   };
+  
+  const handleUnassign = (config: any) => {
+    unassign.mutate(config.id, {
+      onSuccess: () => {
+        toast.success('Configuration Unassigned', {
+          description: `"${config.name}" has been unassigned from its tournament.`,
+        });
+      },
+      onError: () => {
+        toast.error('Unassignment Failed', {
+          description: 'Failed to unassign the configuration. Please try again.',
+        });
+      },
+    });
+  };
+  
+  const handleQuickAssign = (configId: string) => {
+    // For quick assign, we'll just open the assignment dialog with this config
+    const config = configs.find(c => c.id === configId);
+    if (config) {
+      setSelectedConfigForAssignment(config);
+      setIsAssignDialogOpen(true);
+    }
+  };
+  
+  const handleQuickUnassign = (configId: string) => {
+    const config = configs.find(c => c.id === configId);
+    if (config) {
+      handleUnassign(config);
+    }
+  };
   const handleFormSubmit = (data: ScoreConfigFormValues) => {
   // Map frontend form data to backend DTO keys
   const payload = {
@@ -52,13 +89,45 @@ const ScoreConfigPage = () => {
     bonusConditions: data.bonusConditions,
     penaltyConditions: data.penaltyConditions,
   };
+  
+  console.log('[DEBUG] Form submission - Raw data:', data);
+  console.log('[DEBUG] Form submission - Payload:', payload);
+  console.log('[DEBUG] Form submission - Selected config for edit:', selectedConfigForEdit);
+  
   if (selectedConfigForEdit) {
-    update.mutate({ id: (selectedConfigForEdit as any).id, data: payload }, {
-      onSuccess: () => setIsFormOpen(false),
+    const configId = (selectedConfigForEdit as any).id;
+    console.log('[DEBUG] Updating config with ID:', configId);
+    update.mutate({ id: configId, data: payload }, {
+      onSuccess: (result) => {
+        console.log('[DEBUG] Update success result:', result);
+        toast.success('Configuration Updated', {
+          description: `"${data.name}" has been updated successfully.`,
+        });
+        setIsFormOpen(false);
+      },
+      onError: (error) => {
+        console.error('[DEBUG] Update error:', error);
+        toast.error('Update Failed', {
+          description: 'Failed to update the configuration. Please try again.',
+        });
+      },
     });
   } else {
+    console.log('[DEBUG] Creating new config');
     create.mutate(payload, {
-      onSuccess: () => setIsFormOpen(false),
+      onSuccess: (result) => {
+        console.log('[DEBUG] Create success result:', result);
+        toast.success('Configuration Created', {
+          description: `"${data.name}" has been created successfully.`,
+        });
+        setIsFormOpen(false);
+      },
+      onError: (error) => {
+        console.error('[DEBUG] Create error:', error);
+        toast.error('Creation Failed', {
+          description: 'Failed to create the configuration. Please try again.',
+        });
+      },
     });
   }
   };
@@ -81,6 +150,7 @@ const ScoreConfigPage = () => {
         isLoading={isLoading}
         onEdit={handleEdit}
         onAssign={handleAssign}
+        onUnassign={handleUnassign}
         onDelete={handleDelete}
       />
       <ScoreConfigForm
@@ -89,6 +159,10 @@ const ScoreConfigPage = () => {
         configToEdit={selectedConfigForEdit}
         onSubmit={handleFormSubmit}
         isSubmitting={create.isPending || update.isPending}
+        onAssign={handleQuickAssign}
+        onUnassign={handleQuickUnassign}
+        isAssigning={assign.isPending || unassign.isPending}
+        tournaments={tournaments.map(t => ({ id: t.id, name: t.name }))}
       />
       <AssignConfigDialog
         isOpen={isAssignDialogOpen}

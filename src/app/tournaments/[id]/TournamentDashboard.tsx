@@ -7,11 +7,12 @@ import { TournamentHeader } from "@/components/features/tournaments/tournament-h
 import { TournamentOverview } from "@/components/features/tournaments/tournament-overview";
 import { StagesSection } from "@/components/features/tournaments/stages-section";
 import { FieldsSection } from "@/components/features/tournaments/fields-section";
+import { ScoreConfigManagement } from "@/components/features/tournaments/score-config-management";
 import { TabNavigation } from "@/components/ui/tab-navigation";
 import { TournamentSkeleton } from "@/components/ui/tournament-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 
-type TabType = "overview" | "stages" | "fields";
+type TabType = "overview" | "stages" | "fields" | "scoring";
 
 export default function TournamentDashboard() {
   const { id } = useParams<{ id: string }>();
@@ -63,6 +64,7 @@ export default function TournamentDashboard() {
               { id: "overview", label: "Overview", count: null },
               { id: "stages", label: "Stages", count: stages.length },
               { id: "fields", label: "Fields", count: fields.length },
+              { id: "scoring", label: "Score Config", count: null },
             ]}
           />
 
@@ -77,6 +79,10 @@ export default function TournamentDashboard() {
 
             {activeTab === "fields" && (
               <FieldsSection tournamentId={id} fields={fields} />
+            )}
+
+            {activeTab === "scoring" && (
+              <ScoreConfigManagement tournament={tournament} />
             )}
           </div>
         </div>

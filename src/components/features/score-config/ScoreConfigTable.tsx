@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useReactTable, getCoreRowModel, flexRender, ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Edit, UserPlus, Trash2, Target, Trophy, AlertTriangle } from "lucide-react";
+import { MoreHorizontal, Edit, UserPlus, UserMinus, Trash2, Target, Trophy, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 
 interface Props {
@@ -27,6 +27,7 @@ interface Props {
   isLoading: boolean;
   onEdit: (config: ScoreConfig) => void;
   onAssign: (config: ScoreConfig) => void;
+  onUnassign: (config: ScoreConfig) => void;
   onDelete: (id: string) => void;
 }
 
@@ -36,6 +37,7 @@ const ScoreConfigTable: React.FC<Props> = ({
   isLoading,
   onEdit,
   onAssign,
+  onUnassign,
   onDelete,
 }) => {
   const columns = useMemo<ColumnDef<ScoreConfig, any>[]>(
@@ -167,10 +169,17 @@ const ScoreConfigTable: React.FC<Props> = ({
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onAssign(row.original)}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Assign to Tournament
-              </DropdownMenuItem>
+              {row.original.tournamentId ? (
+                <DropdownMenuItem onClick={() => onUnassign(row.original)}>
+                  <UserMinus className="h-4 w-4 mr-2" />
+                  Unassign from Tournament
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => onAssign(row.original)}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Assign to Tournament
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem 
                 onClick={() => onDelete(row.original.id)}
                 className="text-red-600 focus:text-red-600"
@@ -183,7 +192,7 @@ const ScoreConfigTable: React.FC<Props> = ({
         ),
       },
     ],
-    [onEdit, onAssign, onDelete]
+    [onEdit, onAssign, onUnassign, onDelete]
   );
 
   const table = useReactTable({

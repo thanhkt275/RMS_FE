@@ -14,7 +14,8 @@ import {
   Target,
   CheckCircle,
   AlertCircle,
-  Info
+  Info,
+  Settings
 } from 'lucide-react';
 import { format, formatDistanceToNow, isAfter, isBefore } from 'date-fns';
 import { Tournament } from '@/types/tournament.types';
@@ -121,21 +122,103 @@ export function TournamentDetailSummary({
         )}
         {/* Score Config */}
         <div className="bg-gray-900 rounded-lg p-4">
-          <h3 className="font-semibold flex items-center gap-2 text-slate-100">
-            <Trophy className="h-4 w-4 text-yellow-400" />
-            Score Configuration
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold flex items-center gap-2 text-slate-100">
+              <Trophy className="h-4 w-4 text-yellow-400" />
+              Score Configuration
+            </h3>
+            {scoreConfig && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.open(`/control-match?scoreConfigId=${scoreConfig.id}`, '_blank')}
+                  className="text-slate-300 hover:text-white hover:bg-slate-800 h-7 px-2"
+                >
+                  <Target className="h-3 w-3 mr-1" />
+                  Preview
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.open('/score-config', '_blank')}
+                  className="text-slate-300 hover:text-white hover:bg-slate-800 h-7 px-2"
+                >
+                  <Settings className="h-3 w-3 mr-1" />
+                  Manage
+                </Button>
+              </div>
+            )}
+          </div>
           {scoreConfigLoading ? (
-            <p className="text-slate-300 text-sm">Loading score config...</p>
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-500 border-t-slate-300"></div>
+              <p className="text-slate-300 text-sm">Loading score config...</p>
+            </div>
           ) : scoreConfig ? (
-            <div className="space-y-1">
-              <div className="text-base font-medium text-white">{scoreConfig.name}</div>
-              {scoreConfig.description && (
-                <div className="text-sm text-slate-300">{scoreConfig.description}</div>
-              )}
+            <div className="space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1 flex-1">
+                  <div className="text-base font-medium text-white">{scoreConfig.name}</div>
+                  {scoreConfig.description && (
+                    <div className="text-sm text-slate-300">{scoreConfig.description}</div>
+                  )}
+                </div>
+                <Badge className="bg-green-600 text-green-100 border-green-500 ml-2">
+                  Active
+                </Badge>
+              </div>
+              
+              {/* Score Config Stats */}
+              <div className="grid grid-cols-4 gap-2 pt-2 border-t border-slate-700">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-yellow-400">
+                    {scoreConfig.scoreSections?.length || 0}
+                  </div>
+                  <div className="text-xs text-slate-400">Sections</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-blue-400">
+                    {scoreConfig.scoreSections?.reduce(
+                      (total, section) => total + (section.scoreElements?.length || 0),
+                      0
+                    ) || 0}
+                  </div>
+                  <div className="text-xs text-slate-400">Elements</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-green-400">
+                    {scoreConfig.bonusConditions?.length || 0}
+                  </div>
+                  <div className="text-xs text-slate-400">Bonuses</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-red-400">
+                    {scoreConfig.penaltyConditions?.length || 0}
+                  </div>
+                  <div className="text-xs text-slate-400">Penalties</div>
+                </div>
+              </div>
             </div>
           ) : (
-            <p className="text-slate-300 text-sm">No score config assigned to this tournament.</p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-yellow-500" />
+                <p className="text-slate-300 text-sm">No score config assigned to this tournament.</p>
+              </div>
+              <div className="text-xs text-slate-400">
+                Matches cannot be scored without a configuration.
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(`/tournaments/${tournament.id}#scoring`, '_self')}
+                className="mt-2 border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Assign Score Config
+              </Button>
+            </div>
           )}
         </div>
         {/* Key Information Grid */}

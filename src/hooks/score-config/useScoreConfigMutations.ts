@@ -17,13 +17,20 @@ export function useUpdateScoreConfig() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<ScoreConfig> }) => {
-      return await apiClient.patch<ScoreConfig>(`score-configs/${id}`, data);
+      console.log('[DEBUG] Updating score config:', { id, data });
+      const result = await apiClient.patch<ScoreConfig>(`score-configs/${id}`, data);
+      console.log('[DEBUG] Update result:', result);
+      return result;
     },
     onSuccess: (_data, variables) => {
+      console.log('[DEBUG] Update success, invalidating queries for:', variables);
       queryClient.invalidateQueries({ queryKey: scoreConfigKeys.all });
       if (variables?.id) {
         queryClient.invalidateQueries({ queryKey: scoreConfigKeys.detail(variables.id) });
       }
+    },
+    onError: (error, variables) => {
+      console.error('[DEBUG] Update failed:', { error, variables });
     },
   });
 }
@@ -38,13 +45,13 @@ export function useDeleteScoreConfig() {
   });
 }
 
-export function useAssignScoreConfigToTournaments() {
+export function useAssignScoreConfigToTournament() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ configId, tournamentIds }: { configId: string; tournamentIds: string[] }) => {
-      return await apiClient.post<{ configId: string; tournamentIds: string[] }>(
-        `score-configs/${configId}/assign-tournaments`,
-        { tournamentIds }
+    mutationFn: async ({ configId, tournamentId }: { configId: string; tournamentId: string }) => {
+      return await apiClient.post(
+        `score-configs/${configId}/assign-tournament/${tournamentId}`,
+        {}
       );
     },
     onSuccess: (_data, variables) => {
@@ -54,4 +61,20 @@ export function useAssignScoreConfigToTournaments() {
       }
     },
   });
-} 
+}
+
+export function useUnassignScoreConfig() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (configId: string) => {
+      // Use PATCH endpoint to update the score config to unassign it
+      return await apiClient.patch(`score-configs/${configId}`, { tournamentId: null });
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: scoreConfigKeys.all });
+      if (variables) {
+        queryClient.invalidateQueries({ queryKey: scoreConfigKeys.detail(variables) });
+      }
+    },
+  });
+}

@@ -65,12 +65,27 @@ export function useScoreConfig() {
     },
   });
 
+  // Unassign from tournament using PATCH endpoint
+  const unassign = useMutation({
+    mutationFn: async (configId: string) => {
+      // Use PATCH endpoint to update the score config to unassign it
+      return await apiClient.patch(`score-configs/${configId}`, { tournamentId: null });
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: scoreConfigKeys.all });
+      if (variables) {
+        queryClient.invalidateQueries({ queryKey: scoreConfigKeys.detail(variables) });
+      }
+    },
+  });
+
   return {
     ...query,
     create,
     update,
     remove,
     assign,
+    unassign,
   };
 }
 

@@ -33,7 +33,7 @@ import { useDisplayControl } from "@/hooks/control-match/use-display-control";
 // Import components
 import { TimerControlPanel } from "@/components/features/control-match/timer-control-panel";
 import { MatchSelector } from "@/components/features/control-match/match-selector";
-import { ScoringPanel } from "@/components/features/control-match/scoring-panel";
+import { IntegratedScoringPanel } from "@/components/features/control-match/integrated-scoring-panel";
 import { AnnouncementPanel } from "@/components/features/control-match/announcement-panel";
 import { MatchStatusDisplay } from "@/components/features/control-match/match-status-display";
 
@@ -637,8 +637,9 @@ export default function ControlMatchPage() {
 
         {/* Secondary Control Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6 px-6">
-          {/* Scoring Panel */}          <div>
-            <ScoringPanel
+          {/* Integrated Scoring Panel */}
+          <div>
+            <IntegratedScoringPanel
               {...scoringControl}
               onUpdateScores={scoringControl.sendRealtimeUpdate}
               onSubmitScores={handleSubmitScores}
