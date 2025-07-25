@@ -40,7 +40,7 @@ export default function Home() {
       <h1 className="text-3xl font-bold mb-2">Welcome, {user.username}!</h1>
       <p className="text-gray-500 mb-8">Robotics Competition Management Dashboard S4VN</p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {/* Tournaments Card */}
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
@@ -79,6 +79,20 @@ export default function Home() {
             <p className="text-sm mb-4">View and manage match schedules</p>
             <Link href="/matches" className="w-full">
               <Button className="w-full">Go to Matches</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Rankings Card */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-3">
+            <CardTitle>Rankings</CardTitle>
+            <CardDescription>Live tournament standings</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm mb-4">View real-time team rankings and standings</p>
+            <Link href="/rankings" className="w-full">
+              <Button className="w-full">Go to Rankings</Button>
             </Link>
           </CardContent>
         </Card>

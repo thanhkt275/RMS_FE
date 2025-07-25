@@ -267,7 +267,9 @@ export type WebSocketEvent =
   | 'tempScoresSubmitted'
   | 'tempScoresSubmissionFailed'
   | 'finalScoresApproved'
-  | 'finalScoresApprovalFailed';
+  | 'finalScoresApprovalFailed'
+  | 'ranking_update'
+  | 'ranking_recalculation';
 
 // --- Match Control Types ---
 export interface Match {
@@ -483,4 +485,3 @@ export interface GeneratePlayoffRequest {
   stageId: string;
   numberOfRounds: number;
 }
-
