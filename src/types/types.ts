@@ -241,7 +241,7 @@ export interface ScoreData {
   redMultiplier?: number;
   blueTeamCount?: number;
   blueMultiplier?: number;
-  scoreDetails?: Record<string, any>;
+  scoreDetails?: Record<string, unknown>;
 }
 
 export interface MatchStateData {
@@ -274,7 +274,9 @@ export type WebSocketEvent =
   | "tempScoresSubmitted"
   | "tempScoresSubmissionFailed"
   | "finalScoresApproved"
-  | "finalScoresApprovalFailed";
+  | "finalScoresApprovalFailed"
+  | 'ranking_update'
+  | 'ranking_recalculation';
 
 // --- Match Control Types ---
 export interface Match {
