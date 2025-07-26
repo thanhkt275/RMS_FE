@@ -11,6 +11,7 @@ import { UserRole } from "@/types/types";
 const navigationItems = [
   { name: "Audience Display", href: "/audience-display", roles: [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER, UserRole.COMMON] },
   { name: "Teams", href: "/teams", roles: [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER, UserRole.COMMON] },
+  { name: "Rankings", href: "/rankings", roles: [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER, UserRole.COMMON] },
   { name: "Matches", href: "/matches", roles: [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER, UserRole.COMMON] },
   { name: "Control Match", href: "/control-match", roles: [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE] },
   { name: "Tournaments", href: "/tournaments", roles: [UserRole.ADMIN, UserRole.COMMON] },
@@ -22,12 +23,12 @@ const navigationItems = [
 const getFilteredNavigationItems = (userRole: UserRole | null) => {
   if (!userRole) {
     // Not signed in - show only basic items
-    return navigationItems.filter(item => 
+    return navigationItems.filter(item =>
       item.roles.includes(UserRole.COMMON)
     );
   }
-  
-  return navigationItems.filter(item => 
+
+  return navigationItems.filter(item =>
     item.roles.includes(userRole)
   );
 };

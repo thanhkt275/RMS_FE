@@ -9,6 +9,28 @@ import type {
   WebSocketEvent,
   AudienceDisplaySettings,
 } from '@/types/types';
+import { RealTimeRanking } from '@/types/ranking.types';
+
+/**
+ * WebSocket Data Types
+ */
+interface RankingUpdateData {
+  type: 'ranking_update';
+  tournamentId: string;
+  stageId?: string;
+  rankings: RealTimeRanking[];
+  timestamp: number;
+  triggerMatchId?: string;
+}
+
+interface RankingRecalculationData {
+  type: 'ranking_recalculation_started' | 'ranking_recalculation_completed' | 'ranking_recalculation_failed';
+  tournamentId: string;
+  stageId?: string;
+  timestamp: number;
+  progress?: number;
+  error?: string;
+}
 
 //  Interface for WebSocket connection strategy
 interface IWebSocketConnection {
@@ -101,6 +123,8 @@ class SocketIOConnection implements IWebSocketConnection, IWebSocketEventManager
       'tempScoresSubmissionFailed',
       'finalScoresApproved',
       'finalScoresApprovalFailed',
+      'ranking_update',
+      'ranking_recalculation',
     ];
     events.forEach(eventName => {
       this.socket!.off(eventName);
@@ -157,10 +181,14 @@ class WebSocketService {
   startTimer(timerData: TimerData) { this.emit('timer_update', { ...timerData, startedAt: Date.now(), isRunning: true }); }
   pauseTimer(timerData: TimerData) { this.emit('timer_update', { ...timerData, isRunning: false }); }
   resetTimer(timerData: TimerData) { this.emit('timer_update', { ...timerData, isRunning: false, remaining: timerData.duration }); }
-  
+
   // Temp scores methods
   sendTempScores(tempScoreData: any) { this.emit('submitTempScores', tempScoreData); }
   approveFinalScores(approveData: any) { this.emit('approveFinalScores', approveData); }
+
+  // Ranking methods
+  sendRankingUpdate(rankingData: RankingUpdateData) { this.emit('ranking_update', rankingData); }
+  sendRankingRecalculation(recalculationData: RankingRecalculationData) { this.emit('ranking_recalculation', recalculationData); }
 }
 
 
