@@ -241,7 +241,7 @@ export interface ScoreData {
   redMultiplier?: number;
   blueTeamCount?: number;
   blueMultiplier?: number;
-  scoreDetails?: Record<string, any>;
+  scoreDetails?: Record<string, unknown>;
 }
 
 export interface MatchStateData {
