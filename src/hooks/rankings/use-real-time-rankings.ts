@@ -10,7 +10,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { RankingService } from '@/services/ranking.service';
-import webSocketService from '@/services/websocket-service';
+import { unifiedWebSocketService } from '@/lib/unified-websocket';
 import {
   RankingUpdateEvent,
   RankingRecalculationEvent,
@@ -128,7 +128,7 @@ export function useRealTimeRankings(
     const updateConnectionStatus = () => {
       setState(prev => ({
         ...prev,
-        isConnected: webSocketService.isConnectedToServer(),
+        isConnected: unifiedWebSocketService.isConnected(),
       }));
     };
 
@@ -219,12 +219,12 @@ export function useRealTimeRankings(
     console.log('Subscribing to ranking updates for tournament:', tournamentId);
 
     // Subscribe to ranking updates
-    const unsubscribeRankingUpdate = webSocketService.on('ranking_update', handleRankingUpdate);
-    const unsubscribeRecalculation = webSocketService.on('ranking_recalculation', handleRecalculationEvent);
+    const unsubscribeRankingUpdate = unifiedWebSocketService.on('ranking_update', handleRankingUpdate);
+    const unsubscribeRecalculation = unifiedWebSocketService.on('ranking_recalculation', handleRecalculationEvent);
 
     // Join tournament room for updates
-    if (webSocketService.isConnectedToServer()) {
-      webSocketService.joinTournament(tournamentId);
+    if (unifiedWebSocketService.isConnected()) {
+      unifiedWebSocketService.joinTournament(tournamentId);
     }
 
     return () => {
@@ -260,8 +260,8 @@ export function useRealTimeRankings(
 
   // Subscribe/unsubscribe functions
   const subscribe = useCallback(() => {
-    if (webSocketService.isConnectedToServer()) {
-      webSocketService.joinTournament(tournamentId);
+    if (unifiedWebSocketService.isConnected()) {
+      unifiedWebSocketService.joinTournament(tournamentId);
     }
   }, [tournamentId]);
 

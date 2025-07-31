@@ -4,10 +4,10 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMatch, useUpdateMatchStatus, useMatches } from "@/hooks/matches/use-matches";
 import { useMatchesByTournament } from "@/hooks/matches/use-matches-by-tournament";
-import { MatchStatus } from "@/types/types";
+import { MatchStatus, UserRole } from "@/types/types";
 import { useTournaments } from "@/hooks/tournaments/use-tournaments";
 import { MatchData } from "@/types/types";
-import { webSocketService } from "@/lib/websocket";
+import { unifiedWebSocketService } from "@/lib/unified-websocket";
 import { Card } from "@/components/ui/card";
 
 import {
@@ -26,8 +26,10 @@ import { apiClient } from "@/lib/api-client";
 // Import custom hooks
 import { useTimerControl } from "@/hooks/control-match/use-timer-control";
 import { useScoringControl } from "@/hooks/control-match/use-scoring-control";
-import { useWebSocketSubscriptions } from "@/hooks/websocket/use-websocket-subscriptions";
 import { useDisplayControl } from "@/hooks/control-match/use-display-control";
+import { useRoleBasedAccess } from "@/hooks/control-match/use-role-based-access";
+import { useUnifiedMatchControl } from "@/hooks/control-match/use-unified-match-control";
+import { useUnifiedWebSocket } from "@/hooks/websocket/use-unified-websocket";
 
 
 // Import components
@@ -36,10 +38,14 @@ import { MatchSelector } from "@/components/features/control-match/match-selecto
 import { ScoringPanel } from "@/components/features/control-match/scoring-panel";
 import { AnnouncementPanel } from "@/components/features/control-match/announcement-panel";
 import { MatchStatusDisplay } from "@/components/features/control-match/match-status-display";
+import { AccessDenied, AccessDeniedOverlay } from "@/components/features/control-match/access-denied";
 
 
 export default function ControlMatchPage() {
   const queryClient = useQueryClient();
+  
+  // Initialize role-based access control
+  const roleAccess = useRoleBasedAccess();
   
   // Tournament selection state
   const { data: tournaments = [], isLoading: tournamentsLoading } =
@@ -62,6 +68,16 @@ export default function ControlMatchPage() {
     selectedTournamentId,
     setSelectedTournamentId,
   } = useDisplayControl();
+
+  // State for selected match
+  const [selectedMatchId, setSelectedMatchId] = useState<string>("");
+
+  // Initialize unified match control hook
+  const unifiedMatchControl = useUnifiedMatchControl({
+    tournamentId: selectedTournamentId || "all",
+    fieldId: selectedFieldId,
+    selectedMatchId: selectedMatchId || undefined,
+  });
   // Set default tournamentId on load (All Tournaments)
   useEffect(() => {
     if (
@@ -78,9 +94,6 @@ export default function ControlMatchPage() {
     setSelectedTournamentId,
   ]);  // Use selectedTournamentId for all tournament-specific logic
   const tournamentId = selectedTournamentId || "all";
-
-  // State for selected match
-  const [selectedMatchId, setSelectedMatchId] = useState<string>("");
 
 
   // Fetch matches based on tournament selection
@@ -137,21 +150,12 @@ export default function ControlMatchPage() {
     selectedMatchId || ""
   );
 
-  // Send match update to audience display when selected match data loads
+  // Send match update to audience display when selected match data loads using unified service
   useEffect(() => {
     if (!selectedMatch || !selectedMatchId || isLoadingMatchDetails) return;
     
     console.log("📡 Broadcasting match update for selected match:", selectedMatchId, selectedMatch);
     
-    const matchData: Omit<MatchData, "tournamentId"> = {
-      id: selectedMatchId,
-      matchNumber:
-        typeof selectedMatch.matchNumber === "string"
-          ? parseInt(selectedMatch.matchNumber, 10)
-          : selectedMatch.matchNumber,
-      status: selectedMatch.status,
-    };
-
     const redTeams = getRedTeams(selectedMatch).map(
       (teamNumber: string | number) => ({
         name: teamNumber,
@@ -162,23 +166,22 @@ export default function ControlMatchPage() {
       (teamNumber: string | number) => ({
         name: teamNumber,
       })
-    );    webSocketService.sendMatchUpdate({
-      ...matchData,
-      fieldId: selectedFieldId || undefined,
-      redTeams,
-      blueTeams,
-      scheduledTime: selectedMatch.scheduledTime,
-    } as any);
+    );
 
-    // Also send through legacy WebSocket for backward compatibility
-    webSocketService.sendLegacyMatchUpdate({
-      ...matchData,
-      fieldId: selectedFieldId || undefined,
+    // Send match update through unified service with field-specific filtering
+    unifiedMatchControl.sendMatchUpdate({
+      id: selectedMatchId,
+      matchNumber: typeof selectedMatch.matchNumber === "string"
+        ? parseInt(selectedMatch.matchNumber, 10)
+        : selectedMatch.matchNumber,
+      status: selectedMatch.status,
+      tournamentId: selectedTournamentId || "all",
+      fieldId: selectedFieldId,
       redTeams,
       blueTeams,
       scheduledTime: selectedMatch.scheduledTime,
     } as any);
-  }, [selectedMatch, selectedMatchId, isLoadingMatchDetails, selectedFieldId]);
+  }, [selectedMatch, selectedMatchId, isLoadingMatchDetails, selectedFieldId, selectedTournamentId, unifiedMatchControl]);
 
   // Helper function to extract red teams from alliances
   const getRedTeams = (match?: any): string[] => {
@@ -228,27 +231,38 @@ export default function ControlMatchPage() {
     setMatchState(data);
   }, []);
 
-  // Initialize WebSocket subscriptions with optimized implementation
+  // Initialize unified WebSocket connection
   const {
     isConnected,
-    currentTournament,
-    joinTournament,
-    joinFieldRoom,
-    leaveFieldRoom,
     changeDisplayMode,
     sendAnnouncement,
-    sendMatchUpdate,
-    sendMatchStateChange,
-    sendScoreUpdate,
-  } = useWebSocketSubscriptions({
+    sendMatchUpdate: unifiedSendMatchUpdate,
+    sendMatchStateChange: unifiedSendMatchStateChange,
+    sendScoreUpdate: unifiedSendScoreUpdate,
+    subscribe: unifiedSubscribe,
+  } = useUnifiedWebSocket({
     tournamentId,
-    selectedFieldId,
-    selectedMatchId,
-    onTimerUpdate: handleTimerUpdate,
-    onScoreUpdate: handleScoreUpdate,
-    onMatchUpdate: handleMatchUpdate,
-    onMatchStateChange: handleMatchStateChange,
+    fieldId: selectedFieldId || undefined,
+    autoConnect: true,
+    userRole: UserRole.HEAD_REFEREE,
   });
+
+  // Subscribe to WebSocket events through unified service
+  useEffect(() => {
+    if (!isConnected) return;
+
+    const unsubscribeTimer = unifiedSubscribe('timer_update', handleTimerUpdate);
+    const unsubscribeScore = unifiedSubscribe('score_update', handleScoreUpdate);
+    const unsubscribeMatch = unifiedSubscribe('match_update', handleMatchUpdate);
+    const unsubscribeMatchState = unifiedSubscribe('match_state_change', handleMatchStateChange);
+
+    return () => {
+      unsubscribeTimer();
+      unsubscribeScore();
+      unsubscribeMatch();
+      unsubscribeMatchState();
+    };
+  }, [isConnected, unifiedSubscribe, handleTimerUpdate, handleScoreUpdate, handleMatchUpdate, handleMatchStateChange]);
 
 
   // Initialize timer control hook
@@ -267,7 +281,7 @@ export default function ControlMatchPage() {
     tournamentId,
     selectedFieldId,
     selectedMatchId,
-    sendMatchStateChange,
+    sendMatchStateChange: unifiedSendMatchStateChange,
   });
 
   // Initialize scoring control hook
@@ -299,7 +313,8 @@ export default function ControlMatchPage() {
       showTimer,
       showScores,
       showTeams,
-      tournamentId,      fieldId: match.fieldId || selectedFieldId || undefined,
+      tournamentId,
+      fieldId: match.fieldId || selectedFieldId || undefined,
     });
     
     // Note: Match update is now handled by useEffect when selectedMatch data loads
@@ -314,51 +329,30 @@ export default function ControlMatchPage() {
       showTimer,
       showScores,
       showTeams,
-      tournamentId: currentTournament!,
+      tournamentId,
       fieldId: selectedFieldId || undefined,
     });
   };
 
-  // Enhanced timer controls with match state changes
-  const handleEnhancedStartTimer = () => {    handleStartTimer();
-    sendMatchStateChange({
-      matchId: selectedMatchId,
-      status: MatchStatus.IN_PROGRESS,
-      currentPeriod: matchPeriod as any,
-      fieldId: selectedFieldId,
-    } as any);
-    updateMatchStatus.mutate({
-      matchId: selectedMatchId,
-      status: MatchStatus.IN_PROGRESS,
-    });
+  // Enhanced timer controls with unified match control
+  const handleEnhancedStartTimer = () => {
+    handleStartTimer();
+    // Update match status and period through unified service
+    unifiedMatchControl.startMatch();
+    unifiedMatchControl.updateMatchPeriod(matchPeriod as unknown);
   };
+  
   const handleEnhancedResetTimer = () => {
     handleResetTimer();
-    sendMatchStateChange({
-      matchId: selectedMatchId,
-      status: MatchStatus.PENDING,
-      currentPeriod: null,
-      fieldId: selectedFieldId,
-    } as any);
-    updateMatchStatus.mutate({
-      matchId: selectedMatchId,
-      status: MatchStatus.PENDING,
-    });
+    // Reset match status and period through unified service
+    unifiedMatchControl.resetMatch();
   };
   // Handle submitting final scores and completing the match
   const handleSubmitScores = async () => {
     try {
       await scoringControl.saveScores();
-      sendMatchStateChange({
-        matchId: selectedMatchId,
-        status: MatchStatus.COMPLETED,
-        currentPeriod: null,
-        fieldId: selectedFieldId,
-      } as any);
-      updateMatchStatus.mutate({
-        matchId: selectedMatchId,
-        status: MatchStatus.COMPLETED,
-      });
+      // Complete match through unified service
+      await unifiedMatchControl.completeMatch();
       toast.success("Match Completed", {
         description: `Final score: Red ${scoringControl.redTotalScore} - Blue ${scoringControl.blueTotalScore}`,
       });
@@ -375,12 +369,12 @@ export default function ControlMatchPage() {
       sendAnnouncement(announcementMessage.trim());
 
       // Switch display mode to announcement
-      changeDisplayMode({
-        displayMode: "announcement",
-        message: announcementMessage.trim(),
-        tournamentId: currentTournament!,
-        fieldId: selectedFieldId || undefined,
-      });
+        changeDisplayMode({
+          displayMode: "announcement",
+          message: announcementMessage.trim(),
+          tournamentId,
+          fieldId: selectedFieldId || undefined,
+        });
 
       // Clear input after sending
       setAnnouncementMessage("");
@@ -537,8 +531,35 @@ export default function ControlMatchPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-0 w-full">
       <div className="w-full">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6 px-6 pt-6">
-          Match Control Center        </h1>
+        <div className="flex justify-between items-center mb-6 px-6 pt-6">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Match Control Center
+          </h1>
+          
+          {/* Role Indicator */}
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-sm text-gray-600">Current Role</div>
+              <div className={`text-sm font-semibold ${
+                roleAccess.isAdmin ? 'text-red-600' :
+                roleAccess.isHeadReferee ? 'text-blue-600' :
+                roleAccess.isAllianceReferee ? 'text-green-600' :
+                'text-gray-600'
+              }`}>
+                {roleAccess.currentUser?.username || 'Unknown'} ({roleAccess.currentRole})
+              </div>
+            </div>
+            <div className={`w-3 h-3 rounded-full ${
+              roleAccess.hasFullAccess ? 'bg-green-500' :
+              roleAccess.hasScoringAccess ? 'bg-yellow-500' :
+              'bg-gray-400'
+            }`} title={
+              roleAccess.hasFullAccess ? 'Full Access' :
+              roleAccess.hasScoringAccess ? 'Scoring Access' :
+              'Limited Access'
+            } />
+          </div>
+        </div>
 
         {/* Tournament and Field Selection */}
         <Card className="p-6 mb-6 mx-6">
@@ -556,7 +577,7 @@ export default function ControlMatchPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Tournaments</SelectItem>
-                  {tournaments.map((tournament: any) => (
+                  {tournaments.map((tournament: unknown) => (
                     <SelectItem key={tournament.id} value={tournament.id}>
                       {tournament.name}
                     </SelectItem>
@@ -578,7 +599,7 @@ export default function ControlMatchPage() {
           <div className="mt-4">
             <ConnectionStatus
               isConnected={isConnected}
-              currentTournament={currentTournament}
+              currentTournament={tournamentId}
             />
           </div>
         </Card>
@@ -587,17 +608,26 @@ export default function ControlMatchPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 px-6">
           {/* Match Selection */}
           <div className="xl:col-span-1">
-            <MatchSelector
-              matches={matchesData}
-              selectedMatchId={selectedMatchId}
-              onSelectMatch={handleSelectMatch}
-              getStatusBadgeColor={getStatusBadgeColor}
-              formatDate={formatDate}
-              getRedTeams={getRedTeams}
-              getBlueTeams={getBlueTeams}
-              matchScoresMap={matchScoresMap}
-              isLoading={isLoadingMatches}
-            />
+            {roleAccess.showMatchControls || roleAccess.hasScoringAccess ? (
+              <MatchSelector
+                matches={matchesData}
+                selectedMatchId={selectedMatchId}
+                onSelectMatch={handleSelectMatch}
+                getStatusBadgeColor={getStatusBadgeColor}
+                formatDate={formatDate}
+                getRedTeams={getRedTeams}
+                getBlueTeams={getBlueTeams}
+                matchScoresMap={matchScoresMap}
+                isLoading={isLoadingMatches}
+              />
+            ) : (
+              <AccessDenied
+                feature="Match Selection"
+                message={roleAccess.getAccessDeniedMessage('match')}
+                currentRole={roleAccess.currentRole}
+                requiredRoles={[UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE]}
+              />
+            )}
           </div>
 
           {/* Match Status Display */}
@@ -619,56 +649,84 @@ export default function ControlMatchPage() {
 
           {/* Timer Control */}
           <div className="xl:col-span-1">
-            <TimerControlPanel
-              timerDuration={timerDuration}
-              timerRemaining={timerRemaining}
-              timerIsRunning={timerIsRunning}
-              matchPeriod={matchPeriod}
-              setTimerDuration={setTimerDuration}
-              setMatchPeriod={setMatchPeriod}
-              onStartTimer={handleEnhancedStartTimer}
-              onPauseTimer={handlePauseTimer}
-              onResetTimer={handleEnhancedResetTimer}
-              formatTime={formatTime}
-              disabled={!isConnected || !selectedMatchId}
-            />
+            {roleAccess.showTimerControls ? (
+              <TimerControlPanel
+                timerDuration={timerDuration}
+                timerRemaining={timerRemaining}
+                timerIsRunning={timerIsRunning}
+                matchPeriod={matchPeriod}
+                setTimerDuration={setTimerDuration}
+                setMatchPeriod={setMatchPeriod}
+                onStartTimer={handleEnhancedStartTimer}
+                onPauseTimer={handlePauseTimer}
+                onResetTimer={handleEnhancedResetTimer}
+                formatTime={formatTime}
+                disabled={!isConnected || !selectedMatchId}
+              />
+            ) : (
+              <AccessDenied
+                feature="Timer Control"
+                message={roleAccess.getAccessDeniedMessage('timer')}
+                currentRole={roleAccess.currentRole}
+                requiredRoles={[UserRole.ADMIN, UserRole.HEAD_REFEREE]}
+              />
+            )}
           </div>
         </div>
 
         {/* Secondary Control Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6 px-6">
-          {/* Scoring Panel */}          <div>
-            <ScoringPanel
-              {...scoringControl}
-              onUpdateScores={scoringControl.sendRealtimeUpdate}
-              onSubmitScores={handleSubmitScores}
-              addRedGameElement={addRedGameElement}
-              addBlueGameElement={addBlueGameElement}
-              removeGameElement={removeGameElement}
-              updateRedTeamCount={updateRedTeamCount}
-              updateBlueTeamCount={updateBlueTeamCount}
-              selectedMatchId={selectedMatchId}
-              disabled={!isConnected}
-            />
+          {/* Scoring Panel */}
+          <div>
+            {roleAccess.showScoringPanel ? (
+              <ScoringPanel
+                {...scoringControl}
+                onUpdateScores={scoringControl.sendRealtimeUpdate}
+                onSubmitScores={handleSubmitScores}
+                addRedGameElement={addRedGameElement}
+                addBlueGameElement={addBlueGameElement}
+                removeGameElement={removeGameElement}
+                updateRedTeamCount={updateRedTeamCount}
+                updateBlueTeamCount={updateBlueTeamCount}
+                selectedMatchId={selectedMatchId}
+                disabled={!isConnected}
+              />
+            ) : (
+              <AccessDenied
+                feature="Scoring Panel"
+                message={roleAccess.getAccessDeniedMessage('scoring')}
+                currentRole={roleAccess.currentRole}
+                requiredRoles={[UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE]}
+              />
+            )}
           </div>
           {/* Announcement Panel */}
           <div>
-            <AnnouncementPanel
-              announcementMessage={announcementMessage}
-              setAnnouncementMessage={setAnnouncementMessage}
-              displayMode={displayMode}
-              setDisplayMode={setDisplayMode}
-              showTimer={showTimer}
-              showScores={showScores}
-              showTeams={showTeams}
-              setShowTimer={setShowTimer}
-              setShowScores={setShowScores}
-              setShowTeams={setShowTeams}
-              onSendAnnouncement={handleSendAnnouncement}
-              onDisplayModeChange={handleDisplayModeChange}
-              isConnected={isConnected}
-            />
-          </div>{" "}
+            {roleAccess.showDisplayControls ? (
+              <AnnouncementPanel
+                announcementMessage={announcementMessage}
+                setAnnouncementMessage={setAnnouncementMessage}
+                displayMode={displayMode}
+                setDisplayMode={setDisplayMode}
+                showTimer={showTimer}
+                showScores={showScores}
+                showTeams={showTeams}
+                setShowTimer={setShowTimer}
+                setShowScores={setShowScores}
+                setShowTeams={setShowTeams}
+                onSendAnnouncement={handleSendAnnouncement}
+                onDisplayModeChange={handleDisplayModeChange}
+                isConnected={isConnected}
+              />
+            ) : (
+              <AccessDenied
+                feature="Display Control"
+                message={roleAccess.getAccessDeniedMessage('display')}
+                currentRole={roleAccess.currentRole}
+                requiredRoles={[UserRole.ADMIN, UserRole.HEAD_REFEREE]}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

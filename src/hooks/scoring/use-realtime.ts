@@ -1,6 +1,11 @@
+/**
+ * MIGRATION NOTE: This hook has been updated to use the unified WebSocket service
+ * instead of the legacy WebSocketServiceAdapter that was removed.
+ * The old adapter referenced a missing @/lib/unified-websocket service.
+ */
 import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { useQueryClient } from "@tanstack/react-query";
-import { WebSocketServiceAdapter } from './services/websocket.service';
+import { unifiedWebSocketService } from '@/lib/unified-websocket';
 import { CacheService } from './services/cache.service';
 import { DataTransformationService } from './services/data-transformation.service';
 import { MatchScoreData } from './types/index';
@@ -16,8 +21,8 @@ export function useRealtime({ selectedMatchId, selectedFieldId, tournamentId, is
   const queryClient = useQueryClient();
   const previousMatchIdRef = useRef<string | null>(null);
   
-  // Create stable service instances to prevent infinite loops
-  const webSocketService = useMemo(() => new WebSocketServiceAdapter(), []);
+  // Use unified WebSocket service and create stable service instances to prevent infinite loops
+  const webSocketService = unifiedWebSocketService;
   const cacheService = useMemo(() => new CacheService(queryClient), [queryClient]);
   const transformationService = useMemo(() => new DataTransformationService(), []);
 
@@ -61,7 +66,7 @@ export function useRealtime({ selectedMatchId, selectedFieldId, tournamentId, is
       }
     };
 
-    const unsubscribe = webSocketService.onScoreUpdate(handleScoreUpdate);
+    const unsubscribe = webSocketService.on('scoreUpdateRealtime', handleScoreUpdate);
     return () => {
       if (unsubscribe) unsubscribe();
     };
@@ -79,7 +84,11 @@ export function useRealtime({ selectedMatchId, selectedFieldId, tournamentId, is
     console.log("📊 Real-time update calculations:", realtimeData);
     console.log("Sending real-time score update (no DB persist):", realtimeData);
     
-    webSocketService.sendRealtimeScoreUpdate(realtimeData);
+    // Use emit to send scoreUpdateRealtime event directly
+    webSocketService.emit('scoreUpdateRealtime', realtimeData, {
+      fieldId: selectedFieldId || undefined,
+      tournamentId,
+    });
   }, [selectedMatchId, selectedFieldId, tournamentId, webSocketService, transformationService]);
 
   const broadcastForNewMatch = useCallback((scoreData: MatchScoreData) => {
@@ -97,7 +106,11 @@ export function useRealtime({ selectedMatchId, selectedFieldId, tournamentId, is
     });
     
     console.log("📡 Broadcasting scores for NEW match:", selectedMatchId, realtimeData);
-    webSocketService.sendRealtimeScoreUpdate(realtimeData);
+    // Use emit to send scoreUpdateRealtime event directly
+    webSocketService.emit('scoreUpdateRealtime', realtimeData, {
+      fieldId: selectedFieldId || undefined,
+      tournamentId,
+    });
   }, [selectedMatchId, selectedFieldId, tournamentId, webSocketService, transformationService]);
 
   return {

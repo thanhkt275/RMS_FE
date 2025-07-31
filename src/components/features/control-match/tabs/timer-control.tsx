@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { useWebSocket } from '@/hooks/websocket/use-websocket';
-import websocketService from '@/lib/websocket';
+import { useUnifiedWebSocket as useWebSocket } from '@/hooks/websocket/use-unified-websocket';
+import { unifiedWebSocketService as websocketService } from '@/lib/unified-websocket';
 import { MatchStatus } from '@/types/types';
 
 interface TimerControlProps {

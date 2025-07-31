@@ -10,7 +10,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { RankingService } from '@/services/ranking.service';
-import webSocketService from '@/services/websocket-service';
+import { unifiedWebSocketService } from '@/lib/unified-websocket';
 import { RankingQueryKeys } from './use-real-time-rankings';
 import { ScoreData } from '@/types/types';
 import { RankingUpdateEvent } from '@/types/ranking.types';
@@ -65,8 +65,8 @@ export function useRankingIntegration(
       }
 
       // Emit WebSocket event for real-time updates
-      if (webSocketService.isConnectedToServer()) {
-        webSocketService.sendRankingRecalculation({
+      if (unifiedWebSocketService.isConnected()) {
+        unifiedWebSocketService.emit('ranking_recalculation', {
           type: 'ranking_recalculation_completed',
           tournamentId,
           stageId,
@@ -212,7 +212,7 @@ export function useRankingUpdateMonitor(tournamentId: string, stageId?: string) 
 
   // Set up WebSocket listeners (this would be called in a useEffect)
   const setupListeners = useCallback(() => {
-    const unsubscribe = webSocketService.on('ranking_update', handleRankingUpdate);
+    const unsubscribe = unifiedWebSocketService.on('ranking_update', handleRankingUpdate);
     return unsubscribe;
   }, [handleRankingUpdate]);
 

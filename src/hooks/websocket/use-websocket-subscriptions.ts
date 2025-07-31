@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useWebSocket } from "@/hooks/websocket/use-websocket";
+import { useUnifiedWebSocket } from "@/hooks/websocket/use-unified-websocket";
 import { QueryKeys } from "@/lib/query-keys";
+import { UserRole } from "@/types/types";
 
 interface UseWebSocketSubscriptionsProps {
   tournamentId: string;
@@ -18,7 +19,7 @@ interface WebSocketSubscriptionsReturn {
   joinTournament: (tournamentId: string) => void;
   joinFieldRoom: (fieldId: string) => void;
   leaveFieldRoom: (fieldId: string) => void;
-  changeDisplayMode: (settings: any) => void; // Updated to match useWebSocket signature
+  changeDisplayMode: (settings: any) => void;
   sendAnnouncement: (message: string, duration?: number, fieldId?: string) => void;
   sendMatchUpdate: (data: any) => void;
   sendMatchStateChange: (data: any) => void;
@@ -40,10 +41,10 @@ export function useWebSocketSubscriptions({
 }: UseWebSocketSubscriptionsProps): WebSocketSubscriptionsReturn {
   const queryClient = useQueryClient();
 
-  // Connect to WebSocket with the tournament ID and auto-connect
+  // Use unified WebSocket service
   const {
     isConnected,
-    currentTournament,
+    connectionStatus,
     joinTournament,
     changeDisplayMode,
     sendAnnouncement,
@@ -53,7 +54,12 @@ export function useWebSocketSubscriptions({
     subscribe,
     joinFieldRoom,
     leaveFieldRoom,
-  } = useWebSocket({ tournamentId, autoConnect: true });
+  } = useUnifiedWebSocket({ 
+    tournamentId, 
+    fieldId: selectedFieldId || undefined,
+    autoConnect: true,
+    userRole: UserRole.REFEREE // Subscriptions typically used by referees/control panels
+  });
   // Join tournament and field rooms on mount
   useEffect(() => {
     if (!tournamentId) return;
@@ -309,6 +315,6 @@ export function useWebSocketSubscriptions({
     
     // Connection state
     isConnected,
-    currentTournament,
+    currentTournament: tournamentId,
   };
 }

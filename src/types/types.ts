@@ -207,6 +207,7 @@ export interface MatchData {
   matchNumber: number;
   status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
   tournamentId: string;
+  fieldId?: string;
   // Add other match properties as needed
 }
 
@@ -219,6 +220,7 @@ export interface ScoreData {
   blueDriveScore: number;
   blueTotalScore: number;
   tournamentId: string;
+  fieldId?: string;
   redGameElements?:
     | Array<{
         element: string;
@@ -249,6 +251,7 @@ export interface MatchStateData {
   status: MatchStatus;
   currentPeriod?: "auto" | "teleop" | "endgame" | null;
   tournamentId: string;
+  fieldId?: string;
 }
 
 export interface AnnouncementData {

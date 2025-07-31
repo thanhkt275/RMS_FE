@@ -1,70 +1,30 @@
-'use client';
+// This file is deprecated. Use the unified WebSocket service directly.
+// The context wrapper adds unnecessary complexity when the service is already a singleton.
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import websocketService, { IWebSocketService } from '@/lib/websocket';
+import { unifiedWebSocketService } from '@/lib/unified-websocket';
 
-interface WebSocketContextType {
-  service: IWebSocketService;
-  isConnected: boolean;
-  connectionAttempts: number;
-}
+/**
+ * @deprecated This context wrapper is no longer needed.
+ * Use the unifiedWebSocketService directly or useUnifiedWebSocket hook instead.
+ * The service is already a singleton and doesn't need React context wrapping.
+ */
 
-const WebSocketContext = createContext<WebSocketContextType | null>(null);
+// Re-export for backward compatibility during migration
+export { unifiedWebSocketService as websocketService };
 
-interface WebSocketProviderProps {
-  children: ReactNode;
-  autoConnect?: boolean;
-  url?: string;
-}
-
-export function WebSocketProvider({ 
-  children, 
-  autoConnect = true, 
-  url 
-}: WebSocketProviderProps) {
-  const [isConnected, setIsConnected] = useState(false);
-  const [connectionAttempts, setConnectionAttempts] = useState(0);
-
-  useEffect(() => {
-
-    const handleConnectionStatus = (status: { connected: boolean; reconnectAttempts?: number }) => {
-      setIsConnected(status.connected);
-      setConnectionAttempts(status.reconnectAttempts || 0);
-    };
-
-    const unsubscribe = websocketService.onConnectionStatus(handleConnectionStatus);
-    
-    // Initialize connection
-    setIsConnected(websocketService.isConnected());
-    if (autoConnect && !websocketService.isConnected()) {
-      websocketService.connect(url);
-    }
-
-    return () => {
-      unsubscribe();
-    };
-  }, [autoConnect, url]);
-
-  const contextValue: WebSocketContextType = {
-    service: websocketService,
-    isConnected,
-    connectionAttempts,
+// Temporary compatibility function for existing code
+export function useWebSocketContext() {
+  console.warn('useWebSocketContext is deprecated. Use unifiedWebSocketService directly or useUnifiedWebSocket hook.');
+  
+  return {
+    service: unifiedWebSocketService,
+    isConnected: unifiedWebSocketService.isConnected(),
+    connectionAttempts: 0, // Not tracked in unified service
   };
-
-  return (
-    <WebSocketContext.Provider value={contextValue}>
-      {children}
-    </WebSocketContext.Provider>
-  );
 }
 
-export function useWebSocketContext(): WebSocketContextType {
-  const context = useContext(WebSocketContext);
-  if (!context) {
-    throw new Error('useWebSocketContext must be used within a WebSocketProvider');
-  }
-  return context;
+// Deprecated provider component
+export function WebSocketProvider({ children }: { children: React.ReactNode }) {
+  console.warn('WebSocketProvider is deprecated. The unified WebSocket service is a singleton and does not need React context.');
+  return <>{children}</>;
 }
-
-// Re-export for backward compatibility
-export { websocketService };

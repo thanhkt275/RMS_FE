@@ -1,0 +1,137 @@
+import React from "react";
+import { useAudienceTimer } from "@/hooks/audience-display/use-audience-timer";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+
+interface TimerDisplayProps {
+  tournamentId: string;
+  fieldId?: string;
+  className?: string;
+  showConnectionStatus?: boolean;
+}
+
+export function TimerDisplay({
+  tournamentId,
+  fieldId,
+  className = "",
+  showConnectionStatus = true,
+}: TimerDisplayProps) {
+  const {
+    timer,
+    isConnected,
+    connectionStatus,
+    showConnectionStatus: showStatus,
+    connectionMessage,
+    formatTime,
+  } = useAudienceTimer({ tournamentId, fieldId });
+
+  if (!timer) {
+    return (
+      <div className={`text-center ${className}`}>
+        <div className="text-6xl font-bold text-gray-400">--:--</div>
+        <div className="text-lg text-gray-500 mt-2">No Timer Data</div>
+      </div>
+    );
+  }
+
+  const getPeriodColor = (period?: string) => {
+    switch (period) {
+      case "auto":
+        return "bg-blue-500";
+      case "teleop":
+        return "bg-green-500";
+      case "endgame":
+        return "bg-red-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+  const getPeriodText = (period?: string) => {
+    switch (period) {
+      case "auto":
+        return "AUTONOMOUS";
+      case "teleop":
+        return "TELEOPERATED";
+      case "endgame":
+        return "ENDGAME";
+      default:
+        return "MATCH";
+    }
+  };
+
+  return (
+    <div className={`text-center ${className}`}>
+      {/* Connection Status Indicator */}
+      {showConnectionStatus && showStatus && (
+        <Alert className="mb-4 bg-yellow-50 border-yellow-200">
+          <AlertDescription className="text-yellow-800">
+            {connectionMessage}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Timer Display */}
+      <div className="relative">
+        <div
+          className={`text-8xl font-bold transition-colors duration-300 ${
+            timer.isRunning
+              ? timer.remaining <= 30000
+                ? "text-red-600 animate-pulse"
+                : "text-green-600"
+              : "text-gray-600"
+          }`}
+        >
+          {formatTime(timer.remaining)}
+        </div>
+
+        {/* Period Indicator */}
+        {timer.period && (
+          <Badge
+            className={`mt-2 text-white text-lg px-4 py-2 ${getPeriodColor(
+              timer.period
+            )}`}
+          >
+            {getPeriodText(timer.period)}
+          </Badge>
+        )}
+
+        {/* Running Status */}
+        <div className="mt-2 flex items-center justify-center gap-2">
+          <div
+            className={`w-3 h-3 rounded-full ${
+              timer.isRunning ? "bg-green-500 animate-pulse" : "bg-gray-400"
+            }`}
+          />
+          <span className="text-lg text-gray-600">
+            {timer.isRunning ? "RUNNING" : "STOPPED"}
+          </span>
+        </div>
+
+        {/* Connection Status Badge */}
+        {showConnectionStatus && (
+          <div className="absolute top-0 right-0">
+            <Badge
+              variant={isConnected ? "default" : "destructive"}
+              className="text-xs"
+            >
+              {isConnected ? "● LIVE" : "● OFFLINE"}
+            </Badge>
+          </div>
+        )}
+      </div>
+
+      {/* Debug Info (development only) */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="mt-4 text-xs text-gray-500 bg-gray-50 p-2 rounded">
+          <div>Duration: {formatTime(timer.duration)}</div>
+          <div>Status: {connectionStatus}</div>
+          <div>Field: {fieldId || "All"}</div>
+          {timer.startedAt && (
+            <div>Started: {new Date(timer.startedAt).toLocaleTimeString()}</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

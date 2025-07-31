@@ -28,7 +28,7 @@ export interface BaseScoreData {
   redMultiplier?: number;
   blueTeamCount?: number;
   blueMultiplier?: number;
-  scoreDetails?: Record<string, any>;
+  scoreDetails?: Record<string, unknown>;
 }
 
 // For real-time score updates (no database persistence)
@@ -47,11 +47,11 @@ export interface PersistenceResultData {
   matchId: string;
   message?: string;
   error?: string;
-  data?: any;
+  data?: unknown;
 }
 
 // Event types for WebSocket communication
-export type WebSocketScoreEvent = 
+export type WebSocketScoreEvent =
   | 'scoreUpdateRealtime'
   | 'persistScores'
   | 'scoreUpdated'
@@ -70,8 +70,56 @@ export interface WebSocketConnectionStatus {
 export interface WebSocketError {
   event: string;
   message: string;
-  data?: any;
+  data?: unknown;
   timestamp: Date;
+}
+
+// Common WebSocket event data structure
+export interface WebSocketEventData extends Record<string, unknown> {
+  tournamentId?: string;
+  fieldId?: string;
+  timestamp?: number;
+  userRole?: string;
+}
+
+// Collaborative session event data types
+export interface CollaborativeStateUpdateData {
+  matchId: string;
+  state: unknown;
+  update: unknown;
+}
+
+export interface UserSessionEventData {
+  matchId: string;
+  userId: string;
+  userRole?: string;
+  timestamp?: number;
+}
+
+export interface UserDisconnectEventData {
+  userId: string;
+  timestamp: number;
+  reason?: string;
+}
+
+export interface StateSyncRequestData {
+  matchId: string;
+  userId: string;
+  timestamp?: number;
+}
+
+export interface StateSyncResponseData {
+  matchId: string;
+  state: unknown;
+  requesterId: string;
+  providerId: string;
+  timestamp: number;
+}
+
+export interface SessionHeartbeatData {
+  matchId: string;
+  userId: string;
+  timestamp: number;
 }
 
 // Event callback types
