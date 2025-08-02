@@ -71,7 +71,7 @@ export function useMatch(matchId: string) {
 /**
  * Hook to update a match status
  */
-export function useUpdateMatchStatus() {
+export function useUpdateMatchStatus(showToast: boolean = true) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ matchId, status }: { matchId: string; status: MatchStatus }) => {
@@ -83,9 +83,43 @@ export function useUpdateMatchStatus() {
       }
     },
     onSuccess: (data) => {
-      toast.success("Match status updated successfully");
-      queryClient.invalidateQueries({ queryKey: QueryKeys.matches.all() });
-      queryClient.invalidateQueries({ queryKey: QueryKeys.matches.byId(data.id) });
+      // Add timestamp to track duplicate calls
+      console.log('[useUpdateMatchStatus] Success callback triggered at:', new Date().toISOString(), 'for match:', data.id, 'status:', data.status);
+      
+      // Only show toast for manual status updates, not automatic timer transitions
+      if (showToast) {
+        toast.success("Match status updated successfully");
+      }
+      
+      // Optimized cache updates - minimize invalidations
+      // Update the specific match data in cache first
+      queryClient.setQueryData(QueryKeys.matches.byId(data.id), data);
+      
+      // Instead of invalidating, try to update existing queries in cache
+      // Update all matches query if it exists
+      queryClient.setQueryData(QueryKeys.matches.all(), (oldData: any[]) => {
+        if (!oldData) return oldData;
+        return oldData.map(match => match.id === data.id ? { ...match, ...data } : match);
+      });
+      
+      // Update tournament matches query if it exists
+      if (data.tournamentId) {
+        queryClient.setQueryData(QueryKeys.matches.byTournament(data.tournamentId), (oldData: any[]) => {
+          if (!oldData) return oldData;
+          return oldData.map(match => match.id === data.id ? { ...match, ...data } : match);
+        });
+      }
+      
+      // Only invalidate as a fallback if cache updates might not be sufficient
+      // This ensures fresh data if the cache structure is different than expected
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: QueryKeys.matches.all() });
+        if (data.tournamentId) {
+          queryClient.invalidateQueries({ 
+            queryKey: QueryKeys.matches.byTournament(data.tournamentId)
+          });
+        }
+      }, 100); // Small delay to batch invalidations
     },
     onError: (error: any) => {
       toast.error(`Failed to update match status: ${error.message}`);

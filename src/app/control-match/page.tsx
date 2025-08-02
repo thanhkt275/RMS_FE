@@ -83,11 +83,26 @@ export default function ControlMatchPage() {
   const [selectedMatchId, setSelectedMatchId] = useState<string>("");
 
 
-  // Fetch matches based on tournament selection
-  const { data: allMatchesData = [], isLoading: isLoadingMatches } = 
-    selectedTournamentId === "all" || !selectedTournamentId
-      ? useMatches() // Fetch all matches when "All Tournaments" is selected
-      : useMatchesByTournament(tournamentId);
+  // Fetch matches based on tournament selection using a single hook
+  const { data: allMatchesData = [], isLoading: isLoadingMatches } = useQuery({
+    queryKey: selectedTournamentId === "all" || !selectedTournamentId
+      ? QueryKeys.matches.all()
+      : QueryKeys.matches.byTournament(tournamentId),
+    queryFn: async () => {
+      if (selectedTournamentId === "all" || !selectedTournamentId) {
+        // Fetch all matches
+        return await apiClient.get("/matches");
+      } else {
+        // Fetch matches by tournament
+        return await apiClient.get(`/matches?tournamentId=${tournamentId}`);
+      }
+    },
+    enabled: !!tournamentId,
+    staleTime: 1000 * 60 * 10, // 10 minutes - longer stale time to reduce refetches
+    gcTime: 1000 * 60 * 15,    // 15 minutes garbage collection time
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnMount: false,       // Don't refetch on component remount if data exists
+  });
   // Filter matches by selected field
   const matchesData = useMemo(() => {
     if (!selectedFieldId) return allMatchesData;
@@ -251,7 +266,16 @@ export default function ControlMatchPage() {
   });
 
 
-  // Initialize timer control hook
+  // Get the match status update mutations - one for manual actions, one for automatic
+  const updateMatchStatusWithToast = useUpdateMatchStatus(true);  // For manual actions
+  const updateMatchStatusSilent = useUpdateMatchStatus(false);    // For automatic timer updates
+
+  // Create stable callback for API updates using silent mutation for timer control
+  const updateMatchStatusAPI = useCallback(({ matchId, status }: { matchId: string; status: MatchStatus }) => {
+    updateMatchStatusSilent.mutate({ matchId, status });
+  }, []); // Empty dependency array since we're using the mutation directly
+
+  // Initialize timer control hook with API update function
   const {
     timerDuration,
     timerRemaining,
@@ -268,6 +292,7 @@ export default function ControlMatchPage() {
     selectedFieldId,
     selectedMatchId,
     sendMatchStateChange,
+    updateMatchStatusAPI,
   });
 
   // Initialize scoring control hook
@@ -276,11 +301,6 @@ export default function ControlMatchPage() {
     selectedMatchId,
     selectedFieldId,
   });
-
-  // Get the match status update mutation
-  const updateMatchStatus = useUpdateMatchStatus();
-
-  // Handle selecting a match
   const handleSelectMatch = (match: {
     id: string;
     matchNumber: string | number;
@@ -319,46 +339,35 @@ export default function ControlMatchPage() {
     });
   };
 
-  // Enhanced timer controls with match state changes
-  const handleEnhancedStartTimer = () => {    handleStartTimer();
-    sendMatchStateChange({
-      matchId: selectedMatchId,
-      status: MatchStatus.IN_PROGRESS,
-      currentPeriod: matchPeriod as any,
-      fieldId: selectedFieldId,
-    } as any);
-    updateMatchStatus.mutate({
-      matchId: selectedMatchId,
-      status: MatchStatus.IN_PROGRESS,
-    });
+  // Enhanced timer controls - let timer control hook handle everything
+  const handleEnhancedStartTimer = () => {
+    // Timer control hook handles both WebSocket and API updates internally
+    handleStartTimer();
   };
+  
   const handleEnhancedResetTimer = () => {
+    // Timer control hook handles both WebSocket and API updates internally
     handleResetTimer();
-    sendMatchStateChange({
-      matchId: selectedMatchId,
-      status: MatchStatus.PENDING,
-      currentPeriod: null,
-      fieldId: selectedFieldId,
-    } as any);
-    updateMatchStatus.mutate({
-      matchId: selectedMatchId,
-      status: MatchStatus.PENDING,
-    });
   };
   // Handle submitting final scores and completing the match
   const handleSubmitScores = async () => {
     try {
       await scoringControl.saveScores();
+      
+      // Send WebSocket update for immediate UI feedback
       sendMatchStateChange({
         matchId: selectedMatchId,
         status: MatchStatus.COMPLETED,
         currentPeriod: null,
         fieldId: selectedFieldId,
       } as any);
-      updateMatchStatus.mutate({
+      
+      // Single API call to update match status to completed
+      updateMatchStatusWithToast.mutate({
         matchId: selectedMatchId,
         status: MatchStatus.COMPLETED,
       });
+      
       toast.success("Match Completed", {
         description: `Final score: Red ${scoringControl.redTotalScore} - Blue ${scoringControl.blueTotalScore}`,
       });
@@ -596,6 +605,7 @@ export default function ControlMatchPage() {
               getRedTeams={getRedTeams}
               getBlueTeams={getBlueTeams}
               matchScoresMap={matchScoresMap}
+              matchState={matchState}
               isLoading={isLoadingMatches}
             />
           </div>
