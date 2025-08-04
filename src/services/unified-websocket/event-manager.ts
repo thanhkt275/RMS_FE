@@ -22,8 +22,17 @@ export class EventManager {
   private eventFilters: Map<string, EventFilter[]> = new Map();
   private lastEventData: Map<string, WebSocketEventData> = new Map();
   private errorCallbacks: Set<(error: Error) => void> = new Set();
+  private queuedEvents: Array<{ event: string; data: unknown; options?: EventOptions }> = [];
+  private isProcessingQueue = false;
 
-  constructor(private connectionManager: ConnectionManager) { }
+  constructor(private connectionManager: ConnectionManager) { 
+    // Set up connection listener to process queued events when connected
+    this.connectionManager.onConnectionStatus((status) => {
+      if (status.connected && status.state === 'CONNECTED') {
+        this.processQueuedEvents();
+      }
+    });
+  }
 
   /**
    * Subscribe to an event with optional filtering
@@ -85,7 +94,13 @@ export class EventManager {
     const socket = this.connectionManager.getSocket();
 
     if (!socket || !socket.connected) {
-      console.warn(`[EventManager] Cannot emit '${event}': not connected`);
+      console.warn(`[EventManager] Cannot emit '${event}': not connected. Socket: ${!!socket}, Connected: ${socket?.connected}`);
+      
+      // For critical room joining events, queue them for retry
+      if (event === 'joinFieldRoom' || event === 'join_tournament') {
+        console.log(`[EventManager] Queuing critical event '${event}' for retry when connected`);
+        this.queueCriticalEvent(event, data, options);
+      }
       return;
     }
 
@@ -296,5 +311,49 @@ export class EventManager {
 
     const events = Array.from(this.eventHandlers.keys());
     events.forEach(event => this.cleanupEvent(event));
+    
+    // Clear queued events as well
+    this.queuedEvents = [];
+  }
+
+  /**
+   * Queue a critical event for retry when connection is established
+   */
+  private queueCriticalEvent<T = WebSocketEventData>(event: string, data: T, options?: EventOptions): void {
+    // Avoid duplicates in the queue
+    const isDuplicate = this.queuedEvents.some(queuedEvent => 
+      queuedEvent.event === event && JSON.stringify(queuedEvent.data) === JSON.stringify(data)
+    );
+    
+    if (!isDuplicate) {
+      this.queuedEvents.push({ event, data, options });
+      console.log(`[EventManager] Queued event '${event}' for retry (queue size: ${this.queuedEvents.length})`);
+    }
+  }
+
+  /**
+   * Process all queued events when connection is restored
+   */
+  private processQueuedEvents(): void {
+    if (this.isProcessingQueue || this.queuedEvents.length === 0) {
+      return;
+    }
+
+    this.isProcessingQueue = true;
+    console.log(`[EventManager] Processing ${this.queuedEvents.length} queued events`);
+
+    const eventsToProcess = [...this.queuedEvents];
+    this.queuedEvents = [];
+
+    eventsToProcess.forEach(({ event, data, options }) => {
+      try {
+        console.log(`[EventManager] Retrying queued event '${event}'`);
+        this.emit(event, data, options);
+      } catch (error) {
+        console.error(`[EventManager] Error processing queued event '${event}':`, error);
+      }
+    });
+
+    this.isProcessingQueue = false;
   }
 }

@@ -1,7 +1,5 @@
 /**
- * MIGRATION NOTE: This hook has been updated to use the unified WebSocket service
- * instead of the legacy WebSocketServiceAdapter that was removed.
- * The old adapter referenced a missing @/lib/unified-websocket service.
+ * Real-time scoring hook using the unified WebSocket service
  */
 import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { useQueryClient } from "@tanstack/react-query";
@@ -85,7 +83,7 @@ export function useRealtime({ selectedMatchId, selectedFieldId, tournamentId, is
     console.log("Sending real-time score update (no DB persist):", realtimeData);
     
     // Use emit to send scoreUpdateRealtime event directly
-    webSocketService.emit('scoreUpdateRealtime', realtimeData, {
+    webSocketService.emit('scoreUpdateRealtime', realtimeData as any, {
       fieldId: selectedFieldId || undefined,
       tournamentId,
     });
@@ -107,7 +105,7 @@ export function useRealtime({ selectedMatchId, selectedFieldId, tournamentId, is
     
     console.log("📡 Broadcasting scores for NEW match:", selectedMatchId, realtimeData);
     // Use emit to send scoreUpdateRealtime event directly
-    webSocketService.emit('scoreUpdateRealtime', realtimeData, {
+    webSocketService.emit('scoreUpdateRealtime', realtimeData as any, {
       fieldId: selectedFieldId || undefined,
       tournamentId,
     });

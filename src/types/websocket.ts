@@ -85,8 +85,8 @@ export interface WebSocketEventData extends Record<string, unknown> {
 // Collaborative session event data types
 export interface CollaborativeStateUpdateData {
   matchId: string;
-  state: unknown;
-  update: unknown;
+  state: any;
+  update: any;
 }
 
 export interface UserSessionEventData {
@@ -110,7 +110,7 @@ export interface StateSyncRequestData {
 
 export interface StateSyncResponseData {
   matchId: string;
-  state: unknown;
+  state: any;
   requesterId: string;
   providerId: string;
   timestamp: number;

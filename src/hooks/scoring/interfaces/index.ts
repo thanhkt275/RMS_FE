@@ -35,11 +35,7 @@ export interface IApiService {
   refetchScores(): Promise<any>;
 }
 
-// WebSocket service interface
-export interface IWebSocketService {
-  sendRealtimeScoreUpdate(data: RealtimeScoreUpdate): void;
-  onScoreUpdate(callback: (data: any) => void): () => void;
-}
+
 
 // User activity service interface
 export interface IUserActivityService {

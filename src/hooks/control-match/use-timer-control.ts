@@ -137,7 +137,7 @@ export function useTimerControl({
 
   // Listen for timer updates from unified WebSocket service
   useEffect(() => {
-    const handleTimerUpdate = (data: unknown) => {
+    const handleTimerUpdate = (data: any) => {
       console.log('[useTimerControl] Timer update received:', data);
       
       // Filter messages by fieldId if we're in a specific field room

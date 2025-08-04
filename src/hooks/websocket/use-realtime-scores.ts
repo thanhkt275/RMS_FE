@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { unifiedWebSocketService } from '@/services/unified-websocket/unified-websocket-service';
+import { unifiedWebSocketService } from '@/lib/unified-websocket';
 
 interface IScoreState {
   red: {
@@ -148,7 +148,7 @@ export function useRealtimeScores(matchId: string) {
     getCurrentStatus: () => ({
       ...connectionState,
       matchId,
-      fallbackActive: fallbackManagerRef.current?.isFallbackActive() || false
+      fallbackActive: false
     })
   };
 }

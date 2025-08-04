@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/common/use-auth';
 import { UserRole } from '@/types/types';
-import { unifiedWebSocketService } from '@/services/unified-websocket/unified-websocket-service';
+import { unifiedWebSocketService } from '@/lib/unified-websocket';
 
 /**
  * Hook for managing role-based access control in the control-match page
@@ -94,7 +94,7 @@ export function useRoleBasedAccess() {
    * Get role-specific styling for UI elements
    */
   const getRoleBasedStyling = (feature: string) => {
-    const hasAccess = canAccess(feature as unknown);
+    const hasAccess = canAccess(feature as any);
     
     return {
       container: hasAccess 

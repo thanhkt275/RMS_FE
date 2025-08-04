@@ -2,7 +2,11 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMatch, useUpdateMatchStatus, useMatches } from "@/hooks/matches/use-matches";
+import {
+  useMatch,
+  useUpdateMatchStatus,
+  useMatches,
+} from "@/hooks/matches/use-matches";
 import { useMatchesByTournament } from "@/hooks/matches/use-matches-by-tournament";
 import { MatchStatus, UserRole } from "@/types/types";
 import { useTournaments } from "@/hooks/tournaments/use-tournaments";
@@ -31,22 +35,23 @@ import { useRoleBasedAccess } from "@/hooks/control-match/use-role-based-access"
 import { useUnifiedMatchControl } from "@/hooks/control-match/use-unified-match-control";
 import { useUnifiedWebSocket } from "@/hooks/websocket/use-unified-websocket";
 
-
 // Import components
 import { TimerControlPanel } from "@/components/features/control-match/timer-control-panel";
 import { MatchSelector } from "@/components/features/control-match/match-selector";
 import { ScoringPanel } from "@/components/features/control-match/scoring-panel";
 import { AnnouncementPanel } from "@/components/features/control-match/announcement-panel";
 import { MatchStatusDisplay } from "@/components/features/control-match/match-status-display";
-import { AccessDenied, AccessDeniedOverlay } from "@/components/features/control-match/access-denied";
-
+import {
+  AccessDenied,
+  AccessDeniedOverlay,
+} from "@/components/features/control-match/access-denied";
 
 export default function ControlMatchPage() {
   const queryClient = useQueryClient();
-  
+
   // Initialize role-based access control
   const roleAccess = useRoleBasedAccess();
-  
+
   // Tournament selection state
   const { data: tournaments = [], isLoading: tournamentsLoading } =
     useTournaments();
@@ -75,7 +80,7 @@ export default function ControlMatchPage() {
   // Initialize unified match control hook
   const unifiedMatchControl = useUnifiedMatchControl({
     tournamentId: selectedTournamentId || "all",
-    fieldId: selectedFieldId,
+    fieldId: selectedFieldId ?? undefined,
     selectedMatchId: selectedMatchId || undefined,
   });
   // Set default tournamentId on load (All Tournaments)
@@ -92,12 +97,11 @@ export default function ControlMatchPage() {
     tournamentsLoading,
     selectedTournamentId,
     setSelectedTournamentId,
-  ]);  // Use selectedTournamentId for all tournament-specific logic
+  ]); // Use selectedTournamentId for all tournament-specific logic
   const tournamentId = selectedTournamentId || "all";
 
-
   // Fetch matches based on tournament selection
-  const { data: allMatchesData = [], isLoading: isLoadingMatches } = 
+  const { data: allMatchesData = [], isLoading: isLoadingMatches } =
     selectedTournamentId === "all" || !selectedTournamentId
       ? useMatches() // Fetch all matches when "All Tournaments" is selected
       : useMatchesByTournament(tournamentId);
@@ -153,9 +157,13 @@ export default function ControlMatchPage() {
   // Send match update to audience display when selected match data loads using unified service
   useEffect(() => {
     if (!selectedMatch || !selectedMatchId || isLoadingMatchDetails) return;
-    
-    console.log("📡 Broadcasting match update for selected match:", selectedMatchId, selectedMatch);
-    
+
+    console.log(
+      "📡 Broadcasting match update for selected match:",
+      selectedMatchId,
+      selectedMatch
+    );
+
     const redTeams = getRedTeams(selectedMatch).map(
       (teamNumber: string | number) => ({
         name: teamNumber,
@@ -171,9 +179,10 @@ export default function ControlMatchPage() {
     // Send match update through unified service with field-specific filtering
     unifiedMatchControl.sendMatchUpdate({
       id: selectedMatchId,
-      matchNumber: typeof selectedMatch.matchNumber === "string"
-        ? parseInt(selectedMatch.matchNumber, 10)
-        : selectedMatch.matchNumber,
+      matchNumber:
+        typeof selectedMatch.matchNumber === "string"
+          ? parseInt(selectedMatch.matchNumber, 10)
+          : selectedMatch.matchNumber,
       status: selectedMatch.status,
       tournamentId: selectedTournamentId || "all",
       fieldId: selectedFieldId,
@@ -181,7 +190,14 @@ export default function ControlMatchPage() {
       blueTeams,
       scheduledTime: selectedMatch.scheduledTime,
     } as any);
-  }, [selectedMatch, selectedMatchId, isLoadingMatchDetails, selectedFieldId, selectedTournamentId, unifiedMatchControl]);
+  }, [
+    selectedMatch,
+    selectedMatchId,
+    isLoadingMatchDetails,
+    selectedFieldId,
+    selectedTournamentId,
+    unifiedMatchControl,
+  ]);
 
   // Helper function to extract red teams from alliances
   const getRedTeams = (match?: any): string[] => {
@@ -204,7 +220,8 @@ export default function ControlMatchPage() {
     if (!blueAlliance?.teamAlliances) return [];
     return blueAlliance.teamAlliances.map(
       (ta: any) => ta.team?.teamNumber || ta.team?.name || "Unknown"
-    );  };
+    );
+  };
 
   // State for tracking active match and match state from WebSocket
   const [activeMatch, setActiveMatch] = useState<any>(null);
@@ -219,13 +236,16 @@ export default function ControlMatchPage() {
     // Score updates are handled by the scoring control hook
   }, []);
 
-  const handleMatchUpdate = useCallback((data: any) => {
-    setActiveMatch(data);
-    // Auto-select this match if we don't have one selected yet
-    if (!selectedMatchId && data.id) {
-      setSelectedMatchId(data.id);
-    }
-  }, [selectedMatchId]);
+  const handleMatchUpdate = useCallback(
+    (data: any) => {
+      setActiveMatch(data);
+      // Auto-select this match if we don't have one selected yet
+      if (!selectedMatchId && data.id) {
+        setSelectedMatchId(data.id);
+      }
+    },
+    [selectedMatchId]
+  );
 
   const handleMatchStateChange = useCallback((data: any) => {
     setMatchState(data);
@@ -251,10 +271,22 @@ export default function ControlMatchPage() {
   useEffect(() => {
     if (!isConnected) return;
 
-    const unsubscribeTimer = unifiedSubscribe('timer_update', handleTimerUpdate);
-    const unsubscribeScore = unifiedSubscribe('score_update', handleScoreUpdate);
-    const unsubscribeMatch = unifiedSubscribe('match_update', handleMatchUpdate);
-    const unsubscribeMatchState = unifiedSubscribe('match_state_change', handleMatchStateChange);
+    const unsubscribeTimer = unifiedSubscribe(
+      "timer_update",
+      handleTimerUpdate
+    );
+    const unsubscribeScore = unifiedSubscribe(
+      "score_update",
+      handleScoreUpdate
+    );
+    const unsubscribeMatch = unifiedSubscribe(
+      "match_update",
+      handleMatchUpdate
+    );
+    const unsubscribeMatchState = unifiedSubscribe(
+      "match_state_change",
+      handleMatchStateChange
+    );
 
     return () => {
       unsubscribeTimer();
@@ -262,8 +294,39 @@ export default function ControlMatchPage() {
       unsubscribeMatch();
       unsubscribeMatchState();
     };
-  }, [isConnected, unifiedSubscribe, handleTimerUpdate, handleScoreUpdate, handleMatchUpdate, handleMatchStateChange]);
+  }, [
+    isConnected,
+    unifiedSubscribe,
+    handleTimerUpdate,
+    handleScoreUpdate,
+    handleMatchUpdate,
+    handleMatchStateChange,
+  ]);
 
+  // Create wrapper for sendMatchStateChange to match expected signature
+  const sendMatchStateChangeWrapper = useCallback(
+    (params: {
+      matchId: string;
+      status: MatchStatus;
+      currentPeriod: string | null;
+    }) => {
+      // Convert string currentPeriod to the expected union type
+      const validPeriod =
+        params.currentPeriod === "auto" ||
+        params.currentPeriod === "teleop" ||
+        params.currentPeriod === "endgame" ||
+        params.currentPeriod === null
+          ? (params.currentPeriod as "auto" | "teleop" | "endgame" | null)
+          : null;
+
+      unifiedSendMatchStateChange({
+        matchId: params.matchId,
+        status: params.status,
+        currentPeriod: validPeriod,
+      });
+    },
+    [unifiedSendMatchStateChange]
+  );
 
   // Initialize timer control hook
   const {
@@ -281,7 +344,7 @@ export default function ControlMatchPage() {
     tournamentId,
     selectedFieldId,
     selectedMatchId,
-    sendMatchStateChange: unifiedSendMatchStateChange,
+    sendMatchStateChange: sendMatchStateChangeWrapper,
   });
 
   // Initialize scoring control hook
@@ -313,10 +376,9 @@ export default function ControlMatchPage() {
       showTimer,
       showScores,
       showTeams,
-      tournamentId,
-      fieldId: match.fieldId || selectedFieldId || undefined,
+      updatedAt: Date.now(),
     });
-    
+
     // Note: Match update is now handled by useEffect when selectedMatch data loads
     // This prevents sending stale match data
   };
@@ -329,8 +391,7 @@ export default function ControlMatchPage() {
       showTimer,
       showScores,
       showTeams,
-      tournamentId,
-      fieldId: selectedFieldId || undefined,
+      updatedAt: Date.now()
     });
   };
 
@@ -339,9 +400,9 @@ export default function ControlMatchPage() {
     handleStartTimer();
     // Update match status and period through unified service
     unifiedMatchControl.startMatch();
-    unifiedMatchControl.updateMatchPeriod(matchPeriod as unknown);
+    unifiedMatchControl.updateMatchPeriod(matchPeriod as any);
   };
-  
+
   const handleEnhancedResetTimer = () => {
     handleResetTimer();
     // Reset match status and period through unified service
@@ -361,20 +422,17 @@ export default function ControlMatchPage() {
     }
   };
 
-
-
   // Handle sending an announcement
   const handleSendAnnouncement = () => {
     if (announcementMessage.trim()) {
       sendAnnouncement(announcementMessage.trim());
 
       // Switch display mode to announcement
-        changeDisplayMode({
-          displayMode: "announcement",
-          message: announcementMessage.trim(),
-          tournamentId,
-          fieldId: selectedFieldId || undefined,
-        });
+      changeDisplayMode({
+        displayMode: "announcement",
+        message: announcementMessage.trim(),
+        updatedAt: Date.now()
+      });
 
       // Clear input after sending
       setAnnouncementMessage("");
@@ -535,29 +593,42 @@ export default function ControlMatchPage() {
           <h1 className="text-3xl font-bold text-gray-900">
             Match Control Center
           </h1>
-          
+
           {/* Role Indicator */}
           <div className="flex items-center gap-3">
             <div className="text-right">
               <div className="text-sm text-gray-600">Current Role</div>
-              <div className={`text-sm font-semibold ${
-                roleAccess.isAdmin ? 'text-red-600' :
-                roleAccess.isHeadReferee ? 'text-blue-600' :
-                roleAccess.isAllianceReferee ? 'text-green-600' :
-                'text-gray-600'
-              }`}>
-                {roleAccess.currentUser?.username || 'Unknown'} ({roleAccess.currentRole})
+              <div
+                className={`text-sm font-semibold ${
+                  roleAccess.isAdmin
+                    ? "text-red-600"
+                    : roleAccess.isHeadReferee
+                    ? "text-blue-600"
+                    : roleAccess.isAllianceReferee
+                    ? "text-green-600"
+                    : "text-gray-600"
+                }`}
+              >
+                {roleAccess.currentUser?.username || "Unknown"} (
+                {roleAccess.currentRole})
               </div>
             </div>
-            <div className={`w-3 h-3 rounded-full ${
-              roleAccess.hasFullAccess ? 'bg-green-500' :
-              roleAccess.hasScoringAccess ? 'bg-yellow-500' :
-              'bg-gray-400'
-            }`} title={
-              roleAccess.hasFullAccess ? 'Full Access' :
-              roleAccess.hasScoringAccess ? 'Scoring Access' :
-              'Limited Access'
-            } />
+            <div
+              className={`w-3 h-3 rounded-full ${
+                roleAccess.hasFullAccess
+                  ? "bg-green-500"
+                  : roleAccess.hasScoringAccess
+                  ? "bg-yellow-500"
+                  : "bg-gray-400"
+              }`}
+              title={
+                roleAccess.hasFullAccess
+                  ? "Full Access"
+                  : roleAccess.hasScoringAccess
+                  ? "Scoring Access"
+                  : "Limited Access"
+              }
+            />
           </div>
         </div>
 
@@ -567,7 +638,8 @@ export default function ControlMatchPage() {
             <div>
               <label className="block text-sm font-medium mb-2">
                 Tournament
-              </label>              <Select
+              </label>{" "}
+              <Select
                 value={selectedTournamentId}
                 onValueChange={setSelectedTournamentId}
                 disabled={tournamentsLoading}
@@ -577,14 +649,15 @@ export default function ControlMatchPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Tournaments</SelectItem>
-                  {tournaments.map((tournament: unknown) => (
+                  {tournaments.map((tournament: any) => (
                     <SelectItem key={tournament.id} value={tournament.id}>
                       {tournament.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>            <div>
+            </div>{" "}
+            <div>
               <label className="block text-sm font-medium mb-2">Field</label>
               <DynamicFieldSelectDropdown
                 selectedTournamentId={selectedTournamentId}
@@ -623,9 +696,13 @@ export default function ControlMatchPage() {
             ) : (
               <AccessDenied
                 feature="Match Selection"
-                message={roleAccess.getAccessDeniedMessage('match')}
+                message={roleAccess.getAccessDeniedMessage("match")}
                 currentRole={roleAccess.currentRole}
-                requiredRoles={[UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE]}
+                requiredRoles={[
+                  UserRole.ADMIN,
+                  UserRole.HEAD_REFEREE,
+                  UserRole.ALLIANCE_REFEREE,
+                ]}
               />
             )}
           </div>
@@ -666,7 +743,7 @@ export default function ControlMatchPage() {
             ) : (
               <AccessDenied
                 feature="Timer Control"
-                message={roleAccess.getAccessDeniedMessage('timer')}
+                message={roleAccess.getAccessDeniedMessage("timer")}
                 currentRole={roleAccess.currentRole}
                 requiredRoles={[UserRole.ADMIN, UserRole.HEAD_REFEREE]}
               />
@@ -694,9 +771,13 @@ export default function ControlMatchPage() {
             ) : (
               <AccessDenied
                 feature="Scoring Panel"
-                message={roleAccess.getAccessDeniedMessage('scoring')}
+                message={roleAccess.getAccessDeniedMessage("scoring")}
                 currentRole={roleAccess.currentRole}
-                requiredRoles={[UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE]}
+                requiredRoles={[
+                  UserRole.ADMIN,
+                  UserRole.HEAD_REFEREE,
+                  UserRole.ALLIANCE_REFEREE,
+                ]}
               />
             )}
           </div>
@@ -721,7 +802,7 @@ export default function ControlMatchPage() {
             ) : (
               <AccessDenied
                 feature="Display Control"
-                message={roleAccess.getAccessDeniedMessage('display')}
+                message={roleAccess.getAccessDeniedMessage("display")}
                 currentRole={roleAccess.currentRole}
                 requiredRoles={[UserRole.ADMIN, UserRole.HEAD_REFEREE]}
               />

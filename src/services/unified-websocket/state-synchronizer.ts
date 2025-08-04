@@ -538,7 +538,7 @@ export class StateSynchronizer {
     // Apply top-level changes
     Object.keys(changes).forEach(key => {
       if (key !== 'timer' && key !== 'scores') {
-        (newState as any)[key] = (changes as unknown)[key];
+        (newState as any)[key] = (changes as any)[key];
       }
     });
 

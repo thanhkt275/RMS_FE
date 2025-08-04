@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { useUnifiedWebSocket as useWebSocket } from '@/hooks/websocket/use-unified-websocket';
-import { unifiedWebSocketService as websocketService } from '@/lib/unified-websocket';
+import { useUnifiedWebSocket } from '@/hooks/websocket/use-unified-websocket';
+import { unifiedWebSocketService } from '@/lib/unified-websocket';
 import { MatchStatus } from '@/types/types';
 
 interface TimerControlProps {
@@ -34,7 +34,7 @@ export default function TimerControl({
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // WebSocket connection
-  const { startTimer, pauseTimer, resetTimer, subscribe } = useWebSocket({ tournamentId });
+  const { startTimer, pauseTimer, resetTimer, subscribe } = useUnifiedWebSocket({ tournamentId });
 
   // Format time as MM:SS
   const formatTime = (ms: number) => {
@@ -103,7 +103,7 @@ export default function TimerControl({
         setRemaining(prev => {
           const newRemaining = prev - 1000;
           // Broadcast the new remaining time to audience-display via timer_update
-          websocketService.emit('timer_update', {
+          unifiedWebSocketService.emit('timer_update', {
             duration: MATCH_DURATION,
             remaining: newRemaining > 0 ? newRemaining : 0,
             isRunning: newRemaining > 0,

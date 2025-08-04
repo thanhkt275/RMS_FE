@@ -7,9 +7,11 @@ import { usePersistence } from '../scoring/use-persistence';
 import { useUserActivity } from '../scoring/use-user-activity';
 import { useDataSync } from '../scoring/use-data-sync';
 import { GameElement, ScoringConfig, Alliance, ScoreType } from '../scoring/types/index';
-import { ScoreData } from '@/types/types';
+import { ScoreData, UserRole } from '@/types/types';
 
-type UseScoringControlProps = ScoringConfig
+interface UseScoringControlProps extends ScoringConfig {
+  userRole?: UserRole;
+}
 
 interface ScoringControlReturn {
   // Score states
@@ -71,9 +73,15 @@ export function useScoringControl({
   tournamentId,
   selectedMatchId,
   selectedFieldId,
+  userRole = UserRole.HEAD_REFEREE, // Default to HEAD_REFEREE for control-match scenarios
 }: UseScoringControlProps): ScoringControlReturn {
   const queryClient = useQueryClient();
-  const unifiedWebSocket = useUnifiedWebSocket();
+  const unifiedWebSocket = useUnifiedWebSocket({
+    tournamentId: tournamentId || "all", // Ensure we always have a tournament ID
+    fieldId: selectedFieldId || undefined,
+    autoConnect: true,
+    userRole, // Pass the user role to enable proper permissions
+  });
   
   // Core state management
   const { state, stateService } = useScoringState();

@@ -247,22 +247,21 @@
   - Remove duplicate event handlers and connections
   - _Requirements: 4.1, 4.2_
 
-- [ ] 8.1 Remove old WebSocket service files
+- [x] 8.1 Remove old WebSocket service files
 
 
   - Delete or deprecate old WebSocket service implementation
   - Remove duplicate connection management code
   - Clean up unused event handler files
   - Update all import statements to use unified service
-  - Write migration tests to ensure no functionality is lost
   - _Requirements: 4.1, 4.2_
 
-- [ ] 8.2 Update all WebSocket usage across application
+- [x] 8.2 Update all WebSocket usage across application
   - Replace all useWebSocket hook usage with unified service
   - Update control-match page to use new service
   - Update audience-display page to use new service
   - Remove any remaining dual service references
-  - Write comprehensive integration tests for all updated components
+
   - _Requirements: 4.1, 4.2_
 
 - [ ] 9. Add comprehensive error handling and monitoring

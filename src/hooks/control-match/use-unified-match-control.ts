@@ -223,7 +223,7 @@ export function useUnifiedMatchControl({
       if (data.id === selectedMatchId) {
         setMatchState(prev => ({
           ...prev,
-          matchStatus: data.status || prev.matchStatus
+          matchStatus: (data.status as MatchStatus) || prev.matchStatus
         }));
       }
     };
@@ -241,7 +241,7 @@ export function useUnifiedMatchControl({
       if (data.matchId === selectedMatchId) {
         setMatchState(prev => ({
           ...prev,
-          matchStatus: data.status || prev.matchStatus,
+          matchStatus: (data.status as MatchStatus) || prev.matchStatus,
           currentPeriod: data.currentPeriod || prev.currentPeriod
         }));
       }

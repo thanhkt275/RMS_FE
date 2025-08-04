@@ -75,7 +75,11 @@ export function useAudienceScores(
     options: UseAudienceScoresOptions
 ) {
     const { tournamentId, fieldId, enableValidation = true, enableAnimations = true } = options;
-    const unifiedWebSocket = useUnifiedWebSocket();
+    const unifiedWebSocket = useUnifiedWebSocket({
+        tournamentId: tournamentId || "all", // Ensure we always have a tournament ID
+        fieldId,
+        autoConnect: true,
+    });
 
     // Score state
     const [scores, setScores] = useState<AudienceScoreState>(DEFAULT_SCORE_STATE);
@@ -136,7 +140,7 @@ export function useAudienceScores(
             ];
 
             for (const field of numericFields) {
-                const value = (data as Record<string, unknown>)[field];
+                const value = (data as Record<string, any>)[field];
                 if (value !== undefined && (typeof value !== 'number' || isNaN(value) || value < 0)) {
                     console.warn(`[AudienceScores] Invalid score data: ${field} is not a valid positive number`, value);
                     return false;
@@ -146,7 +150,7 @@ export function useAudienceScores(
             // Check optional penalty fields
             const penaltyFields = ['redPenalty', 'bluePenalty'];
             for (const field of penaltyFields) {
-                const value = (data as Record<string, unknown>)[field];
+                const value = (data as Record<string, any>)[field];
                 if (value !== undefined && (typeof value !== 'number' || isNaN(value) || value < 0)) {
                     console.warn(`[AudienceScores] Invalid score data: ${field} is not a valid positive number`, value);
                     return false;
@@ -219,8 +223,8 @@ export function useAudienceScores(
             blueAutoScore: data.blueAutoScore || 0,
             blueDriveScore: data.blueDriveScore || 0,
             blueTotalScore: data.blueTotalScore || 0,
-            redPenalty: data.redPenalty || 0,
-            bluePenalty: data.bluePenalty || 0,
+            redPenalty: (data as any).redPenalty || 0,
+            bluePenalty: (data as any).bluePenalty || 0,
             redGameElements: data.redGameElements || [],
             blueGameElements: data.blueGameElements || [],
             redTeamCount: data.redTeamCount || 2,
@@ -301,7 +305,7 @@ export function useAudienceScores(
     useEffect(() => {
         if (!unifiedWebSocket) return;
 
-        const handleConnectionStatus = (status: WebSocketConnectionStatus) => {
+        const handleConnectionStatus = (status: { connected: boolean; [key: string]: any }) => {
             setConnectionState(prev => ({
                 ...prev,
                 isConnected: status.connected,

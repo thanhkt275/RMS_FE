@@ -186,12 +186,6 @@ export interface LoadingState {
 
 // --- WebSocket/Real-time Types ---
 
-export interface UseWebSocketOptions {
-  autoConnect?: boolean;
-  url?: string;
-  tournamentId?: string;
-}
-
 export interface TimerData {
   duration: number;
   remaining: number;
@@ -219,6 +213,8 @@ export interface ScoreData {
   blueAutoScore: number;
   blueDriveScore: number;
   blueTotalScore: number;
+  redPenalty?: number;
+  bluePenalty?: number;
   tournamentId: string;
   fieldId?: string;
   redGameElements?:

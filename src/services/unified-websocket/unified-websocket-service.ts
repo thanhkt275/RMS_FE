@@ -297,7 +297,7 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
             return;
         }
 
-        this.emit('timer_update', data as unknown as WebSocketEventData, {
+        this.emit('timer_update', data as any as WebSocketEventData, {
             fieldId: data.fieldId,
             tournamentId: data.tournamentId,
             debounce: true,
@@ -315,7 +315,7 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
             return;
         }
 
-        this.emit('score_update', data as unknown as WebSocketEventData, {
+        this.emit('score_update', data as any as WebSocketEventData, {
             fieldId: data.fieldId,
             tournamentId: data.tournamentId,
             debounce: true,
@@ -333,7 +333,7 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
             return;
         }
 
-        this.emit('match_update', data as unknown as WebSocketEventData, {
+        this.emit('match_update', data as any as WebSocketEventData, {
             tournamentId: data.tournamentId
         });
     }
@@ -512,7 +512,7 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
 
     joinFieldRoom(fieldId: string): void {
         this.currentFieldId = fieldId;
-        this.emit('join_field_room', { fieldId });
+        this.emit('joinFieldRoom', { fieldId });
         console.log(`[UnifiedWebSocketService] Joined field room: ${fieldId}`);
     }
 
@@ -520,7 +520,7 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
         if (this.currentFieldId === fieldId) {
             this.currentFieldId = null;
         }
-        this.emit('leave_field_room', { fieldId });
+        this.emit('leaveFieldRoom', { fieldId });
         console.log(`[UnifiedWebSocketService] Left field room: ${fieldId}`);
     }
 
@@ -530,7 +530,7 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
             return;
         }
 
-        this.emit('display_mode_change', settings as unknown as WebSocketEventData, {
+        this.emit('display_mode_change', settings as any as WebSocketEventData, {
             fieldId: settings.fieldId || undefined,
             tournamentId: settings.tournamentId
         });
@@ -542,7 +542,7 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
             return;
         }
 
-        this.emit('match_state_change', data as unknown as WebSocketEventData, {
+        this.emit('match_state_change', data as any as WebSocketEventData, {
             tournamentId: data.tournamentId
         });
     }
@@ -601,7 +601,7 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
             return;
         }
 
-        this.emit('announcement', data as unknown as WebSocketEventData, {
+        this.emit('announcement', data as any as WebSocketEventData, {
             fieldId: data.fieldId,
             tournamentId: data.tournamentId
         });
