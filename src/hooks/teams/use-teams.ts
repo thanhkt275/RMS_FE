@@ -10,6 +10,74 @@ import { useAuth } from "@/hooks/common/use-auth";
 import { UserRole } from "@/types/types";
 import { toast } from "sonner";
 
+
+export async function getTeamById(teamId: string) {
+  return apiClient.get<Team>(`teams/${teamId}`);
+}
+
+export function useTeamById(teamId: string | undefined) {
+  const { user } = useAuth();
+  const userRole = user?.role as UserRole | null;
+  const userId = user?.id;
+
+  return useQuery({
+    queryKey: QueryKeys.teams.byId(teamId ?? ""),
+    queryFn: async () => {
+      if (!teamId) return null;
+      
+      // Check if user has permission to view teams
+      const canViewAll = PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_ALL') ||
+                        PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_ALL_READONLY');
+      
+      const team = await apiClient.get<Team>(`teams/${teamId}`);
+      
+      // For team members/leaders, check if they can view this specific team
+      if (!canViewAll) {
+        const canViewOwn = PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_OWN');
+        const canViewLimited = PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_LIMITED');
+        
+        if (canViewOwn) {
+          // Check if user is part of this team
+          const isTeamMember = team.userId === userId || 
+                              team.teamMembers?.some(member => member.email === user?.email);
+          if (!isTeamMember) {
+            throw new Error('You can only view your own team details');
+          }
+        } else if (!canViewLimited) {
+          throw new Error('Insufficient permissions to view team details');
+        }
+      }
+      
+      return team;
+    },
+    enabled: !!teamId,
+  });
+}
+
+export function useAllTeams() {
+  const { user } = useAuth();
+  const userRole = user?.role as UserRole | null;
+  const userId = user?.id;
+
+  return useQuery({
+    queryKey: [...QueryKeys.teams.all(), 'all-tournaments'],
+    queryFn: async () => {
+      // Check if user has permission to view all teams
+      const canViewAll = PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_ALL') ||
+                        PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_ALL_READONLY');
+      
+      if (!canViewAll) {
+        throw new Error('Insufficient permissions to view all teams');
+      }
+      
+      // Fetch teams across all tournaments
+      return await apiClient.get<Team[]>('teams');
+    },
+    enabled: PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_ALL') ||
+             PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_ALL_READONLY'),
+  });
+}
+
 export function useTeams(tournamentId: string | undefined) {
   const { user } = useAuth();
   const userRole = user?.role as UserRole | null;

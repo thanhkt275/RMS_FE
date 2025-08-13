@@ -93,8 +93,8 @@ export function CommonTeamsView({
   // Get columns based on common user role permissions
   const publicColumns = useMemo(() => {
     return getTeamLeaderboardColumns(currentRole).filter((column) => {
-      // Only show basic public columns for common users
-      const allowedColumns = ["rank", "teamName", "teamCode"];
+      // Only show basic public columns for common users, plus actions
+      const allowedColumns = ["rank", "teamName", "teamCode", "actions"];
       
       // Check for accessorKey (for accessor columns) or id (for other column types)
       const columnKey = (column as any).accessorKey || column.id;
@@ -345,6 +345,11 @@ export function CommonTeamsView({
             }
             initialSorting={[{ id: "rank", desc: false }]}
             emptyMessage="No other teams found in this tournament."
+            tableMeta={{
+              userRole: currentRole,
+              userId: currentUser?.id,
+              userEmail: currentUser?.email
+            }}
           />
         </div>
 

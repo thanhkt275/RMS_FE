@@ -30,7 +30,7 @@ import { UploadIcon, DownloadIcon, PlusIcon } from "lucide-react";
 import { LeaderboardTable } from "@/components/features/leaderboard/leaderboard-table";
 import { LeaderboardFilters } from "@/components/features/leaderboard/leaderboard-filters";
 import {
-  teamLeaderboardColumns,
+  getTeamLeaderboardColumns,
   TeamLeaderboardRow,
 } from "@/components/features/leaderboard/team-leaderboard-columns";
 import { TeamStatsRecalculateButton } from "@/components/features/admin/team-stats-recalculate-button";
@@ -77,6 +77,11 @@ export function AdminTeamsView({
   } = useTeamManagement();
 
   const { getAccessDeniedMessage, currentRole } = useTeamsRoleAccess();
+
+  // Get columns based on admin role permissions
+  const visibleColumns = useMemo(() => {
+    return getTeamLeaderboardColumns(currentRole);
+  }, [currentRole]);
 
   // Local UI state for import functionality
   const [showImportCard, setShowImportCard] = useState(false);
@@ -478,7 +483,7 @@ export function AdminTeamsView({
       {/* Teams Table */}
       <LeaderboardTable
         data={filteredRows}
-        columns={teamLeaderboardColumns}
+        columns={visibleColumns}
         loading={isLoading}
         filterUI={
           <LeaderboardFilters
@@ -494,6 +499,11 @@ export function AdminTeamsView({
         }
         initialSorting={[{ id: "rank", desc: false }]}
         emptyMessage="No teams found."
+        tableMeta={{
+          userRole: currentRole,
+          userId: null, // Admin can edit any team
+          userEmail: null
+        }}
       />
     </div>
   );
