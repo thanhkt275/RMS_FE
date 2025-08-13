@@ -50,6 +50,11 @@ export enum SecurityEventType {
   ACCOUNT_LOCKED = 'account_locked',
   SUSPICIOUS_ACTIVITY = 'suspicious_activity',
   SECURITY_VIOLATION = 'security_violation',
+  // Team-specific events
+  TEAM_ACCESS_DENIED = 'team_access_denied',
+  TEAM_ACCESS_GRANTED = 'team_access_granted',
+  TEAM_OPERATION_DENIED = 'team_operation_denied',
+  TEAM_DATA_ACCESS_DENIED = 'team_data_access_denied',
 }
 
 /**
@@ -79,6 +84,11 @@ export interface ISecurityLogger {
   logSessionExpired(userId: string, sessionId: string): Promise<void>;
   logSuspiciousActivity(description: string, userId?: string, details?: Record<string, unknown>): Promise<void>;
   registrationAttempt(username: string, success: boolean, error?: string): Promise<void>;
+  // Team-specific logging methods
+  logTeamAccessDenied(userId: string | null, role: string | null, teamId: string, operation: string, reason?: string): Promise<void>;
+  logTeamAccessGranted(userId: string, role: string, teamId: string, operation: string): Promise<void>;
+  logTeamOperationDenied(userId: string | null, role: string | null, operation: string, teamId?: string, reason?: string): Promise<void>;
+  logTeamDataAccessDenied(userId: string | null, role: string | null, teamId: string, dataType: string, reason?: string): Promise<void>;
   // Backward compatibility aliases
   logout(userId: string, role: string, reason?: string): Promise<void>;
   roleCheck(userId: string, role: string, requiredRoles: string[]): Promise<void>;
@@ -419,6 +429,99 @@ class RBACSecurityLogger implements ISecurityLogger {
    */
   async logout(userId: string, role: string, reason?: string): Promise<void> {
     return this.logLogout(userId, role, reason);
+  }
+
+  /**
+   * Log team access denied events
+   */
+  async logTeamAccessDenied(
+    userId: string | null, 
+    role: string | null, 
+    teamId: string, 
+    operation: string, 
+    reason?: string
+  ): Promise<void> {
+    const event = this.createSecurityEvent(
+      SecurityEventType.TEAM_ACCESS_DENIED,
+      SecurityEventSeverity.WARNING,
+      { 
+        teamId,
+        operation,
+        reason: reason || 'Insufficient permissions for team access',
+      },
+      userId || undefined,
+      role || undefined
+    );
+
+    await this.logEvent(event);
+  }
+
+  /**
+   * Log successful team access grants
+   */
+  async logTeamAccessGranted(userId: string, role: string, teamId: string, operation: string): Promise<void> {
+    // Only log in development to avoid noise in production
+    if (this.environment === 'development') {
+      const event = this.createSecurityEvent(
+        SecurityEventType.TEAM_ACCESS_GRANTED,
+        SecurityEventSeverity.INFO,
+        { teamId, operation },
+        userId,
+        role
+      );
+
+      await this.logEvent(event);
+    }
+  }
+
+  /**
+   * Log team operation denied events
+   */
+  async logTeamOperationDenied(
+    userId: string | null, 
+    role: string | null, 
+    operation: string, 
+    teamId?: string, 
+    reason?: string
+  ): Promise<void> {
+    const event = this.createSecurityEvent(
+      SecurityEventType.TEAM_OPERATION_DENIED,
+      SecurityEventSeverity.WARNING,
+      { 
+        operation,
+        teamId,
+        reason: reason || `Insufficient permissions for team operation: ${operation}`,
+      },
+      userId || undefined,
+      role || undefined
+    );
+
+    await this.logEvent(event);
+  }
+
+  /**
+   * Log team data access denied events
+   */
+  async logTeamDataAccessDenied(
+    userId: string | null, 
+    role: string | null, 
+    teamId: string, 
+    dataType: string, 
+    reason?: string
+  ): Promise<void> {
+    const event = this.createSecurityEvent(
+      SecurityEventType.TEAM_DATA_ACCESS_DENIED,
+      SecurityEventSeverity.WARNING,
+      { 
+        teamId,
+        dataType,
+        reason: reason || `Insufficient permissions to access team data: ${dataType}`,
+      },
+      userId || undefined,
+      role || undefined
+    );
+
+    await this.logEvent(event);
   }
 
   /**

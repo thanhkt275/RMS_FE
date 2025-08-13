@@ -27,16 +27,16 @@ interface TimerControlReturn {
   timerRemaining: number;
   timerIsRunning: boolean;
   matchPeriod: string;
-  
+
   // Timer setters
   setTimerDuration: (duration: number) => void;
   setMatchPeriod: (period: string) => void;
-  
+
   // Timer controls
   handleStartTimer: () => void;
   handlePauseTimer: () => void;
   handleResetTimer: () => void;
-  
+
   // Utility functions
   formatTime: (ms: number) => string;
 }
@@ -73,7 +73,10 @@ export function useTimerControl({
     localStartTime: null as number | null,
   });
 
-  // Update ref when state changes
+  // Ref for sendMatchStateChange to avoid stale closures
+  const sendMatchStateChangeRef = useRef(sendMatchStateChange);
+
+  // Update refs when state changes
   useEffect(() => {
     timerStateRef.current = {
       duration: timerDuration,
@@ -84,6 +87,11 @@ export function useTimerControl({
     };
   }, [timerDuration, timerRemaining, timerIsRunning, serverTimestamp, localStartTime]);
 
+  // Update sendMatchStateChange ref when it changes
+  useEffect(() => {
+    sendMatchStateChangeRef.current = sendMatchStateChange;
+  }, [sendMatchStateChange]);
+
   // Unified WebSocket connection for timer controls
   const {
     startTimer,
@@ -92,11 +100,11 @@ export function useTimerControl({
     subscribe,
     isConnected,
     canAccess,
-  } = useUnifiedWebSocket({ 
-    tournamentId, 
+  } = useUnifiedWebSocket({
+    tournamentId,
     fieldId: selectedFieldId || undefined,
     autoConnect: true,
-    userRole 
+    userRole
   });
 
   // Format timer as MM:SS
@@ -121,7 +129,7 @@ export function useTimerControl({
     const now = Date.now();
     const serverElapsed = now - serverData.startedAt;
     const correctedRemaining = Math.max(0, serverData.duration - serverElapsed);
-    
+
     console.log('[useTimerControl] Drift correction:', {
       serverRemaining: serverData.remaining,
       correctedRemaining,
@@ -135,7 +143,7 @@ export function useTimerControl({
   // Connection status tracking
   useEffect(() => {
     setConnectionLost(!isConnected);
-    
+
     if (isConnected && connectionLost) {
       console.log('[useTimerControl] Connection restored, requesting timer resync');
       // Timer state will be resynced automatically by the unified service
@@ -146,7 +154,7 @@ export function useTimerControl({
   useEffect(() => {
     const handleTimerUpdate = (data: any) => {
       console.log('[useTimerControl] Timer update received:', data);
-      
+
       // Filter messages by fieldId if we're in a specific field room
       if (selectedFieldId && data.fieldId && data.fieldId !== selectedFieldId) {
         console.log(`[useTimerControl] Ignoring timer update for different field: ${data.fieldId}`);
@@ -154,18 +162,18 @@ export function useTimerControl({
       }
 
       // Apply drift correction for running timers
-      const correctedRemaining = data.isRunning 
+      const correctedRemaining = data.isRunning
         ? calculateDriftCorrectedTime(data)
         : data.remaining || 0;
 
       // Update local timer state with server data
       setTimerRemaining(correctedRemaining);
       setTimerIsRunning(data.isRunning || false);
-      
+
       // Update sync tracking
       setServerTimestamp(data.startedAt || null);
       setLastSyncTime(Date.now());
-      
+
       if (data.isRunning && data.startedAt) {
         setLocalStartTime(Date.now() - (data.duration - correctedRemaining));
       } else {
@@ -199,14 +207,14 @@ export function useTimerControl({
     if (!timerIsRunning || !connectionLost || !localStartTime) return;
 
     console.log('[useTimerControl] Starting local timer continuation during connection loss');
-    
+
     const interval = setInterval(() => {
       const now = Date.now();
       const elapsed = now - localStartTime;
       const newRemaining = Math.max(0, timerDuration - elapsed);
-      
+
       setTimerRemaining(newRemaining);
-      
+
       if (newRemaining <= 0) {
         setTimerIsRunning(false);
         clearInterval(interval);
@@ -220,9 +228,9 @@ export function useTimerControl({
   // Period transition logic - matches the FRC timing
   useEffect(() => {
     if (!timerIsRunning) return;
-    
+
     const elapsedTime = timerDuration - timerRemaining;
-    
+
     console.log('[useTimerControl Period Logic]', {
       matchPeriod,
       elapsedTime,
@@ -231,17 +239,17 @@ export function useTimerControl({
       elapsedSeconds: Math.floor(elapsedTime / 1000),
       remainingSeconds: Math.floor(timerRemaining / 1000),
     });
-    
+
     // For FRC match timing:
     // - Auto: 0-30 seconds elapsed (2:30 to 2:00 remaining for 2:30 match)
     // - Teleop: 30-120 seconds elapsed (2:00 to 0:30 remaining)  
     // - Endgame: 120+ seconds elapsed (last 30 seconds, 0:30 to 0:00 remaining)
-    
+
     // Transition to teleop after 30 seconds (when 2:00 remains for 2:30 match)
     if (matchPeriod === "auto" && elapsedTime >= 30000) {
-      console.log('[useTimerControl] Transitioning from auto to teleop at', elapsedTime/1000, 'seconds elapsed (', timerRemaining/1000, 'seconds remaining)');
+      console.log('[useTimerControl] Transitioning from auto to teleop at', elapsedTime / 1000, 'seconds elapsed (', timerRemaining / 1000, 'seconds remaining)');
       setMatchPeriod("teleop");
-      
+
       // Broadcast match state change via WebSocket (immediate)
       if (sendMatchStateChangeRef.current && selectedMatchId) {
         sendMatchStateChangeRef.current({
@@ -251,17 +259,20 @@ export function useTimerControl({
           fieldId: selectedFieldId || undefined,
         });
       }
-      
-      // Update API status with debouncing to prevent excessive queries
-      if (selectedMatchId) {
-        debouncedAPIUpdate(selectedMatchId, MatchStatus.IN_PROGRESS);
+
+      // Update API status
+      if (updateMatchStatusAPI && selectedMatchId) {
+        updateMatchStatusAPI({
+          matchId: selectedMatchId,
+          status: MatchStatus.IN_PROGRESS,
+        });
       }
     }
     // Transition to endgame in the last 30 seconds (when 0:30 remains)
     else if ((matchPeriod === "auto" || matchPeriod === "teleop") && timerRemaining <= 30000 && timerRemaining > 0) {
-      console.log('[useTimerControl] Transitioning to endgame at', timerRemaining/1000, 'seconds remaining');
+      console.log('[useTimerControl] Transitioning to endgame at', timerRemaining / 1000, 'seconds remaining');
       setMatchPeriod("endgame");
-      
+
       // Broadcast match state change via WebSocket (immediate)
       if (sendMatchStateChangeRef.current && selectedMatchId) {
         sendMatchStateChangeRef.current({
@@ -271,17 +282,20 @@ export function useTimerControl({
           fieldId: selectedFieldId || undefined,
         });
       }
-      
-      // Update API status with debouncing to prevent excessive queries
-      if (selectedMatchId) {
-        debouncedAPIUpdate(selectedMatchId, MatchStatus.IN_PROGRESS);
+
+      // Update API status
+      if (updateMatchStatusAPI && selectedMatchId) {
+        updateMatchStatusAPI({
+          matchId: selectedMatchId,
+          status: MatchStatus.IN_PROGRESS,
+        });
       }
     }
     // Set match status to COMPLETED when timer reaches 0
     else if (timerRemaining <= 0 && matchPeriod !== "completed") {
       console.log('[useTimerControl] Match completed');
       setMatchPeriod("completed");
-      
+
       // Broadcast match state change via WebSocket (immediate)
       if (sendMatchStateChangeRef.current && selectedMatchId) {
         sendMatchStateChangeRef.current({
@@ -291,26 +305,29 @@ export function useTimerControl({
           fieldId: selectedFieldId || undefined,
         });
       }
-      
-      // Update API status with debouncing to prevent excessive queries
-      if (selectedMatchId) {
-        debouncedAPIUpdate(selectedMatchId, MatchStatus.COMPLETED);
+
+      // Update API status
+      if (updateMatchStatusAPI && selectedMatchId) {
+        updateMatchStatusAPI({
+          matchId: selectedMatchId,
+          status: MatchStatus.COMPLETED,
+        });
       }
     }
-  }, [timerIsRunning, timerRemaining, matchPeriod, timerDuration, selectedMatchId, sendMatchStateChange, setMatchPeriod]);
+  }, [timerIsRunning, timerRemaining, matchPeriod, timerDuration, selectedMatchId, updateMatchStatusAPI, setMatchPeriod]);
 
   // Handle match switching - timer must follow the new match
   useEffect(() => {
     if (selectedMatchId) {
       console.log('[useTimerControl] Match switched to:', selectedMatchId);
-      
+
       // Reset timer state when switching matches to avoid confusion
       setTimerRemaining(timerDuration);
       setTimerIsRunning(false);
       setMatchPeriod("auto");
       setLocalStartTime(null);
       setServerTimestamp(null);
-      
+
       console.log('[useTimerControl] Timer state reset for new match');
     }
   }, [selectedMatchId, timerDuration]);
@@ -327,16 +344,16 @@ export function useTimerControl({
       remaining: timerRemaining,
       isRunning: true, // Start the timer as running
     };
-    
+
     startTimer(timerData);
-    
+
     // Update local state immediately for responsiveness
     setTimerIsRunning(true);
     setLocalStartTime(Date.now());
-    
+
     // Set to auto period when starting
     setMatchPeriod("auto");
-    
+
     // Broadcast match state change via WebSocket (immediate)
     if (sendMatchStateChangeRef.current && selectedMatchId) {
       sendMatchStateChangeRef.current({
@@ -348,7 +365,7 @@ export function useTimerControl({
     }
 
     console.log('[useTimerControl] Timer started:', timerData);
-  }, [canAccess, timerDuration, timerRemaining, startTimer, sendMatchStateChange, selectedMatchId]);
+  }, [canAccess, timerDuration, timerRemaining, startTimer, selectedMatchId, selectedFieldId]);
 
   const handlePauseTimer = useCallback(() => {
     if (!canAccess('timer_control')) {
@@ -361,9 +378,9 @@ export function useTimerControl({
       remaining: timerRemaining,
       isRunning: false,
     };
-    
+
     pauseTimer(timerData);
-    
+
     // Update local state immediately for responsiveness
     setTimerIsRunning(false);
     setLocalStartTime(null);
@@ -382,16 +399,16 @@ export function useTimerControl({
       remaining: timerDuration, // Reset to full duration
       isRunning: false,
     };
-    
+
     resetTimer(timerData);
-    
+
     // Update local state immediately for responsiveness
     setTimerRemaining(timerDuration);
     setTimerIsRunning(false);
     setMatchPeriod("auto");
     setLocalStartTime(null);
     setServerTimestamp(null);
-    
+
     // Broadcast match state change to reset via WebSocket (immediate)
     if (sendMatchStateChangeRef.current && selectedMatchId) {
       sendMatchStateChangeRef.current({
@@ -403,7 +420,7 @@ export function useTimerControl({
     }
 
     console.log('[useTimerControl] Timer reset:', timerData);
-  }, [canAccess, timerDuration, resetTimer, sendMatchStateChange, selectedMatchId]);
+  }, [canAccess, timerDuration, resetTimer, selectedMatchId, selectedFieldId]);
 
   return {
     // Timer state
@@ -411,16 +428,16 @@ export function useTimerControl({
     timerRemaining,
     timerIsRunning,
     matchPeriod,
-    
+
     // Timer setters
     setTimerDuration,
     setMatchPeriod,
-    
+
     // Timer controls
     handleStartTimer,
     handlePauseTimer,
     handleResetTimer,
-    
+
     // Utility functions
     formatTime,
   };
