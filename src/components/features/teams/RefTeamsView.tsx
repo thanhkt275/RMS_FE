@@ -20,7 +20,7 @@ import { useState, useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LeaderboardTable } from "@/components/features/leaderboard/leaderboard-table";
 import { LeaderboardFilters } from "@/components/features/leaderboard/leaderboard-filters";
-import { teamLeaderboardColumns, TeamLeaderboardRow } from "@/components/features/leaderboard/team-leaderboard-columns";
+import { getTeamLeaderboardColumns, TeamLeaderboardRow } from "@/components/features/leaderboard/team-leaderboard-columns";
 import { useTeamsRoleAccess } from "@/hooks/teams/use-teams-role-access";
 import { RoleGuard } from "@/components/features/auth/RoleGuard";
 import type { Tournament } from "@/types/types";
@@ -68,14 +68,16 @@ export function RefTeamsView({
     [leaderboardRows, teamName, teamCode, rankRange, totalScoreRange]
   );
 
-  // Filter columns to show only those appropriate for referees
+  // Get columns based on referee role permissions
   const visibleColumns = useMemo(() => {
-    return teamLeaderboardColumns.filter(column => {
+    return getTeamLeaderboardColumns(currentRole).filter(column => {
       // Remove action columns for referees (read-only access)
       if (column.id === 'actions') return false;
+      
+      // Show all other columns based on role permissions
       return true;
     });
-  }, []);
+  }, [currentRole]);
 
   return (
     <RoleGuard

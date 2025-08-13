@@ -29,7 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { LeaderboardTable } from "@/components/features/leaderboard/leaderboard-table";
 import { LeaderboardFilters } from "@/components/features/leaderboard/leaderboard-filters";
 import {
-  teamLeaderboardColumns,
+  getTeamLeaderboardColumns,
   TeamLeaderboardRow,
 } from "@/components/features/leaderboard/team-leaderboard-columns";
 import { useTeamsRoleAccess } from "@/hooks/teams/use-teams-role-access";
@@ -90,14 +90,17 @@ export function CommonTeamsView({
     [leaderboardRows, userTeam, teamName, teamCode, rankRange, totalScoreRange]
   );
 
-  // Filter columns to show only public information
+  // Get columns based on common user role permissions
   const publicColumns = useMemo(() => {
-    return teamLeaderboardColumns.filter((column) => {
+    return getTeamLeaderboardColumns(currentRole).filter((column) => {
       // Only show basic public columns for common users
-      const allowedColumns = ["teamName", "organization", "rank", "totalScore"];
-      return allowedColumns.includes(column.id || "");
+      const allowedColumns = ["rank", "teamName", "teamCode"];
+      
+      // Check for accessorKey (for accessor columns) or id (for other column types)
+      const columnKey = (column as any).accessorKey || column.id;
+      return allowedColumns.includes(columnKey || "");
     });
-  }, []);
+  }, [currentRole]);
 
   return (
     <RoleGuard

@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/common/use-auth";
 import { useTeamsRoleAccess } from "./use-teams-role-access";
 import { TeamDataFilterService } from "@/utils/teams/team-data-filter";
 import { teamErrorUtils, TeamErrorHandler } from "@/utils/teams/team-error-handler";
+import { PermissionService } from "@/config/permissions";
 import TeamService from "@/services/team.service";
 import type { Team } from "@/types/team.types";
 import { UserRole } from "@/types/types";
@@ -42,8 +43,8 @@ export function useTeamManagement() {
     tournamentId: string,
     delimiter: string = ","
   ): Promise<ImportResult> => {
-    // Check permissions before attempting import
-    if (!TeamDataFilterService.canPerformTeamAction('import', userRole)) {
+    // Check permissions using PermissionService before attempting import
+    if (!PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'IMPORT_EXPORT')) {
       const errorMessage = roleAccess.getAccessDeniedMessage('import_export');
       const result = {
         success: false,
@@ -127,8 +128,8 @@ export function useTeamManagement() {
    * Export teams with role-based access control and filtering
    */
   const exportTeams = useCallback(async (teams: Team[] | TeamResponseDto[]) => {
-    // Check permissions before attempting export
-    if (!TeamDataFilterService.canPerformTeamAction('export', userRole)) {
+    // Check permissions using PermissionService before attempting export
+    if (!PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'IMPORT_EXPORT')) {
       const errorMessage = roleAccess.getAccessDeniedMessage('import_export');
       await TeamErrorHandler.handleTeamOperationDenied({
         userId: user?.id,
@@ -209,8 +210,8 @@ export function useTeamManagement() {
    * Export teams using backend service (for larger datasets)
    */
   const exportTeamsViaService = useCallback(async (tournamentId: string) => {
-    // Check permissions before attempting export
-    if (!TeamDataFilterService.canPerformTeamAction('export', userRole)) {
+    // Check permissions using PermissionService before attempting export
+    if (!PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'IMPORT_EXPORT')) {
       toast.error(roleAccess.getAccessDeniedMessage('import_export'));
       return;
     }
@@ -244,10 +245,9 @@ export function useTeamManagement() {
   }, [userRole, userId]);
 
   /**
-   * Check if user can perform import/export operations
+   * Check if user can perform import/export operations using PermissionService
    */
-  const canImportExport = TeamDataFilterService.canPerformTeamAction('import', userRole) &&
-    TeamDataFilterService.canPerformTeamAction('export', userRole);
+  const canImportExport = PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'IMPORT_EXPORT');
 
   return {
     // Legacy interface (backward compatibility)
@@ -263,14 +263,19 @@ export function useTeamManagement() {
     getFilteredTeamsForDisplay,
     canImportExport,
 
-    // Role and permission information
+    // Role and permission information using PermissionService
     userRole,
     permissions: {
-      canImport: TeamDataFilterService.canPerformTeamAction('import', userRole),
-      canExport: TeamDataFilterService.canPerformTeamAction('export', userRole),
-      canCreate: TeamDataFilterService.canPerformTeamAction('create', userRole),
-      canEdit: (team: Team) => TeamDataFilterService.canPerformTeamAction('edit', userRole, team, userId),
-      canDelete: (team: Team) => TeamDataFilterService.canPerformTeamAction('delete', userRole, team, userId),
+      canImport: PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'IMPORT_EXPORT'),
+      canExport: PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'IMPORT_EXPORT'),
+      canCreate: PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'CREATE_ANY') ||
+                 PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'CREATE_OWN'),
+      canEdit: (team: Team) => {
+        const canEditAny = PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'EDIT_ANY');
+        const canEditOwn = PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'MANAGE_OWN', { isOwner: team.userId === userId });
+        return canEditAny || canEditOwn;
+      },
+      canDelete: (team: Team) => PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'DELETE_ANY'),
     },
   };
 }

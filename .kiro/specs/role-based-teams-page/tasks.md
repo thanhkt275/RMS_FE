@@ -81,13 +81,12 @@
   - Add tooltips using existing `getAccessDeniedMessage` patterns from role-based access hook
   - _Requirements: 5.5, 4.5_
 
-- [ ] 7. Integrate role-based functionality with existing teams infrastructure
+- [x] 7. Integrate role-based functionality with existing teams infrastructure
 
   - Update existing `useTeams` and `useTeamManagement` hooks to respect permission-based filtering
   - Modify team management operations to use existing `PermissionService.hasPermission` checks
   - Ensure import/export functionality uses existing `PERMISSIONS.TEAM_MANAGEMENT` rules
   - Update leaderboard table to use permission-based column configurations
-  - Write integration tests leveraging existing teams functionality test suite
   - _Requirements: 1.1-1.7, 2.1-2.5, 3.1-3.6_
 
 - [ ] 8. Add comprehensive testing using existing RBAC test infrastructure
