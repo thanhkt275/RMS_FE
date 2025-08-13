@@ -151,6 +151,8 @@ export function useTeamsMutations() {
       toast.success("Team created successfully");
       [
         QueryKeys.teams.byTournament(data.tournamentId),
+  // Ensure the global All Teams list refreshes after creation
+  [...QueryKeys.teams.all(), 'all-tournaments'],
         QueryKeys.tournaments.all(),
       ].forEach((queryKey) =>
         queryClient.invalidateQueries({
@@ -179,6 +181,11 @@ export function useTeamsMutations() {
       toast.success("Team updated successfully");
       queryClient.invalidateQueries({
         queryKey: QueryKeys.tournaments.all(),
+      });
+
+      // Update the global All Teams list as well
+      queryClient.invalidateQueries({
+        queryKey: [...QueryKeys.teams.all(), 'all-tournaments'],
       });
 
       if (data.tournamentId) {
