@@ -28,6 +28,7 @@ export interface LeaderboardTableProps<TData extends object> {
   filterUI?: React.ReactNode;
   loading?: boolean;
   emptyMessage?: string;
+  tableMeta?: any;
 }
 
 export function LeaderboardTable<TData extends object>({
@@ -38,6 +39,7 @@ export function LeaderboardTable<TData extends object>({
   filterUI,
   loading,
   emptyMessage = "No data found.",
+  tableMeta,
 }: LeaderboardTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [columnFilters, setColumnFilters] =
@@ -55,6 +57,7 @@ export function LeaderboardTable<TData extends object>({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    meta: tableMeta,
     debugTable: false,
   });
 

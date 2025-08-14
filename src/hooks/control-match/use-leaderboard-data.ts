@@ -30,7 +30,8 @@ export function useLeaderboardData(
   tournamentStats: TournamentTeamStats[],
   tournamentTeams: Team[],
   swissRankings: SwissRanking[],
-  allTeamsOption: string
+  allTeamsOption: string,
+  displayAllTeams: boolean = false
 ) {
   return useMemo(() => {
     console.log("🔍 useLeaderboardData - Processing data:");
@@ -153,5 +154,5 @@ export function useLeaderboardData(
       opponentWinPercentage: r.opponentWinPercentage ?? 0,
       pointDifferential: r.pointDifferential ?? 0,
     }));
-  }, [selectedStageId, tournamentStats, tournamentTeams, swissRankings, allTeamsOption]);
+  }, [selectedStageId, tournamentStats, tournamentTeams, swissRankings, allTeamsOption, displayAllTeams]);
 }

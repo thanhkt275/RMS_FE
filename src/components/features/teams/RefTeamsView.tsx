@@ -70,13 +70,7 @@ export function RefTeamsView({
 
   // Get columns based on referee role permissions
   const visibleColumns = useMemo(() => {
-    return getTeamLeaderboardColumns(currentRole).filter(column => {
-      // Remove action columns for referees (read-only access)
-      if (column.id === 'actions') return false;
-      
-      // Show all other columns based on role permissions
-      return true;
-    });
+    return getTeamLeaderboardColumns(currentRole);
   }, [currentRole]);
 
   return (
@@ -166,6 +160,11 @@ export function RefTeamsView({
           }
           initialSorting={[{ id: "rank", desc: false }]}
           emptyMessage="No teams found for the selected tournament."
+          tableMeta={{
+            userRole: currentRole,
+            userId: null, // Referees have read-only access
+            userEmail: null
+          }}
         />
 
         {/* Footer Information */}
