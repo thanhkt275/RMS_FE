@@ -1,8 +1,8 @@
 /**
  * Real-time Ranking Table Component
  *
- * Main component for displaying live tournament rankings with real-time updates.
- * Integrates with WebSocket for live data and provides filtering and sorting.
+ * Main component for displaying live tournament rankings with polling-based updates.
+ * Uses HTTP polling for reliable data updates and provides filtering and sorting.
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 // import { cn } from '@/lib/utils';
 
-import { useRealTimeRankings } from '@/hooks/rankings/use-real-time-rankings';
+import { usePollingRankings } from '@/hooks/rankings/use-polling-rankings';
 import { RankingUpdateIndicator } from './ranking-update-indicator';
 import { RankingRow, CompactRankingRow } from './ranking-row';
 import {
@@ -46,7 +46,7 @@ export function RealTimeRankingTable({
   const [searchTerm, setSearchTerm] = useState('');
   const [isCompactView, setIsCompactView] = useState(false);
 
-  // Real-time rankings hook
+  // Polling-based rankings hook
   const {
     rankings,
     isLoading,
@@ -57,7 +57,7 @@ export function RealTimeRankingTable({
     isRecalculating,
     refetch,
     recalculate,
-  } = useRealTimeRankings(tournamentId, stageId, {
+  } = usePollingRankings(tournamentId, stageId, {
     config: finalConfig,
     onUpdate: onRankingUpdate,
     onError,

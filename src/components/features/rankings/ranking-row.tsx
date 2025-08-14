@@ -216,11 +216,26 @@ export function RankingRow({
     </div>
   );
 
+  // Helper function to convert RGB to RGBA with opacity
+  const getRgbaColor = (rgbColor: string, opacity: number): string => {
+    // Extract RGB values from string like "rgb(34, 197, 94)"
+    const rgbMatch = rgbColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (rgbMatch) {
+      const [, r, g, b] = rgbMatch;
+      return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    }
+    // Fallback to transparent if parsing fails
+    return 'rgba(0, 0, 0, 0)';
+  };
+
   // Animation wrapper
   const AnimatedRow = ({ children }: { children: React.ReactNode }) => {
     if (!showAnimation) {
       return <>{children}</>;
     }
+
+    const highlightColor = getRgbaColor(DEFAULT_ANIMATION_CONFIG.highlightColor, 0.2);
+    const transparentColor = 'rgba(0, 0, 0, 0)';
 
     return (
       <motion.div
@@ -229,9 +244,7 @@ export function RankingRow({
         animate={{
           opacity: 1,
           y: 0,
-          backgroundColor: isHighlighted
-            ? DEFAULT_ANIMATION_CONFIG.highlightColor + '20' // 20% opacity
-            : 'transparent'
+          backgroundColor: isHighlighted ? highlightColor : transparentColor
         }}
         exit={{ opacity: 0, y: -20 }}
         transition={{

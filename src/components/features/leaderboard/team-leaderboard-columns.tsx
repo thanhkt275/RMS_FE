@@ -1,6 +1,8 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { PermissionService } from "@/config/permissions";
 import { UserRole } from "@/types/types";
+import { Button } from "@/components/ui/button";
+import { Eye, Edit } from "lucide-react";
 
 export interface TeamLeaderboardRow {
   id: string;
@@ -130,6 +132,48 @@ const advancedColumns: ColumnDef<TeamLeaderboardRow, any>[] = [
   },
 ];
 
+// Actions column for admin and users with edit permissions
+const actionsColumn: ColumnDef<TeamLeaderboardRow, any> = {
+  id: "actions",
+  header: "Actions",
+  cell: ({ row }) => {
+    const team = row.original;
+
+    return (
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 px-3 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300"
+          onClick={(e) => {
+            e.stopPropagation();
+            // TODO: Implement view team functionality
+            console.log('View team:', team.id);
+          }}
+        >
+          <Eye className="h-3 w-3 mr-1" />
+          View
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 px-3 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
+          onClick={(e) => {
+            e.stopPropagation();
+            // TODO: Implement edit team functionality
+            console.log('Edit team:', team.id);
+          }}
+        >
+          <Edit className="h-3 w-3 mr-1" />
+          Edit
+        </Button>
+      </div>
+    );
+  },
+  enableSorting: false,
+  enableColumnFilter: false,
+};
+
 /**
  * Get team leaderboard columns based on user role and permissions
  */
@@ -149,6 +193,13 @@ export function getTeamLeaderboardColumns(userRole: UserRole | null): ColumnDef<
     columns = [...columns, ...advancedColumns];
   }
 
+  // Add actions column for users with appropriate permissions
+  if (PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_ALL') ||
+      PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'EDIT_ANY') ||
+      PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'MANAGE_OWN')) {
+    columns = [...columns, actionsColumn];
+  }
+
   return columns;
 }
 
@@ -157,4 +208,5 @@ export const teamLeaderboardColumns: ColumnDef<TeamLeaderboardRow, any>[] = [
   ...baseColumns,
   ...detailedColumns,
   ...advancedColumns,
+  actionsColumn,
 ];

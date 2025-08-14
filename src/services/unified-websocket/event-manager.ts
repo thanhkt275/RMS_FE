@@ -23,13 +23,15 @@ export class EventManager {
   private lastEventData: Map<string, WebSocketEventData> = new Map();
   private errorCallbacks: Set<(error: Error) => void> = new Set();
   private queuedEvents: Array<{ event: string; data: unknown; options?: EventOptions }> = [];
+  private queuedHandlers: Set<string> = new Set();
   private isProcessingQueue = false;
 
-  constructor(private connectionManager: ConnectionManager) { 
-    // Set up connection listener to process queued events when connected
+  constructor(private connectionManager: ConnectionManager) {
+    // Set up connection listener to process queued events and handlers when connected
     this.connectionManager.onConnectionStatus((status) => {
       if (status.connected && status.state === 'CONNECTED') {
         this.processQueuedEvents();
+        this.processQueuedHandlers();
       }
     });
   }
@@ -142,7 +144,10 @@ export class EventManager {
   private setupMasterHandler(event: string): void {
     const socket = this.connectionManager.getSocket();
     if (!socket) {
-      console.warn(`[EventManager] No socket available for event: ${event}`);
+      console.warn(`[EventManager] No socket available for event: ${event}. Will retry when connected.`);
+
+      // Queue the handler setup for when connection is established
+      this.queueHandlerSetup(event);
       return;
     }
 
@@ -311,9 +316,10 @@ export class EventManager {
 
     const events = Array.from(this.eventHandlers.keys());
     events.forEach(event => this.cleanupEvent(event));
-    
-    // Clear queued events as well
+
+    // Clear queued events and handlers as well
     this.queuedEvents = [];
+    this.queuedHandlers.clear();
   }
 
   /**
@@ -355,5 +361,39 @@ export class EventManager {
     });
 
     this.isProcessingQueue = false;
+  }
+
+  /**
+   * Queue a handler setup for retry when connection is established
+   */
+  private queueHandlerSetup(event: string): void {
+    this.queuedHandlers.add(event);
+    console.log(`[EventManager] Queued handler setup for event '${event}' (queue size: ${this.queuedHandlers.size})`);
+  }
+
+  /**
+   * Process all queued handler setups when connection is restored
+   */
+  private processQueuedHandlers(): void {
+    if (this.queuedHandlers.size === 0) {
+      return;
+    }
+
+    console.log(`[EventManager] Processing ${this.queuedHandlers.size} queued handler setups`);
+
+    const handlersToProcess = Array.from(this.queuedHandlers);
+    this.queuedHandlers.clear();
+
+    handlersToProcess.forEach(event => {
+      try {
+        // Only setup if we still have handlers for this event and no master handler exists
+        if (this.eventHandlers.has(event) && !this.masterHandlers.has(event)) {
+          console.log(`[EventManager] Setting up queued handler for event '${event}'`);
+          this.setupMasterHandler(event);
+        }
+      } catch (error) {
+        console.error(`[EventManager] Error setting up queued handler for '${event}':`, error);
+      }
+    });
   }
 }

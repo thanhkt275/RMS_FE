@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 
 import { RankingService } from '@/services/ranking.service';
 import { unifiedWebSocketService } from '@/lib/unified-websocket';
+import { rankingWebSocketService } from '@/services/ranking-websocket.service';
+import { rankingCacheService } from '@/services/ranking-cache.service';
 import {
   RankingUpdateEvent,
   RankingRecalculationEvent,
@@ -74,7 +76,7 @@ export function useRealTimeRankings(
   // Query key for this specific ranking request
   const queryKey = RankingQueryKeys.live(tournamentId, stageId);
 
-  // React Query for initial data and fallback
+  // React Query for initial data and fallback with caching
   const {
     data: queryData,
     isLoading: queryLoading,
@@ -84,9 +86,14 @@ export function useRealTimeRankings(
     queryKey,
     queryFn: async () => {
       if (stageId) {
-        return RankingService.getStageRankings(stageId);
+        return RankingService.getStageRankings(stageId, {
+          useCache: true,
+          tournamentId
+        });
       } else {
-        return RankingService.getTournamentRankings(tournamentId);
+        return RankingService.getTournamentRankings(tournamentId, {
+          useCache: true
+        });
       }
     },
     enabled: enabled && !!tournamentId,
@@ -123,8 +130,22 @@ export function useRealTimeRankings(
     }
   }, [queryError]);
 
-  // WebSocket connection status
+  // WebSocket connection initialization and status monitoring
   useEffect(() => {
+    const initializeConnection = async () => {
+      try {
+        // Check if already connected
+        if (!unifiedWebSocketService.isConnected()) {
+          console.log('[useRealTimeRankings] Initializing WebSocket connection...');
+          await unifiedWebSocketService.connect();
+          console.log('[useRealTimeRankings] WebSocket connection established');
+        }
+      } catch (error) {
+        console.error('[useRealTimeRankings] Failed to establish WebSocket connection:', error);
+        onErrorRef.current?.(error as Error);
+      }
+    };
+
     const updateConnectionStatus = () => {
       setState(prev => ({
         ...prev,
@@ -132,16 +153,36 @@ export function useRealTimeRankings(
       }));
     };
 
+    // Initialize connection
+    initializeConnection();
+
     // Initial status
     updateConnectionStatus();
 
-    // Poll connection status periodically
-    const interval = setInterval(updateConnectionStatus, 5000);
+    // Monitor connection status changes
+    const unsubscribeStatus = unifiedWebSocketService.onConnectionStatus((status) => {
+      setState(prev => ({
+        ...prev,
+        isConnected: status.connected,
+      }));
+
+      if (status.connected && status.state === 'CONNECTED') {
+        console.log('[useRealTimeRankings] WebSocket reconnected, rejoining tournament room');
+        // Rejoin tournament room after reconnection
+        if (tournamentId) {
+          unifiedWebSocketService.joinTournament(tournamentId);
+        }
+      }
+    });
+
+    // Poll connection status periodically as fallback
+    const interval = setInterval(updateConnectionStatus, 10000);
 
     return () => {
       clearInterval(interval);
+      unsubscribeStatus();
     };
-  }, []);
+  }, [tournamentId]);
 
   // Handle ranking updates from WebSocket
   const handleRankingUpdate = useCallback((event: RankingUpdateEvent) => {
@@ -212,26 +253,77 @@ export function useRealTimeRankings(
     }
   }, [tournamentId, stageId, queryRefetch]);
 
-  // Subscribe to WebSocket events
+  // Subscribe to WebSocket events using enhanced ranking WebSocket service
   useEffect(() => {
-    if (!finalConfig.autoUpdate || !enabled) return;
+    if (!finalConfig.autoUpdate || !enabled || !tournamentId) return;
 
-    console.log('Subscribing to ranking updates for tournament:', tournamentId);
+    console.log('[useRealTimeRankings] Subscribing to ranking updates for tournament:', tournamentId);
 
-    // Subscribe to ranking updates
-    const unsubscribeRankingUpdate = unifiedWebSocketService.on('ranking_update', handleRankingUpdate);
-    const unsubscribeRecalculation = unifiedWebSocketService.on('ranking_recalculation', handleRecalculationEvent);
+    // Use the enhanced ranking WebSocket service for better performance
+    const unsubscribeRankingUpdate = rankingWebSocketService.subscribe(
+      tournamentId,
+      stageId,
+      (rankings) => {
+        setState(prev => ({
+          ...prev,
+          rankings,
+          lastUpdate: new Date(),
+          updateCount: prev.updateCount + 1,
+          error: undefined,
+        }));
 
-    // Join tournament room for updates
-    if (unifiedWebSocketService.isConnected()) {
-      unifiedWebSocketService.joinTournament(tournamentId);
-    }
+        // Update React Query cache
+        queryClient.setQueryData(queryKey, rankings);
+        onUpdateRef.current?.(rankings);
+
+        // Show toast notification for updates
+        toast.info('Rankings updated', {
+          description: `${rankings.length} teams updated`,
+        });
+      },
+      (error) => {
+        setState(prev => ({
+          ...prev,
+          error: error.message,
+        }));
+        onErrorRef.current?.(error);
+      }
+    );
+
+    const unsubscribeRecalculation = unifiedWebSocketService.on('ranking_recalculation', handleRecalculationEvent, {
+      tournamentId,
+      filter: (data) => {
+        return data.tournamentId === tournamentId && (!stageId || data.stageId === stageId);
+      }
+    });
+
+    // Function to join tournament room when connected
+    const joinTournamentRoom = () => {
+      if (unifiedWebSocketService.isConnected()) {
+        console.log('[useRealTimeRankings] Joining tournament room:', tournamentId);
+        unifiedWebSocketService.joinTournament(tournamentId);
+      } else {
+        console.warn('[useRealTimeRankings] Cannot join tournament room: WebSocket not connected');
+      }
+    };
+
+    // Join tournament room immediately if connected
+    joinTournamentRoom();
+
+    // Also join when connection is established
+    const unsubscribeConnectionStatus = unifiedWebSocketService.onConnectionStatus((status) => {
+      if (status.connected && status.state === 'CONNECTED') {
+        joinTournamentRoom();
+      }
+    });
 
     return () => {
+      console.log('[useRealTimeRankings] Cleaning up WebSocket subscriptions');
       unsubscribeRankingUpdate();
       unsubscribeRecalculation();
+      unsubscribeConnectionStatus();
     };
-  }, [tournamentId, finalConfig.autoUpdate, enabled, handleRankingUpdate, handleRecalculationEvent]);
+  }, [tournamentId, stageId, finalConfig.autoUpdate, enabled, handleRankingUpdate, handleRecalculationEvent]);
 
   // Manual refetch function
   const refetch = useCallback(async () => {

@@ -1,17 +1,17 @@
 /**
  * Rankings Components Index
- * 
- * Central export point for all ranking-related components.
- * Follows the Barrel Export pattern for better organization.
+ *
+ * Central export point for ranking-related components.
+ * Optimized for polling-based rankings without WebSocket dependencies.
  */
 
 // Main components
 export { RealTimeRankingTable } from './real-time-ranking-table';
 export { RankingRow, CompactRankingRow } from './ranking-row';
-export { 
-  RankingUpdateIndicator, 
+export {
+  RankingUpdateIndicator,
   CompactRankingUpdateIndicator,
-  RankingStatusIndicator 
+  RankingStatusIndicator
 } from './ranking-update-indicator';
 
 // Re-export types for convenience
@@ -29,8 +29,8 @@ export type {
   UseRealTimeRankingsReturn,
 } from '@/types/ranking.types';
 
-// Re-export hooks
-export { useRealTimeRankings, RankingQueryKeys } from '@/hooks/rankings/use-real-time-rankings';
+// Re-export polling-based hook (WebSocket hooks removed to prevent connection attempts)
+export { usePollingRankings } from '@/hooks/rankings/use-polling-rankings';
 
 // Re-export service
 export { RankingService } from '@/services/ranking.service';

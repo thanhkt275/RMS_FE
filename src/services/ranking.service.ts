@@ -37,20 +37,34 @@ interface TournamentStatsResponse {
 }
 
 /**
- * Service class for ranking operations
- * Follows Single Responsibility Principle - only handles ranking API calls
+ * Enhanced service class for ranking operations with intelligent caching
+ * Integrates with caching and WebSocket services for optimal performance
  */
 export class RankingService {
 
   /**
-   * Get real-time rankings for a tournament
+   * Get real-time rankings for a tournament with intelligent caching
    */
-  static async getTournamentRankings(tournamentId: string): Promise<RealTimeRanking[]> {
-    try {
-      // Use existing team stats endpoint for tournament-wide rankings
-      const response = await apiClient.get<TournamentStatsResponse[]>(`/team-stats/tournament/${tournamentId}`);
+  static async getTournamentRankings(
+    tournamentId: string,
+    options: { useCache?: boolean; filters?: any } = {}
+  ): Promise<RealTimeRanking[]> {
+    const { useCache = false, filters } = options; // Default to no cache for polling
 
-      return this.transformToRealTimeRankings(response);
+    try {
+      if (useCache) {
+        // Try to get from cache first (only when explicitly requested)
+        const { rankingCacheService } = await import('./ranking-cache.service');
+        return await rankingCacheService.getRankings(
+          tournamentId,
+          undefined,
+          filters,
+          () => this.fetchTournamentRankings(tournamentId)
+        );
+      } else {
+        // Direct fetch without caching (preferred for polling)
+        return await this.fetchTournamentRankings(tournamentId);
+      }
     } catch (error) {
       console.error('Failed to fetch tournament rankings:', error);
       throw new Error('Failed to fetch tournament rankings');
@@ -58,22 +72,53 @@ export class RankingService {
   }
 
   /**
-   * Get real-time rankings for a specific stage
+   * Internal method to fetch tournament rankings from API
    */
-  static async getStageRankings(stageId: string): Promise<RealTimeRanking[]> {
+  private static async fetchTournamentRankings(tournamentId: string): Promise<RealTimeRanking[]> {
+    const response = await apiClient.get<TournamentStatsResponse[]>(`/team-stats/tournament/${tournamentId}`);
+    return this.transformToRealTimeRankings(response);
+  }
+
+  /**
+   * Get real-time rankings for a specific stage with intelligent caching
+   */
+  static async getStageRankings(
+    stageId: string,
+    options: { useCache?: boolean; tournamentId?: string; filters?: any } = {}
+  ): Promise<RealTimeRanking[]> {
+    const { useCache = false, tournamentId, filters } = options; // Default to no cache for polling
+
     try {
-      // Use existing stage rankings endpoint
-      const response = await apiClient.get<{ success: boolean; data: TeamRanking[] }>(`/stages/${stageId}/rankings`);
-
-      if (!response.success) {
-        throw new Error('Failed to fetch stage rankings');
+      if (useCache && tournamentId) {
+        // Try to get from cache first (only when explicitly requested)
+        const { rankingCacheService } = await import('./ranking-cache.service');
+        return await rankingCacheService.getRankings(
+          tournamentId,
+          stageId,
+          filters,
+          () => this.fetchStageRankings(stageId)
+        );
+      } else {
+        // Direct fetch without caching (preferred for polling)
+        return await this.fetchStageRankings(stageId);
       }
-
-      return this.transformToRealTimeRankings(response.data);
     } catch (error) {
       console.error('Failed to fetch stage rankings:', error);
       throw new Error('Failed to fetch stage rankings');
     }
+  }
+
+  /**
+   * Internal method to fetch stage rankings from API
+   */
+  private static async fetchStageRankings(stageId: string): Promise<RealTimeRanking[]> {
+    const response = await apiClient.get<{ success: boolean; data: TeamRanking[] }>(`/stages/${stageId}/rankings`);
+
+    if (!response.success) {
+      throw new Error('Failed to fetch stage rankings');
+    }
+
+    return this.transformToRealTimeRankings(response.data);
   }
 
   /**
