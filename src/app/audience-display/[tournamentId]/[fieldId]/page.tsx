@@ -1,18 +1,19 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTournament } from "@/hooks/tournaments/use-tournaments";
 import { useTournamentFields } from "@/components/features/fields/FieldSelectDropdown";
 import { useUnifiedWebSocket } from "@/hooks/websocket/use-unified-websocket";
 import { useUnifiedAudienceDisplay } from "@/hooks/audience-display/use-unified-audience-display";
 import { useRealtimeScores } from "@/hooks/websocket/use-realtime-scores";
+import { useAudienceTimer } from "@/hooks/audience-display/use-audience-timer";
 import { UserRole } from "@/types/types";
 import { AudienceDisplaySettings } from "@/types/types";
 import TeamsDisplay from "../../../../components/features/audience-display/displays/teams-display";
 import ScheduleDisplay, {
   Match,
 } from "../../../../components/features/audience-display/displays/schedule-display";
-import { useTeams } from "@/hooks/teams/use-teams";
+import { useOptimizedTeams } from "@/hooks/audience-display/use-optimized-teams";
 import { apiClient } from "@/lib/api-client";
 import { useInjectTextShadowStyle } from "../../../../hooks/common/use-inject-text-shadow-style";
 import { useAnnouncement } from "../../../../hooks/control-match/use-announcement";
@@ -43,7 +44,6 @@ export default function LiveFieldDisplayPage() {
 
   // State for live data
   const [score, setScore] = useState<any>(null);
-  const [timer, setTimer] = useState<any>(null);
   const [matchState, setMatchState] = useState<any>({
     matchId: null,
     matchNumber: null,
@@ -55,21 +55,16 @@ export default function LiveFieldDisplayPage() {
   });
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  // Enhanced timer state for drift correction and smooth updates
-  const [timerState, setTimerState] = useState<{
-    duration: number;
-    remaining: number;
-    isRunning: boolean;
-    serverTimestamp: number | null;
-    lastSyncTime: number | null;
-    localStartTime: number | null;
-  }>({
-    duration: 0,
-    remaining: 0,
-    isRunning: false,
-    serverTimestamp: null,
-    lastSyncTime: null,
-    localStartTime: null,
+  // Use the proper audience timer hook for timer functionality
+  const {
+    timer,
+    isConnected: timerConnected,
+    showConnectionStatus: showTimerConnectionStatus,
+    connectionMessage: timerConnectionMessage,
+    formatTime: formatTimerTime,
+  } = useAudienceTimer({
+    tournamentId,
+    fieldId,
   }); // Enhanced real-time scores with fallback support (Steps 10-12)
   const currentMatchId = matchState.matchId || "";
   console.log("useRealtimeScores called with matchId:", currentMatchId);
@@ -115,9 +110,17 @@ export default function LiveFieldDisplayPage() {
     }
   }, [fields, fieldId, field, tournament, isLoadingFields, tournamentId]);
 
-  // Fetch teams for the tournament
-  const { data: teams = [], isLoading: isLoadingTeams } =
-    useTeams(tournamentId);
+  // Fetch teams for the tournament with optimized hook
+  const {
+    teams,
+    isLoading: isLoadingTeams,
+    error: teamsError,
+    refetch: refetchTeams
+  } = useOptimizedTeams({
+    tournamentId,
+    refetchInterval: 30000, // 30 seconds
+    staleTime: 60000, // 1 minute
+  });
 
   // Fetch match schedule for the tournament
   const { data: matches = [], isLoading: isLoadingMatches } =
@@ -267,7 +270,7 @@ export default function LiveFieldDisplayPage() {
     leaveFieldRoom,
     fieldId,
     tournamentId,
-    displaySettings,
+    // Removed displaySettings to prevent infinite re-renders
   ]);   // Room joining is automatically handled by useUnifiedWebSocket hook
   // Log the rooms being joined for debugging
   useEffect(() => {
@@ -318,10 +321,10 @@ export default function LiveFieldDisplayPage() {
 
         // Update display settings if needed
         if (
-          unifiedDisplaySettings.displayMode !== displaySettings.displayMode
+          unifiedDisplaySettings.displayMode !== displaySettingsRef.current.displayMode
         ) {
           setDisplaySettings({
-            ...displaySettings,
+            ...displaySettingsRef.current,
             displayMode: unifiedDisplaySettings.displayMode,
             matchId: unifiedMatchState.matchId,
             updatedAt: Date.now(),
@@ -337,7 +340,7 @@ export default function LiveFieldDisplayPage() {
     return () => {
       clearInterval(syncInterval);
     };
-  }, [tournamentId, fieldId, unifiedAudienceDisplay, displaySettings]);
+  }, [tournamentId, fieldId]);
 
   // Track connection status and attempts
   const [connectionAttempts, setConnectionAttempts] = useState<number>(0);
@@ -363,8 +366,21 @@ export default function LiveFieldDisplayPage() {
     }
   }, [unifiedConnected, connectionAttempts]);
 
+  // Use refs to access current state values without causing re-renders
+  const matchStateRef = useRef(matchState);
+  const displaySettingsRef = useRef(displaySettings);
+
+  // Update refs when state changes
+  useEffect(() => {
+    matchStateRef.current = matchState;
+  }, [matchState]);
+
+  useEffect(() => {
+    displaySettingsRef.current = displaySettings;
+  }, [displaySettings]);
+
   // Helper to fetch and sync full match details and score
-  async function fetchAndSyncMatch(matchId: string) {
+  const fetchAndSyncMatch = useCallback(async (matchId: string) => {
     try {
       // Fetch match metadata (teams, period, status, etc.)
       const matchDetails = await apiClient.get<any>(`/matches/${matchId}`);
@@ -386,7 +402,151 @@ export default function LiveFieldDisplayPage() {
     } catch (error) {
       console.error("Error syncing match data:", error);
     }
-  }
+  }, []);
+
+  // Stable callback for display mode changes
+  const handleDisplayModeChange = useCallback((data: AudienceDisplaySettings) => {
+    // Apply if global tournament update (no fieldId) or specific to this field
+    if (!data.fieldId || data.fieldId === fieldId) {
+      console.log(
+        "✅ [Unified WebSocket] Received display mode change:",
+        data
+      );
+
+      // Ensure we're using the full data object with all required properties
+      const updatedSettings = {
+        ...data,
+        fieldId: data.fieldId || fieldId,
+        tournamentId: data.tournamentId || tournamentId,
+        updatedAt: data.updatedAt || Date.now(),
+      };
+
+      setDisplaySettings(updatedSettings);
+
+      // If changing to match display mode and matchId is provided,
+      // fetch and sync all match data immediately
+      if (
+        updatedSettings.displayMode === "match" &&
+        updatedSettings.matchId
+      ) {
+        fetchAndSyncMatch(updatedSettings.matchId);
+      }
+    }
+  }, [fieldId, tournamentId, fetchAndSyncMatch]);
+
+  // Timer updates are now handled by the useAudienceTimer hook
+  // No need for manual timer handling here
+
+  // Stable callback for score updates
+  const handleScoreUpdate = useCallback((data: any) => {
+    console.log(
+      "✅ [Unified WebSocket] Real-time score update received:",
+      data,
+      "for field:",
+      fieldId,
+      "current match:",
+      matchStateRef.current?.matchId
+    );
+
+    // Debug: Log detailed matching information
+    console.log("🔍 [Score Update Debug]", {
+      receivedMatchId: data.matchId,
+      currentMatchId: matchStateRef.current?.matchId,
+      receivedFieldId: data.fieldId,
+      currentFieldId: fieldId,
+      matchesMatch: data.matchId === matchStateRef.current?.matchId,
+      matchesField: !data.fieldId || data.fieldId === fieldId,
+      willProcess: data.matchId && data.matchId === matchStateRef.current?.matchId
+    });
+
+    // Accept real-time score updates if they're for the current match
+    if (data.matchId && data.matchId === matchStateRef.current?.matchId) {
+      console.log(
+        "✅ Applying real-time score update for match:",
+        data.matchId
+      );
+
+      // Convert real-time score format to display format
+      const realtimeScoreData = {
+        matchId: data.matchId,
+        redAutoScore: data.redAutoScore || 0,
+        redDriveScore: data.redDriveScore || 0,
+        redTotalScore: data.redTotalScore || 0,
+        blueAutoScore: data.blueAutoScore || 0,
+        blueDriveScore: data.blueDriveScore || 0,
+        blueTotalScore: data.blueTotalScore || 0,
+        redPenalty: data.redPenalty || 0,
+        bluePenalty: data.bluePenalty || 0,
+        redTeamCount: data.redTeamCount || 2,
+        blueTeamCount: data.blueTeamCount || 2,
+        redMultiplier: data.redMultiplier || 1,
+        blueMultiplier: data.blueMultiplier || 1,
+        redGameElements: data.redGameElements || [],
+        blueGameElements: data.blueGameElements || [],
+        scoreDetails: data.scoreDetails || {},
+        timestamp: data.timestamp || Date.now(),
+        isRealtime: true, // Flag to identify real-time updates
+      };
+
+      setScore(realtimeScoreData);
+
+      // Ensure we're in match display mode
+      if (displaySettingsRef.current.displayMode !== "match") {
+        setDisplaySettings({
+          ...displaySettingsRef.current,
+          displayMode: "match",
+          matchId: data.matchId,
+          updatedAt: Date.now(),
+        });
+      }
+    } else {
+      console.log(
+        "❌ Rejecting real-time score update - match ID mismatch or missing:",
+        {
+          receivedMatchId: data.matchId,
+          currentMatchId: matchStateRef.current?.matchId,
+          hasMatchId: !!data.matchId,
+          hasCurrentMatch: !!matchStateRef.current?.matchId,
+          reason: !data.matchId ? "No matchId in data" :
+                  !matchStateRef.current?.matchId ? "No current matchId" :
+                  "Match ID mismatch"
+        }
+      );
+    }
+  }, [fieldId]);
+
+  // Stable callback for announcements
+  const handleAnnouncement = useCallback((data: {
+    message: string;
+    duration?: number;
+    fieldId?: string;
+    tournamentId: string;
+  }) => {
+    console.log("🔔 [Unified WebSocket] Announcement received:", data);
+
+    // Show if it's a tournament-wide announcement or specific to this field
+    if (!data.fieldId || data.fieldId === fieldId) {
+      console.log(
+        "✅ [Unified WebSocket] Displaying announcement for field:",
+        fieldId,
+        data
+      );
+      setAnnouncement(data.message);
+      setShowAnnouncement(true);
+
+      // Use the provided duration or default to 10 seconds
+      const displayDuration = data.duration || 10000;
+
+      // Auto-hide announcement after duration
+      const timerId = setTimeout(
+        () => setShowAnnouncement(false),
+        displayDuration
+      );
+
+      // Clear timeout if component unmounts while announcement is showing
+      return () => clearTimeout(timerId);
+    }
+  }, [fieldId]);
 
   // Subscribe to unified WebSocket events for audience display
   useEffect(() => {
@@ -399,104 +559,15 @@ export default function LiveFieldDisplayPage() {
     // Subscribe to display mode changes
     const unsubDisplayMode = unifiedSubscribe<AudienceDisplaySettings>(
       "display_mode_change",
-      (data) => {
-        // Apply if global tournament update (no fieldId) or specific to this field
-        if (!data.fieldId || data.fieldId === fieldId) {
-          console.log(
-            "✅ [Unified WebSocket] Received display mode change:",
-            data
-          );
-
-          // Ensure we're using the full data object with all required properties
-          const updatedSettings = {
-            ...data,
-            fieldId: data.fieldId || fieldId,
-            tournamentId: data.tournamentId || tournamentId,
-            updatedAt: data.updatedAt || Date.now(),
-          };
-
-          setDisplaySettings(updatedSettings);
-
-          // If changing to match display mode and matchId is provided,
-          // fetch and sync all match data immediately
-          if (
-            updatedSettings.displayMode === "match" &&
-            updatedSettings.matchId
-          ) {
-            fetchAndSyncMatch(updatedSettings.matchId);
-          }
-        }
-      }
+      handleDisplayModeChange
     );
 
-    // Subscribe to timer updates
-    const unsubTimer = unifiedSubscribe<any>("timer_update", (data) => {
-      // Process timer updates for this specific field OR tournament-wide updates (no fieldId specified)
-      if (data.fieldId === fieldId || !data.fieldId) {
-        console.log(
-          "✅ [Unified WebSocket] Applying timer update for field:",
-          fieldId,
-          data
-        );
-        setTimer(data);
-      }
-    });
+    // Timer updates are handled by useAudienceTimer hook
 
     // Subscribe to real-time score updates
     const unsubRealtimeScore = unifiedSubscribe<any>(
-      "scoreUpdateRealtime",
-      (data) => {
-        console.log(
-          "✅ [Unified WebSocket] Real-time score update received:",
-          data,
-          "for field:",
-          fieldId,
-          "current match:",
-          matchState?.matchId
-        );
-
-        // Accept real-time score updates if they're for the current match
-        if (data.matchId && data.matchId === matchState?.matchId) {
-          console.log(
-            "Applying real-time score update for match:",
-            data.matchId
-          );
-
-          // Convert real-time score format to display format
-          const realtimeScoreData = {
-            matchId: data.matchId,
-            redAutoScore: data.redAutoScore || 0,
-            redDriveScore: data.redDriveScore || 0,
-            redTotalScore: data.redTotalScore || 0,
-            blueAutoScore: data.blueAutoScore || 0,
-            blueDriveScore: data.blueDriveScore || 0,
-            blueTotalScore: data.blueTotalScore || 0,
-            redPenalty: data.redPenalty || 0,
-            bluePenalty: data.bluePenalty || 0,
-            redTeamCount: data.redTeamCount || 2,
-            blueTeamCount: data.blueTeamCount || 2,
-            redMultiplier: data.redMultiplier || 1,
-            blueMultiplier: data.blueMultiplier || 1,
-            redGameElements: data.redGameElements || [],
-            blueGameElements: data.blueGameElements || [],
-            scoreDetails: data.scoreDetails || {},
-            timestamp: data.timestamp || Date.now(),
-            isRealtime: true, // Flag to identify real-time updates
-          };
-
-          setScore(realtimeScoreData);
-
-          // Ensure we're in match display mode
-          if (displaySettings.displayMode !== "match") {
-            setDisplaySettings({
-              ...displaySettings,
-              displayMode: "match",
-              matchId: data.matchId,
-              updatedAt: Date.now(),
-            });
-          }
-        }
-      }
+      "score_update",
+      handleScoreUpdate
     );
 
     // Subscribe to announcements
@@ -505,69 +576,25 @@ export default function LiveFieldDisplayPage() {
       duration?: number;
       fieldId?: string;
       tournamentId: string;
-    }>("announcement", (data) => {
-      console.log("🔔 [Unified WebSocket] Announcement received:", data);
-
-      // Show if it's a tournament-wide announcement or specific to this field
-      if (!data.fieldId || data.fieldId === fieldId) {
-        console.log(
-          "✅ [Unified WebSocket] Displaying announcement for field:",
-          fieldId,
-          data
-        );
-        setAnnouncement(data.message);
-        setShowAnnouncement(true);
-
-        // Use the provided duration or default to 10 seconds
-        const displayDuration = data.duration || 10000;
-
-        // Auto-hide announcement after duration
-        const timerId = setTimeout(
-          () => setShowAnnouncement(false),
-          displayDuration
-        );
-
-        // Clear timeout if component unmounts while announcement is showing
-        return () => clearTimeout(timerId);
-      }
-    });
+    }>("announcement", handleAnnouncement);
 
     return () => {
       console.log(
         "🧹 [Unified WebSocket] Cleaning up audience display subscriptions"
       );
       unsubDisplayMode();
-      unsubTimer();
       unsubRealtimeScore();
       unsubAnnouncement();
     };
   }, [
     unifiedConnected,
     unifiedSubscribe,
-    fieldId,
-    tournamentId,
-    matchState?.matchId,
-    displaySettings.displayMode,
+    handleDisplayModeChange,
+    handleScoreUpdate,
+    handleAnnouncement,
   ]);
 
-  // Robust timer countdown effect: always use latest timer state from server, prevent drift
-  useEffect(() => {
-    if (
-      !timer?.isRunning ||
-      typeof timer.remaining !== "number" ||
-      timer.remaining <= 0
-    )
-      return;
-    const interval = setInterval(() => {
-      setTimer((prev: any) => {
-        // Only decrement if still running and remaining > 0
-        if (!prev?.isRunning || prev.remaining <= 0) return prev;
-        // Decrement by 1000ms, but never go below 0
-        return { ...prev, remaining: Math.max(0, prev.remaining - 1000) };
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [timer?.isRunning, timer?.remaining]);
+  // Timer countdown is now handled by the useAudienceTimer hook
 
   // Effect to automatically update match period based on timer
   useEffect(() => {
@@ -763,11 +790,20 @@ export default function LiveFieldDisplayPage() {
     }
   }, [matchState]);
 
-  // Reset timer state when match changes to ensure timer updates correctly for new match
-  useEffect(() => {
-    // When matchId changes, reset timer to null (or a default value)
-    setTimer(null);
-  }, [matchState.matchId]);
+  // Timer state is managed by the useAudienceTimer hook
+
+  // Convert TimerData to TimerState for MatchDisplay component
+  const timerState = timer ? {
+    isRunning: timer.isRunning,
+    remaining: timer.remaining,
+    initial: timer.duration,
+    phase: matchState.currentPeriod,
+  } : {
+    isRunning: false,
+    remaining: 0,
+    initial: 150000, // Default 2:30
+    phase: matchState.currentPeriod,
+  };
 
   // Render content based on display mode
   const renderContent = () => {
@@ -781,7 +817,12 @@ export default function LiveFieldDisplayPage() {
       case "teams":
         return (
           <div key={contentKey}>
-            <TeamsDisplay teams={teams} isLoading={isLoadingTeams} />
+            <TeamsDisplay
+              teams={teams}
+              isLoading={isLoadingTeams}
+              error={teamsError}
+              onRetry={refetchTeams}
+            />
             <DebugInfo />
           </div>
         );
@@ -869,7 +910,7 @@ export default function LiveFieldDisplayPage() {
           <div key={contentKey}>
             <MatchDisplay
               matchState={matchState}
-              timer={timer}
+              timer={timerState}
               score={displayScore}
             />
             <DebugInfo />

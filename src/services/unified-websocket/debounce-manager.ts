@@ -23,11 +23,18 @@ export class DebounceManager {
   private eventHashes: Map<string, string> = new Map();
   private pendingEvents: Map<string, WebSocketEventData> = new Map();
 
-  // Default configurations for different event types
+  // Optimized configurations for different event types (Phase 2 optimization)
   private readonly defaultConfigs: Map<string, DebounceConfig> = new Map([
-    ['score_update', { delay: 200, maxCalls: 10, windowMs: 1000 }], // Max 10/second
-    ['timer_update', { delay: 1000, maxCalls: 1, windowMs: 1000 }], // Max 1/second
-    ['match_update', { delay: 100, maxCalls: 5, windowMs: 1000 }], // Max 5/second
+    ['score_update', { delay: 100, maxCalls: 20, windowMs: 1000 }], // Increased frequency for real-time scoring
+    ['timer_update', { delay: 50, maxCalls: 20, windowMs: 1000 }],  // Real-time timer updates
+    ['timer_start', { delay: 0, maxCalls: 5, windowMs: 1000 }],     // Immediate timer start
+    ['timer_pause', { delay: 0, maxCalls: 5, windowMs: 1000 }],     // Immediate timer pause
+    ['timer_reset', { delay: 0, maxCalls: 5, windowMs: 1000 }],     // Immediate timer reset
+    ['match_update', { delay: 200, maxCalls: 10, windowMs: 1000 }], // Moderate frequency for match updates
+    ['match_state_change', { delay: 0, maxCalls: 10, windowMs: 1000 }], // Immediate state changes
+    ['announcement', { delay: 0, maxCalls: 5, windowMs: 1000 }],    // No delay for announcements
+    ['display_mode_change', { delay: 100, maxCalls: 10, windowMs: 1000 }], // Quick display updates
+    ['connection_status', { delay: 0, maxCalls: 20, windowMs: 1000 }], // Immediate connection updates
   ]);
 
   /**

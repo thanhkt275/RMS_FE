@@ -133,6 +133,23 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
     });
   }, []);
 
+  // Timer updates for real-time synchronization
+  const sendTimerUpdate = useCallback((timerData: Omit<TimerData, 'tournamentId' | 'fieldId'>) => {
+    const tournamentId = currentTournamentRef.current;
+    const fieldId = currentFieldRef.current;
+
+    if (!tournamentId) {
+      console.error('[useUnifiedWebSocket] No tournament ID available for sendTimerUpdate');
+      return;
+    }
+
+    unifiedWebSocketService.sendTimerUpdate({
+      ...timerData,
+      tournamentId,
+      fieldId: fieldId || undefined,
+    });
+  }, []);
+
   // Score updates
   const sendScoreUpdate = useCallback((scoreData: Omit<ScoreData, 'tournamentId' | 'fieldId'>) => {
     const tournamentId = currentTournamentRef.current;
@@ -341,7 +358,8 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
     startTimer,
     pauseTimer,
     resetTimer,
-    
+    sendTimerUpdate,
+
     // Data updates
     sendScoreUpdate,
     sendMatchUpdate,

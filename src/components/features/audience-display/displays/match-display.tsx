@@ -1,5 +1,6 @@
 import React from "react";
 import { formatTimeMs } from "../../../../lib/utils";
+import { colors, typography, spacing, components, cn } from "../design-system";
 
 interface Team {
   name: string;
@@ -42,65 +43,70 @@ interface MatchDisplayProps {
 export const MatchDisplay: React.FC<MatchDisplayProps> = ({ matchState, timer, score }) => (
   <>
     {/* Match Info */}
-    <div className="mb-6 text-center">
-      <div className="bg-white border border-gray-200 shadow-lg py-6 px-8 rounded-xl">
-        <div className="flex flex-col md:flex-row justify-between items-center">
-          <div className="flex-1 text-left">
-            <h2 className="text-4xl font-bold text-gray-900 uppercase tracking-wide">
-              {matchState?.matchNumber || matchState?.name || matchState?.matchId
-                ? `Match ${matchState.matchNumber || matchState.name || "Unknown"}`
-                : "Match Information"}
-            </h2>
-            <p className="text-sm font-medium text-gray-600 mt-2">
-              {matchState?.matchId
-                ? `ID: ${matchState.matchId}`
-                : matchState?.redTeams?.length > 0 || matchState?.blueTeams?.length > 0
-                ? "Teams ready for match"
-                : "Waiting for match selection..."}
-            </p>
-          </div>
-          <div className="flex-1 text-right">
-            <div className="inline-block bg-blue-500 text-white text-xl px-4 py-2 rounded-lg font-bold uppercase shadow-md">
-              {matchState?.currentPeriod ? (
-                <span className="flex items-center">
-                  <span
-                    className={`inline-block w-3 h-3 mr-2 rounded-full ${
-                      matchState.currentPeriod === "auto"
-                        ? "bg-yellow-300"
-                        : matchState.currentPeriod === "teleop"
-                        ? "bg-green-300"
-                        : matchState.currentPeriod === "endgame"
-                        ? "bg-red-300"
-                        : "bg-gray-300"
-                    }`}
-                  ></span>
-                  {matchState.currentPeriod.toUpperCase()}
-                </span>
-              ) : (
-                "SETUP"
-              )}
+    <div className={spacing.margin.bottom.md}>
+      <div className={components.card.base}>
+        <div className={cn(components.card.header, "mb-0")}>
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="flex-1 text-left">
+              <h2 className={cn(typography.display.lg, "text-white uppercase tracking-wide")}>
+                {matchState?.matchNumber || matchState?.name || matchState?.matchId
+                  ? `Match ${matchState.matchNumber || matchState.name || "Unknown"}`
+                  : "Match Information"}
+              </h2>
+              <p className={cn(typography.body.sm, "text-blue-100 mt-2")}>
+                {matchState?.matchId
+                  ? `ID: ${matchState.matchId}`
+                  : matchState?.redTeams?.length > 0 || matchState?.blueTeams?.length > 0
+                  ? "Teams ready for match"
+                  : "Waiting for match selection..."}
+              </p>
             </div>
-            <div className="mt-2 text-lg font-semibold text-blue-800 bg-blue-50 px-3 py-1 rounded-lg border border-blue-200">
-              Status: {matchState?.status ? matchState.status.replace(/_/g, " ").toUpperCase() : "PENDING"}
+            <div className="flex-1 text-right">
+              <div className={cn("inline-block", colors.primary[500], "text-white", typography.body.xl, "px-4 py-2 rounded-lg font-bold uppercase shadow-md")}>
+                {matchState?.currentPeriod ? (
+                  <span className="flex items-center">
+                    <span
+                      className={cn("inline-block w-3 h-3 mr-2 rounded-full", {
+                        "bg-yellow-300": matchState.currentPeriod === "auto",
+                        "bg-green-300": matchState.currentPeriod === "teleop",
+                        "bg-red-300": matchState.currentPeriod === "endgame",
+                        "bg-gray-300": !["auto", "teleop", "endgame"].includes(matchState.currentPeriod)
+                      })}
+                    ></span>
+                    {matchState.currentPeriod.toUpperCase()}
+                  </span>
+                ) : (
+                  "SETUP"
+                )}
+              </div>
+              <div className={cn("mt-2", typography.body.lg, colors.text.blue, colors.blue[50], "px-3 py-1 rounded-lg border border-blue-200")}>
+                Status: {matchState?.status ? matchState.status.replace(/_/g, " ").toUpperCase() : "PENDING"}
+              </div>
             </div>
           </div>
         </div>
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-red-50 border border-red-200 p-4 rounded-xl">
-            <h3 className="text-lg font-bold text-red-800 mb-2">RED ALLIANCE</h3>
-            <p className="text-md text-red-700">
-              {Array.isArray(matchState?.redTeams) && matchState.redTeams.length > 0
-                ? matchState.redTeams.filter((t) => t && t.name).map((t) => t.name).join(", ")
-                : "Teams TBD"}
-            </p>
-          </div>
-          <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl">
-            <h3 className="text-lg font-bold text-blue-800 mb-2">BLUE ALLIANCE</h3>
-            <p className="text-md text-blue-700">
-              {Array.isArray(matchState?.blueTeams) && matchState.blueTeams.length > 0
-                ? matchState.blueTeams.filter((t) => t && t.name).map((t) => t.name).join(", ")
-                : "Teams TBD"}
-            </p>
+        <div className={cn(components.card.content, "pt-6")}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className={components.alliance.red.background}>
+              <div className={spacing.padding.md}>
+                <h3 className={cn(typography.heading.md, components.alliance.red.text, "mb-2")}>RED ALLIANCE</h3>
+                <p className={cn(typography.body.md, components.alliance.red.text)}>
+                  {Array.isArray(matchState?.redTeams) && matchState.redTeams.length > 0
+                    ? matchState.redTeams.filter((t) => t && t.name).map((t) => t.name).join(", ")
+                    : "Teams TBD"}
+                </p>
+              </div>
+            </div>
+            <div className={components.alliance.blue.background}>
+              <div className={spacing.padding.md}>
+                <h3 className={cn(typography.heading.md, components.alliance.blue.text, "mb-2")}>BLUE ALLIANCE</h3>
+                <p className={cn(typography.body.md, components.alliance.blue.text)}>
+                  {Array.isArray(matchState?.blueTeams) && matchState.blueTeams.length > 0
+                    ? matchState.blueTeams.filter((t) => t && t.name).map((t) => t.name).join(", ")
+                    : "Teams TBD"}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, flexRender, ColumnDef, SortingState } from '@tanstack/react-table';
+import { colors, typography, spacing, components, cn } from "../design-system";
 
 interface TeamInfo {
   teamNumber?: string;
@@ -124,14 +125,14 @@ export function SwissRankingsDisplay({ rankings: rawRankings, isLoading }: { ran
   });
 
   return (
-    <div className="flex flex-col h-full bg-slate-100">
+    <div className={cn("flex flex-col h-full", colors.gray[50])}>
       {/* Rankings Page Header */}
-      <div className="bg-slate-800 shadow-lg text-white p-6 md:p-8 rounded-b-xl animate-fade-in">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+      <div className={cn(components.card.header, "rounded-b-xl animate-fade-in")}>
+        <div className={cn("max-w-7xl mx-auto flex justify-between items-center")}>
           <div className="text-center w-full">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-1">Tournament Rankings</h1>
-            <p className="text-sm md:text-base text-slate-300 animate-fade-in-slow">
-              <span className="text-sky-400 font-semibold">{rankings.length}</span> {rankings.length === 1 ? 'team' : 'teams'} ranked
+            <h1 className={cn(typography.display.lg, "text-white mb-1")}>Tournament Rankings</h1>
+            <p className={cn(typography.body.sm, "text-blue-100 animate-fade-in-slow")}>
+              <span className="text-white font-semibold">{rankings.length}</span> {rankings.length === 1 ? 'team' : 'teams'} ranked
             </p>
           </div>
         </div>

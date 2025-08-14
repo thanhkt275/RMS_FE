@@ -9,6 +9,7 @@ import {
   SortingState,
   ColumnFiltersState,
 } from '@tanstack/react-table';
+import { colors, typography, spacing, components, cn } from "../design-system";
 
 // Define Schedule interface
 export interface Match {

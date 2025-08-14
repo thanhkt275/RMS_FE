@@ -1,15 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUnifiedWebSocket } from '@/hooks/websocket/use-unified-websocket';
-import { UserRole } from '@/types/types';
-
-export interface TimerData {
-  duration: number;
-  remaining: number;
-  isRunning: boolean;
-  startedAt?: number;
-  pausedAt?: number;
-  period?: string;
-}
+import { UserRole, TimerData } from '@/types/types';
 
 export interface UseAudienceTimerOptions {
   tournamentId: string;
@@ -89,11 +80,19 @@ export function useAudienceTimer({
   // Handle timer updates with smooth transitions
   const handleTimerUpdate = useCallback((data: any) => {
     console.log('[useAudienceTimer] Timer update received:', data);
+    console.log('[useAudienceTimer] Current fieldId filter:', fieldId);
+    console.log('[useAudienceTimer] Data fieldId:', data.fieldId);
     
     // Filter messages by fieldId if we're in a specific field
+    // Only filter if both fieldId and data.fieldId are present and different
     if (fieldId && data.fieldId && data.fieldId !== fieldId) {
-      console.log(`[useAudienceTimer] Ignoring timer update for different field: ${data.fieldId}`);
+      console.log(`[useAudienceTimer] Ignoring timer update for different field: ${data.fieldId} (expected: ${fieldId})`);
       return;
+    }
+
+    // If no fieldId is specified in the data, accept it (tournament-wide timer)
+    if (fieldId && !data.fieldId) {
+      console.log(`[useAudienceTimer] Accepting timer update without fieldId (tournament-wide)`);
     }
 
     // Apply drift correction for running timers
@@ -108,6 +107,8 @@ export function useAudienceTimer({
       startedAt: data.startedAt,
       pausedAt: data.pausedAt,
       period: data.period,
+      tournamentId: data.tournamentId || tournamentId,
+      fieldId: data.fieldId || fieldId,
     };
 
     setTimer(newTimerData);
@@ -118,10 +119,12 @@ export function useAudienceTimer({
 
   // Subscribe to timer events from unified service
   useEffect(() => {
+    console.log('[useAudienceTimer] Setting up WebSocket subscriptions for tournament:', tournamentId, 'field:', fieldId);
     const unsubscribeUpdate = subscribe("timer_update", handleTimerUpdate);
-    const unsubscribeStart = subscribe("start_timer", handleTimerUpdate);
-    const unsubscribePause = subscribe("pause_timer", handleTimerUpdate);
-    const unsubscribeReset = subscribe("reset_timer", handleTimerUpdate);
+    const unsubscribeStart = subscribe("timer_start", handleTimerUpdate);
+    const unsubscribePause = subscribe("timer_pause", handleTimerUpdate);
+    const unsubscribeReset = subscribe("timer_reset", handleTimerUpdate);
+    console.log('[useAudienceTimer] WebSocket subscriptions established');
 
     return () => {
       if (unsubscribeUpdate) unsubscribeUpdate();

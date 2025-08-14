@@ -97,6 +97,7 @@ export function useTimerControl({
     startTimer,
     pauseTimer,
     resetTimer,
+    sendTimerUpdate,
     subscribe,
     isConnected,
     canAccess,
@@ -187,11 +188,11 @@ export function useTimerControl({
       });
     };
 
-    // Subscribe to multiple timer events from unified service
+    // Subscribe to multiple timer events from unified service (using standardized event names)
     const unsubscribeUpdate = subscribe("timer_update", handleTimerUpdate);
-    const unsubscribeStart = subscribe("start_timer", handleTimerUpdate);
-    const unsubscribePause = subscribe("pause_timer", handleTimerUpdate);
-    const unsubscribeReset = subscribe("reset_timer", handleTimerUpdate);
+    const unsubscribeStart = subscribe("timer_start", handleTimerUpdate);
+    const unsubscribePause = subscribe("timer_pause", handleTimerUpdate);
+    const unsubscribeReset = subscribe("timer_reset", handleTimerUpdate);
 
     // Cleanup subscriptions when component unmounts
     return () => {
@@ -224,6 +225,49 @@ export function useTimerControl({
 
     return () => clearInterval(interval);
   }, [timerIsRunning, connectionLost, localStartTime, timerDuration]);
+
+  // Real-time timer update broadcasting (only when connected and running)
+  useEffect(() => {
+    if (!timerIsRunning || !isConnected || connectionLost || !localStartTime) return;
+
+    console.log('[useTimerControl] Starting real-time timer update broadcasting');
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const elapsed = now - localStartTime;
+      const newRemaining = Math.max(0, timerDuration - elapsed);
+
+      // Update local state
+      setTimerRemaining(newRemaining);
+
+      // Broadcast timer update to all connected clients
+      const timerUpdateData = {
+        duration: timerDuration,
+        remaining: newRemaining,
+        isRunning: true,
+        startedAt: localStartTime,
+        period: matchPeriod,
+      };
+      console.log('[useTimerControl] Broadcasting timer update:', timerUpdateData);
+      sendTimerUpdate(timerUpdateData);
+
+      if (newRemaining <= 0) {
+        setTimerIsRunning(false);
+        clearInterval(interval);
+        console.log('[useTimerControl] Timer completed, broadcasting final update');
+
+        // Send final timer update
+        sendTimerUpdate({
+          duration: timerDuration,
+          remaining: 0,
+          isRunning: false,
+          period: matchPeriod,
+        });
+      }
+    }, 1000); // Broadcast every 1 second for real-time sync
+
+    return () => clearInterval(interval);
+  }, [timerIsRunning, isConnected, connectionLost, localStartTime, timerDuration, sendTimerUpdate, selectedMatchId, matchPeriod]);
 
   // Period transition logic - matches the FRC timing
   useEffect(() => {
@@ -260,6 +304,15 @@ export function useTimerControl({
         });
       }
 
+      // Send timer update with new period
+      sendTimerUpdate({
+        duration: timerDuration,
+        remaining: timerRemaining,
+        isRunning: true,
+        startedAt: localStartTime || undefined,
+        period: "teleop",
+      });
+
       // Update API status
       if (updateMatchStatusAPI && selectedMatchId) {
         updateMatchStatusAPI({
@@ -282,6 +335,15 @@ export function useTimerControl({
           fieldId: selectedFieldId || undefined,
         });
       }
+
+      // Send timer update with new period
+      sendTimerUpdate({
+        duration: timerDuration,
+        remaining: timerRemaining,
+        isRunning: true,
+        startedAt: localStartTime || undefined,
+        period: "endgame",
+      });
 
       // Update API status
       if (updateMatchStatusAPI && selectedMatchId) {
@@ -306,6 +368,14 @@ export function useTimerControl({
         });
       }
 
+      // Send final timer update
+      sendTimerUpdate({
+        duration: timerDuration,
+        remaining: 0,
+        isRunning: false,
+        period: "completed",
+      });
+
       // Update API status
       if (updateMatchStatusAPI && selectedMatchId) {
         updateMatchStatusAPI({
@@ -314,7 +384,7 @@ export function useTimerControl({
         });
       }
     }
-  }, [timerIsRunning, timerRemaining, matchPeriod, timerDuration, selectedMatchId, updateMatchStatusAPI, setMatchPeriod]);
+  }, [timerIsRunning, timerRemaining, matchPeriod, timerDuration, selectedMatchId, updateMatchStatusAPI, setMatchPeriod, sendTimerUpdate, localStartTime, selectedFieldId]);
 
   // Handle match switching - timer must follow the new match
   useEffect(() => {
@@ -339,17 +409,22 @@ export function useTimerControl({
       return;
     }
 
+    const now = Date.now();
     const timerData = {
       duration: timerDuration,
       remaining: timerRemaining,
-      isRunning: true, // Start the timer as running
+      isRunning: true,
+      startedAt: now,
+      period: "auto",
     };
 
+    // Emit timer start event
     startTimer(timerData);
 
     // Update local state immediately for responsiveness
     setTimerIsRunning(true);
-    setLocalStartTime(Date.now());
+    setLocalStartTime(now);
+    setServerTimestamp(now);
 
     // Set to auto period when starting
     setMatchPeriod("auto");
@@ -365,7 +440,12 @@ export function useTimerControl({
     }
 
     console.log('[useTimerControl] Timer started:', timerData);
-  }, [canAccess, timerDuration, timerRemaining, startTimer, selectedMatchId, selectedFieldId]);
+    console.log('[useTimerControl] WebSocket connection status:', isConnected);
+    console.log('[useTimerControl] Tournament ID:', tournamentId);
+    console.log('[useTimerControl] Field ID:', selectedFieldId);
+    console.log('[useTimerControl] Timer duration (ms):', timerDuration);
+    console.log('[useTimerControl] Timer duration (formatted):', formatTime(timerDuration));
+  }, [canAccess, timerDuration, timerRemaining, startTimer, selectedMatchId, selectedFieldId, tournamentId]);
 
   const handlePauseTimer = useCallback(() => {
     if (!canAccess('timer_control')) {
@@ -373,12 +453,16 @@ export function useTimerControl({
       return;
     }
 
+    const now = Date.now();
     const timerData = {
       duration: timerDuration,
       remaining: timerRemaining,
       isRunning: false,
+      pausedAt: now,
+      period: matchPeriod,
     };
 
+    // Emit timer pause event
     pauseTimer(timerData);
 
     // Update local state immediately for responsiveness
@@ -386,7 +470,7 @@ export function useTimerControl({
     setLocalStartTime(null);
 
     console.log('[useTimerControl] Timer paused:', timerData);
-  }, [canAccess, timerDuration, timerRemaining, pauseTimer]);
+  }, [canAccess, timerDuration, timerRemaining, pauseTimer, selectedFieldId, tournamentId, selectedMatchId, matchPeriod]);
 
   const handleResetTimer = useCallback(() => {
     if (!canAccess('timer_control')) {
@@ -398,8 +482,10 @@ export function useTimerControl({
       duration: timerDuration,
       remaining: timerDuration, // Reset to full duration
       isRunning: false,
+      period: "auto",
     };
 
+    // Emit timer reset event
     resetTimer(timerData);
 
     // Update local state immediately for responsiveness
@@ -420,7 +506,7 @@ export function useTimerControl({
     }
 
     console.log('[useTimerControl] Timer reset:', timerData);
-  }, [canAccess, timerDuration, resetTimer, selectedMatchId, selectedFieldId]);
+  }, [canAccess, timerDuration, resetTimer, selectedMatchId, selectedFieldId, tournamentId]);
 
   return {
     // Timer state

@@ -41,22 +41,63 @@ export function useRealtimeScores(matchId: string) {
     fallbackMode: false
   });
 
-  // Helper setters for state updates
-  const setLastUpdateTime = useCallback((time: number) => {
-    setConnectionState(prev => ({ ...prev, lastUpdateTime: time }));
+  // Stable callback for updating connection state
+  const updateConnectionState = useCallback((updates: Partial<IConnectionState>) => {
+    setConnectionState(prev => ({ ...prev, ...updates }));
   }, []);
+  // Stable callback for handling score updates
+  const handleScoreUpdate = useCallback((data: any) => {
+    console.log("🟢 [WebSocket Service] Real-time score update received:", data, "for matchId:", matchId);
 
-  const setSource = useCallback((source: 'websocket' | 'none') => {
-    setConnectionState(prev => ({ ...prev, source }));
-  }, []);
+    if (data.matchId === matchId) {
+      console.log("✅ Score update matches current matchId - applying update");
 
-  const setIsConnected = useCallback((isConnected: boolean) => {
-    setConnectionState(prev => ({ ...prev, isConnected }));
-  }, []);
-  
-  const setFallbackMode = useCallback((fallbackMode: boolean) => {
-    setConnectionState(prev => ({ ...prev, fallbackMode }));
-  }, []);
+      // Update scores
+      setRealtimeScores({
+        red: {
+          auto: data.redAutoScore || 0,
+          drive: data.redDriveScore || 0,
+          total: data.redTotalScore || 0,
+          penalty: data.redPenalty || 0
+        },
+        blue: {
+          auto: data.blueAutoScore || 0,
+          drive: data.blueDriveScore || 0,
+          total: data.blueTotalScore || 0,
+          penalty: data.bluePenalty || 0
+        }
+      });
+
+      updateConnectionState({
+        lastUpdateTime: Date.now(),
+        source: 'websocket'
+      });
+    } else {
+      console.log("❌ Score update ignored - matchId mismatch:", {
+        receivedMatchId: data.matchId,
+        expectedMatchId: matchId
+      });
+    }
+  }, [matchId, updateConnectionState]);
+
+  // Stable callback for handling connection changes
+  const handleConnectionChange = useCallback((status: any) => {
+    if (status.connected) {
+      console.log('WebSocket connected');
+      updateConnectionState({
+        isConnected: true,
+        fallbackMode: false,
+        source: 'websocket'
+      });
+    } else {
+      console.log('WebSocket disconnected');
+      updateConnectionState({
+        isConnected: false,
+        source: 'none'
+      });
+    }
+  }, [updateConnectionState]);
+
   // Initialize connection tracking
   useEffect(() => {
     console.log('🚀 Initializing useRealtimeScores for matchId:', matchId);
@@ -65,76 +106,28 @@ export function useRealtimeScores(matchId: string) {
     const isCurrentlyConnected = unifiedWebSocketService.isConnected();
     console.log('🔍 Initial WebSocket connection status:', isCurrentlyConnected);
 
-    setIsConnected(isCurrentlyConnected);
-    setFallbackMode(false);
-    setSource(isCurrentlyConnected ? 'websocket' : 'none');
-  }, [matchId, setIsConnected, setFallbackMode, setSource]);
+    updateConnectionState({
+      isConnected: isCurrentlyConnected,
+      fallbackMode: false,
+      source: isCurrentlyConnected ? 'websocket' : 'none'
+    });
+  }, [matchId, updateConnectionState]);
 
   // Handle WebSocket score updates
   useEffect(() => {
     if (!matchId) return;
 
-    const handleScoreUpdate = (data: any) => {
-      console.log("🟢 [WebSocket Service] Real-time score update received:", data, "for matchId:", matchId);
-
-      if (data.matchId === matchId) {
-        console.log("✅ Score update matches current matchId - applying update");
-        
-        // Update scores
-        setRealtimeScores({
-          red: {
-            auto: data.redAutoScore || 0,
-            drive: data.redDriveScore || 0,
-            total: data.redTotalScore || 0,
-            penalty: data.redPenalty || 0
-          },
-          blue: {
-            auto: data.blueAutoScore || 0,
-            drive: data.blueDriveScore || 0,
-            total: data.blueTotalScore || 0,
-            penalty: data.bluePenalty || 0
-          }
-        });
-        
-        setLastUpdateTime(Date.now());
-        setSource('websocket');
-      } else {
-        console.log("❌ Score update ignored - matchId mismatch:", {
-          receivedMatchId: data.matchId,
-          expectedMatchId: matchId
-        });
-      }
-    };
-
-    const handleConnect = () => {
-      console.log('WebSocket connected');
-      setIsConnected(true);
-      setFallbackMode(false);
-      setSource('websocket');
-    };
-
-    const handleDisconnect = () => {
-      console.log('WebSocket disconnected');
-      setIsConnected(false);
-      setSource('none');
-    };
-
     // Set up WebSocket listeners
     console.log("🔔 Setting up WebSocket score update subscription for matchId:", matchId);
     const unsubscribeScoreUpdate = unifiedWebSocketService.on('score_update', handleScoreUpdate);
-    const unsubscribeConnect = unifiedWebSocketService.onConnectionStatus((status) => {
-      if (status.connected) {
-        handleConnect();
-      } else {
-        handleDisconnect();
-      }
-    });
+    const unsubscribeConnect = unifiedWebSocketService.onConnectionStatus(handleConnectionChange);
 
     return () => {
+      console.log("🧹 Cleaning up WebSocket subscriptions for matchId:", matchId);
       unsubscribeScoreUpdate?.();
       unsubscribeConnect?.();
     };
-  }, [matchId, setIsConnected, setFallbackMode, setSource, setLastUpdateTime]);
+  }, [matchId, handleScoreUpdate, handleConnectionChange]);
 
   // Return clean interface
   return {

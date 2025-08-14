@@ -1,5 +1,18 @@
 
 /**
+ * Unified WebSocket Service for RMS System
+ * Provides standardized event handling with type safety and performance optimization
+ */
+
+import {
+    WebSocketEvents,
+    WebSocketEventName,
+    WebSocketEventHandler,
+    getStandardizedEventName,
+    LEGACY_EVENT_MAPPING
+} from '@/types/websocket-events';
+
+/**
  * Compares new data with the previous state to detect genuine changes.
  * @param eventType The type of WebSocket event.
  * @param newData The new data being sent.
@@ -11,14 +24,19 @@ function hasDataChanged(eventType: string, newData: WebSocketEventData, previous
         return true; // If there's no previous data, it's definitely new.
     }
 
+    // Standardize event name for comparison
+    const standardizedEventType = getStandardizedEventName(eventType);
+
     // Handle different event types with specific comparison logic
-    switch (eventType) {
+    switch (standardizedEventType) {
         case 'match_update':
             return hasMatchDataChanged(newData as any, previousData as any);
         case 'score_update':
-        case 'scoreUpdateRealtime':
             return hasScoreDataChanged(newData as any, previousData as any);
         case 'timer_update':
+        case 'timer_start':
+        case 'timer_pause':
+        case 'timer_reset':
             return hasTimerDataChanged(newData as any, previousData as any);
         case 'match_state_change':
             return hasMatchStateChanged(newData as any, previousData as any);
@@ -81,6 +99,9 @@ import { EventManager, EventCallback, EventOptions } from './event-manager';
 import { DebounceManager, DebounceConfig } from './debounce-manager';
 import { RoleManager, FeaturePermission } from './role-manager';
 import { StateSynchronizer, MatchState, StateUpdate } from './state-synchronizer';
+// Phase 2 optimizations - now integrated
+import { RoomManager } from '@/hooks/websocket/RoomManager';
+import { FieldFilter } from '@/utils/fieldFilter';
 import {
     WebSocketEventData,
     CollaborativeStateUpdateData,
@@ -182,6 +203,8 @@ export class UnifiedWebSocketService implements IUnifiedWebSocketService {
     private debounceManager: DebounceManager;
     private roleManager: RoleManager;
     private stateSynchronizer: StateSynchronizer;
+    private roomManager: RoomManager; // Phase 2: Room management with race condition prevention
+    private fieldFilter: FieldFilter; // Phase 2: Intelligent event filtering
     private currentTournamentId: string | null = null;
     private currentFieldId: string | null = null;
     private collaborativeSessions: Set<string> = new Set();
@@ -196,11 +219,22 @@ export class UnifiedWebSocketService implements IUnifiedWebSocketService {
         this.debounceManager = new DebounceManager();
         this.roleManager = new RoleManager();
         this.stateSynchronizer = new StateSynchronizer();
+        this.roomManager = new RoomManager(); // Phase 2: Initialize room manager
+        this.fieldFilter = FieldFilter.getInstance(); // Phase 2: Initialize field filter
 
         // Setup connection status monitoring for state resync
         this.connectionManager.onConnectionStatus((status) => {
             if (status.connected && status.state === 'CONNECTED') {
                 this.resyncStateOnReconnection();
+                // Phase 2: Setup room manager with socket
+                const socket = this.connectionManager.getSocket();
+                if (socket) {
+                    this.roomManager.setSocket(socket);
+                    this.roomManager.setConnectionStatus(true);
+                }
+            } else {
+                // Phase 2: Update room manager connection status
+                this.roomManager.setConnectionStatus(false);
             }
         });
 
@@ -278,7 +312,29 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
     }
 
     on<T>(event: string, callback: EventCallback<T>, options?: EventOptions): () => void {
-        return this.eventManager.on(event, callback, options);
+        // Phase 2: Apply field filtering to incoming events
+        const filteredCallback: EventCallback<T> = (data: T) => {
+            // Create filter context
+            const context = {
+                currentFieldId: this.currentFieldId || undefined,
+                currentTournamentId: this.currentTournamentId || undefined,
+                userRole: this.roleManager.getCurrentRole()
+            };
+
+            // Apply field filtering if data has field/tournament context
+            if (data && typeof data === 'object' && ('fieldId' in data || 'tournamentId' in data)) {
+                const shouldProcess = FieldFilter.shouldProcessEvent(data as any, context);
+                if (!shouldProcess) {
+                    console.log(`[UnifiedWebSocketService] Event '${event}' filtered out by field filter`);
+                    return;
+                }
+            }
+
+            // Call original callback if event passes filter
+            callback(data);
+        };
+
+        return this.eventManager.on(event, filteredCallback, options);
     }
 
     off(event: string): void {
@@ -498,30 +554,42 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
 
     joinTournament(tournamentId: string): void {
         this.currentTournamentId = tournamentId;
-        this.emit('join_tournament', { tournamentId });
-        console.log(`[UnifiedWebSocketService] Joined tournament: ${tournamentId}`);
+        // Phase 2: Use RoomManager for race condition prevention
+        this.roomManager.joinRoom(`tournament:${tournamentId}`, 'tournament').catch(error => {
+            console.error(`[UnifiedWebSocketService] Failed to join tournament ${tournamentId}:`, error);
+        });
+        console.log(`[UnifiedWebSocketService] Joining tournament: ${tournamentId}`);
     }
 
     leaveTournament(tournamentId: string): void {
         if (this.currentTournamentId === tournamentId) {
             this.currentTournamentId = null;
         }
-        this.emit('leave_tournament', { tournamentId });
-        console.log(`[UnifiedWebSocketService] Left tournament: ${tournamentId}`);
+        // Phase 2: Use RoomManager for proper cleanup
+        this.roomManager.leaveRoom(`tournament:${tournamentId}`).catch(error => {
+            console.error(`[UnifiedWebSocketService] Failed to leave tournament ${tournamentId}:`, error);
+        });
+        console.log(`[UnifiedWebSocketService] Leaving tournament: ${tournamentId}`);
     }
 
     joinFieldRoom(fieldId: string): void {
         this.currentFieldId = fieldId;
-        this.emit('joinFieldRoom', { fieldId });
-        console.log(`[UnifiedWebSocketService] Joined field room: ${fieldId}`);
+        // Phase 2: Use RoomManager for race condition prevention
+        this.roomManager.joinRoom(`field:${fieldId}`, 'field').catch(error => {
+            console.error(`[UnifiedWebSocketService] Failed to join field ${fieldId}:`, error);
+        });
+        console.log(`[UnifiedWebSocketService] Joining field room: ${fieldId}`);
     }
 
     leaveFieldRoom(fieldId: string): void {
         if (this.currentFieldId === fieldId) {
             this.currentFieldId = null;
         }
-        this.emit('leaveFieldRoom', { fieldId });
-        console.log(`[UnifiedWebSocketService] Left field room: ${fieldId}`);
+        // Phase 2: Use RoomManager for proper cleanup
+        this.roomManager.leaveRoom(`field:${fieldId}`).catch(error => {
+            console.error(`[UnifiedWebSocketService] Failed to leave field ${fieldId}:`, error);
+        });
+        console.log(`[UnifiedWebSocketService] Leaving field room: ${fieldId}`);
     }
 
     sendDisplayModeChange(settings: AudienceDisplaySettings): void {
@@ -553,7 +621,7 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
             return;
         }
 
-        this.emit('start_timer', {
+        this.emit('timer_start', {
             ...data,
             startedAt: Date.now(),
             isRunning: true
@@ -569,7 +637,7 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
             return;
         }
 
-        this.emit('pause_timer', {
+        this.emit('timer_pause', {
             ...data,
             pausedAt: Date.now(),
             isRunning: false
@@ -585,7 +653,7 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
             return;
         }
 
-        this.emit('reset_timer', {
+        this.emit('timer_reset', {
             ...data,
             remaining: data.duration,
             isRunning: false
@@ -594,6 +662,8 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
             tournamentId: data.tournamentId
         });
     }
+
+
 
     sendAnnouncement(data: AnnouncementData): void {
         if (!this.canAccess('display_control')) {
@@ -730,24 +800,7 @@ private isDataUnchanged(event: string, data: WebSocketEventData): boolean {
         };
     }
 
-    /**
-     * Get service statistics
-     */
-    getStats(): {
-        connectionStatus: ConnectionStatus;
-        eventStats: { [event: string]: number };
-        debounceStats: ReturnType<DebounceManager['getStats']>;
-        stateSyncStats: ReturnType<StateSynchronizer['getStats']>;
-        context: ReturnType<UnifiedWebSocketService['getCurrentContext']>
-    } {
-        return {
-            connectionStatus: this.getConnectionStatus(),
-            eventStats: this.eventManager.getStats(),
-            debounceStats: this.debounceManager.getStats(),
-            stateSyncStats: this.stateSynchronizer.getStats(),
-            context: this.getCurrentContext()
-        };
-    }
+
 
     /**
      * Set up collaborative listeners for a match
@@ -954,6 +1007,63 @@ private isDataUnchanged(event: string, data: WebSocketEventData): boolean {
 
         // Disconnect
         this.disconnect();
+    }
+
+    // === Phase 2: Enhanced Statistics and Health Monitoring ===
+
+    /**
+     * Get comprehensive service statistics
+     */
+    getStats(): Record<string, any> {
+        return {
+            connection: this.connectionManager.getConnectionStatus(),
+            rooms: this.roomManager.getStats(),
+            fieldFilter: FieldFilter.getStats(),
+            debouncing: this.debounceManager.getStats(),
+            collaborativeSessions: Array.from(this.collaborativeSessions),
+            activeUsers: this.userLastSeen.size,
+            currentContext: {
+                tournamentId: this.currentTournamentId,
+                fieldId: this.currentFieldId,
+                userId: this.currentUserId,
+                role: this.roleManager.getCurrentRole()
+            }
+        };
+    }
+
+    /**
+     * Get room management status
+     */
+    getRoomStatus(): Record<string, any> {
+        return this.roomManager.getStats();
+    }
+
+    /**
+     * Get field filtering statistics
+     */
+    getFilterStats(): Record<string, number> {
+        return FieldFilter.getStats();
+    }
+
+    /**
+     * Reset field filtering statistics
+     */
+    resetFilterStats(): void {
+        FieldFilter.resetStats();
+    }
+
+    /**
+     * Enable debug mode for field filtering
+     */
+    enableFilterDebug(): void {
+        this.fieldFilter.enableDebug();
+    }
+
+    /**
+     * Disable debug mode for field filtering
+     */
+    disableFilterDebug(): void {
+        this.fieldFilter.disableDebug();
     }
 }
 

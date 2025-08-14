@@ -192,6 +192,7 @@ export interface TimerData {
   isRunning: boolean;
   startedAt?: number;
   pausedAt?: number;
+  period?: string;
   tournamentId: string;
   fieldId?: string;
 }

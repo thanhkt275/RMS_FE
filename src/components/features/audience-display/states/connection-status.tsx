@@ -1,4 +1,5 @@
 import React from 'react';
+import { typography, cn } from "../design-system";
 
 interface ConnectionStatusProps {
   isConnected: boolean;
@@ -61,27 +62,30 @@ export function ConnectionStatus({
 
   return (
     <div className="connection-status fixed top-4 right-4 z-50">
-      <div className="flex items-center gap-3 bg-black/90 text-white px-4 py-3 rounded-lg backdrop-blur-sm border border-gray-600 shadow-lg">
-        <div className={`w-3 h-3 rounded-full ${status.color} ${status.status === 'connected' ? 'animate-pulse' : ''}`} />
+      <div className={cn("flex items-center gap-3 bg-black/90 text-white px-4 py-3 rounded-lg backdrop-blur-sm border border-gray-600 shadow-lg")}>
+        <div className={cn("w-3 h-3 rounded-full", status.color, {
+          'animate-pulse': status.status === 'connected'
+        })} />
         <div className="flex flex-col min-w-[140px]">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-sm">{status.text}</span>
-            <span className="text-xs">{status.icon}</span>
+            <span className={cn(typography.body.sm, "font-medium")}>{status.text}</span>
+            <span className={typography.body.xs}>{status.icon}</span>
           </div>
-          <span className="text-xs text-gray-300">{status.description}</span>
-          
+          <span className={cn(typography.body.xs, "text-gray-300")}>{status.description}</span>
+
           {/* Enhanced status information */}
           <div className="flex items-center gap-2 mt-1">
             {lastUpdateTime > 0 && (
-              <span className="text-xs text-gray-400">
+              <span className={cn(typography.body.xs, "text-gray-400")}>
                 Updated: {new Date(lastUpdateTime).toLocaleTimeString()}
               </span>
             )}
             {source !== 'none' && (
-              <span className={`text-xs px-1 py-0.5 rounded text-black font-medium ${
-                source === 'websocket' ? 'bg-green-400' : 
-                source === 'database' ? 'bg-orange-400' : 'bg-gray-400'
-              }`}>
+              <span className={cn(typography.body.xs, "px-1 py-0.5 rounded text-black font-medium", {
+                'bg-green-400': source === 'websocket',
+                'bg-orange-400': source === 'database',
+                'bg-gray-400': source !== 'websocket' && source !== 'database'
+              })}>
                 {source.toUpperCase()}
               </span>
             )}

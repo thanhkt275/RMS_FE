@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useUnifiedWebSocket } from '@/hooks/websocket/use-unified-websocket';
 import { unifiedWebSocketService } from '@/lib/unified-websocket';
-import { MatchStatus } from '@/types/types';
+import { MatchStatus, UserRole } from '@/types/types';
 
 interface TimerControlProps {
   matchId: string;
@@ -34,7 +34,7 @@ export default function TimerControl({
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // WebSocket connection
-  const { startTimer, pauseTimer, resetTimer, subscribe } = useUnifiedWebSocket({ tournamentId });
+  const { startTimer, pauseTimer, resetTimer, subscribe } = useUnifiedWebSocket({ tournamentId, userRole: UserRole.HEAD_REFEREE });
 
   // Format time as MM:SS
   const formatTime = (ms: number) => {

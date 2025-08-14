@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUnifiedWebSocket } from '../websocket/use-unified-websocket';
 import { useScoringState } from '../scoring/use-scoring-state';
@@ -76,16 +76,24 @@ export function useScoringControl({
   userRole = UserRole.HEAD_REFEREE, // Default to HEAD_REFEREE for control-match scenarios
 }: UseScoringControlProps): ScoringControlReturn {
   const queryClient = useQueryClient();
-  const unifiedWebSocket = useUnifiedWebSocket({
+
+  // Stabilize WebSocket hook to prevent re-renders
+  const webSocketOptions = useMemo(() => ({
     tournamentId: tournamentId || "all", // Ensure we always have a tournament ID
     fieldId: selectedFieldId || undefined,
     autoConnect: true,
     userRole, // Pass the user role to enable proper permissions
-  });
-  
+  }), [tournamentId, selectedFieldId, userRole]);
+
+  const unifiedWebSocket = useUnifiedWebSocket(webSocketOptions);
+
+  // Use ref to access WebSocket methods without causing re-renders
+  const webSocketRef = useRef(unifiedWebSocket);
+  webSocketRef.current = unifiedWebSocket;
+
   // Core state management
   const { state, stateService } = useScoringState();
-  
+
   // User activity tracking
   const userActivityService = useUserActivity();
   
@@ -107,58 +115,59 @@ export function useScoringControl({
   const [scoreUpdateQueue, setScoreUpdateQueue] = useState<ScoreData[]>([]);
   const previousMatchIdRef = useRef<string | null>(null);
 
+  // Stable callback for handling score updates
+  const handleScoreUpdate = useCallback((data: ScoreData) => {
+    console.log("Score update received in control-match:", data, "selectedFieldId:", selectedFieldId);
+
+    // Accept updates if no field filtering or field matches
+    const shouldAccept =
+      !selectedFieldId || // No field selected in control
+      !data.fieldId || // No fieldId in update (tournament-wide)
+      data.fieldId === selectedFieldId; // Exact field match
+
+    if (!shouldAccept) {
+      console.log(`Ignoring score update for different field: ${data.fieldId} (expected: ${selectedFieldId})`);
+      return;
+    }
+
+    if (data.matchId === selectedMatchId) {
+      console.log("Score update received for selected match:", data);
+
+      // Only update cache if user is not actively typing
+      if (!userActivityService.isUserActive()) {
+        // Update query cache with real-time data
+        queryClient.setQueryData(['match-scores', selectedMatchId], (oldData: any) => ({
+          ...oldData,
+          ...data,
+        }));
+      } else {
+        console.log("🚫 Skipping cache update (user actively typing)");
+      }
+    }
+  }, [selectedMatchId, selectedFieldId, userActivityService, queryClient]);
+
   // Subscribe to WebSocket score updates with unified service
   useEffect(() => {
     if (!selectedMatchId) return;
 
-    const handleScoreUpdate = (data: ScoreData) => {
-      console.log("Score update received in control-match:", data, "selectedFieldId:", selectedFieldId);
-      
-      // Accept updates if no field filtering or field matches
-      const shouldAccept = 
-        !selectedFieldId || // No field selected in control
-        !data.fieldId || // No fieldId in update (tournament-wide)
-        data.fieldId === selectedFieldId; // Exact field match
-      
-      if (!shouldAccept) {
-        console.log(`Ignoring score update for different field: ${data.fieldId} (expected: ${selectedFieldId})`);
-        return;
-      }
-
-      if (data.matchId === selectedMatchId) {
-        console.log("Score update received for selected match:", data);
-        
-        // Only update cache if user is not actively typing
-        if (!userActivityService.isUserActive()) {
-          // Update query cache with real-time data
-          queryClient.setQueryData(['match-scores', selectedMatchId], (oldData: any) => ({
-            ...oldData,
-            ...data,
-          }));
-        } else {
-          console.log("🚫 Skipping cache update (user actively typing)");
-        }
-      }
-    };
-
-    const unsubscribe = unifiedWebSocket.subscribe('score_update', handleScoreUpdate);
+    const unsubscribe = webSocketRef.current.subscribe('score_update', handleScoreUpdate);
     return unsubscribe;
-  }, [selectedMatchId, selectedFieldId, userActivityService, queryClient, unifiedWebSocket]);
+  }, [selectedMatchId, handleScoreUpdate]);
 
   // Process queued score updates when connection is restored
   useEffect(() => {
-    if (unifiedWebSocket.isConnected && scoreUpdateQueue.length > 0) {
+    if (webSocketRef.current.isConnected && scoreUpdateQueue.length > 0) {
       console.log(`Processing ${scoreUpdateQueue.length} queued score updates`);
-      
+
       // Send all queued updates
       scoreUpdateQueue.forEach(queuedUpdate => {
-        unifiedWebSocket.sendScoreUpdate(queuedUpdate);
+        webSocketRef.current.sendScoreUpdate(queuedUpdate);
       });
-      
+
       // Clear the queue
       setScoreUpdateQueue([]);
     }
-  }, [unifiedWebSocket, scoreUpdateQueue]);
+  }, [scoreUpdateQueue]);
 
   // Broadcast scores when match changes (but not when state changes)
   useEffect(() => {
@@ -186,9 +195,9 @@ export function useScoringControl({
       };
       
       console.log("📡 Broadcasting scores for NEW match:", selectedMatchId, scoreData);
-      unifiedWebSocket.sendScoreUpdate(scoreData);
+      webSocketRef.current.sendScoreUpdate(scoreData);
     }
-  }, [selectedMatchId, matchScores, tournamentId, selectedFieldId, unifiedWebSocket]);
+  }, [selectedMatchId, matchScores, tournamentId, selectedFieldId]);
 
   // Score setter functions with activity tracking
   const createScoreSetter = useCallback((alliance: Alliance, scoreType: ScoreType) => {
@@ -230,9 +239,9 @@ export function useScoringControl({
 
     console.log("📊 Sending real-time score update:", scoreData);
 
-    if (unifiedWebSocket.isConnected) {
+    if (webSocketRef.current.isConnected) {
       // Send immediately with automatic debouncing (200ms max latency)
-      unifiedWebSocket.sendScoreUpdate(scoreData);
+      webSocketRef.current.sendScoreUpdate(scoreData);
     } else {
       // Queue for later when connection is restored
       console.log("📦 Queueing score update (connection lost)");
