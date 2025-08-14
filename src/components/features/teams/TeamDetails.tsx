@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/common/use-auth";
 import { PermissionService } from "@/config/permissions";
 import { UserRole } from "@/types/types";
+import { canUserEditTeam } from "@/hooks/teams/use-teams";
 import type { Team } from "@/types/team.types";
 
 function hasMembers(
@@ -300,17 +301,7 @@ export const TeamDetails: React.FC<TeamDetailsProps> = ({ team }) => {
                   Actions
                 </h3>
                 <div className="space-y-3">
-                  {PermissionService.hasPermission(
-                    userRole,
-                    "TEAM_MANAGEMENT",
-                    "EDIT_ANY"
-                  ) ||
-                  (PermissionService.hasPermission(
-                    userRole,
-                    "TEAM_MANAGEMENT",
-                    "MANAGE_OWN"
-                  ) &&
-                    isTeamMember) ? (
+                  {canUserEditTeam(team, userRole, user?.id) ? (
                     <button
                       onClick={() => router.push(`/teams/${team.id}/edit`)}
                       className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2"

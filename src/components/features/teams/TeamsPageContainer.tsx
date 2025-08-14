@@ -16,7 +16,8 @@
 
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/common/use-auth";
 import { useTeamsPageData } from "@/hooks/teams/use-teams-page-data";
 import { useTeamsRoleAccess } from "@/hooks/teams/use-teams-role-access";
@@ -81,6 +82,7 @@ function TeamsPageError({ error }: { error: string }) {
  * Main Teams Page Container Component
  */
 export function TeamsPageContainer() {
+  const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
   const {
     currentRole,
@@ -165,6 +167,9 @@ export function TeamsPageContainer() {
       filteredTeams,
     };
   }, [allTeams, currentRole, currentUser?.id]);
+
+  // Note: Removed auto-redirect logic to support multi-team membership
+  // Users can now see all their teams across different tournaments
 
   // Get columns based on role
   const columns = useMemo(() => {

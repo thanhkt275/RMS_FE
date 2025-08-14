@@ -33,10 +33,12 @@ import {
   TeamLeaderboardRow,
 } from "@/components/features/leaderboard/team-leaderboard-columns";
 import { useTeamsRoleAccess } from "@/hooks/teams/use-teams-role-access";
+import { useUserTeams } from "@/hooks/teams/use-teams";
 import { RoleGuard } from "@/components/features/auth/RoleGuard";
 import type { Tournament } from "@/types/types";
 import type { TeamColumn } from "@/utils/teams/team-data-filter";
 import type { OwnTeamDto, PublicTeamDto } from "@/types/team-dto.types";
+import type { Team } from "@/types/team.types";
 
 interface CommonTeamsViewProps {
   tournaments: Tournament[];
@@ -62,6 +64,9 @@ export function CommonTeamsView({
   limitedColumns,
 }: CommonTeamsViewProps) {
   const { currentRole, currentUser } = useTeamsRoleAccess();
+
+  // Fetch all teams where the user is a member/owner
+  const { data: userTeams = [], isLoading: userTeamsLoading } = useUserTeams();
 
   // State for leaderboard filters (only for public teams)
   const [teamName, setTeamName] = useState("");
@@ -90,12 +95,48 @@ export function CommonTeamsView({
     [leaderboardRows, userTeam, teamName, teamCode, rankRange, totalScoreRange]
   );
 
-  // Get columns based on common user role permissions
+  // Convert user teams to leaderboard rows for display
+  const userTeamRows: TeamLeaderboardRow[] = useMemo(() => {
+    return userTeams.map((team: any, index: number) => ({
+      id: team.id,
+      rank: index + 1, // Simple ranking for user teams
+      teamName: team.name,
+      teamCode: team.teamNumber,
+      totalScore: 0, // TODO: Get actual scores from team stats
+      highestScore: 0, // Required field
+      wins: 0,
+      losses: 0,
+      ties: 0,
+      matchesPlayed: 0,
+      rankingPoints: 0,
+      opponentWinPercentage: 0,
+      pointDifferential: 0,
+      // Add tournament and ownership info for permission checking
+      tournament: team.tournament?.name || 'Unknown Tournament',
+      tournamentId: team.tournamentId,
+      userId: team.userId, // Include userId for ownership checks
+    }));
+  }, [userTeams]);
+
+  // Get columns for user teams (show more info since they own these teams)
+  const userTeamColumns = useMemo(() => {
+    return getTeamLeaderboardColumns(currentRole).filter((column) => {
+      // Show team info and actions for user's own teams
+      const allowedColumns = ["rank", "teamName", "teamCode", "tournament", "actions"];
+
+      // Check for accessorKey (for accessor columns) or id (for other column types)
+      const columnKey = (column as any).accessorKey || column.id;
+
+      return allowedColumns.includes(columnKey);
+    });
+  }, [currentRole]);
+
+  // Get columns based on common user role permissions for public teams
   const publicColumns = useMemo(() => {
     return getTeamLeaderboardColumns(currentRole).filter((column) => {
-      // Only show basic public columns for common users, plus actions
-      const allowedColumns = ["rank", "teamName", "teamCode", "actions"];
-      
+      // Only show basic public columns for other teams
+      const allowedColumns = ["rank", "teamName", "teamCode"];
+
       // Check for accessorKey (for accessor columns) or id (for other column types)
       const columnKey = (column as any).accessorKey || column.id;
       return allowedColumns.includes(columnKey || "");
@@ -154,8 +195,16 @@ export function CommonTeamsView({
           </div>
         </div>
 
-        {/* User's Own Team Section */}
-        {userTeam ? (
+        {/* User's Teams Section */}
+        {userTeamsLoading ? (
+          <Card className="border-2 border-blue-700 bg-gradient-to-br from-blue-950 to-blue-900 shadow-xl">
+            <CardContent className="py-6">
+              <div className="flex items-center justify-center">
+                <div className="text-blue-200">Loading your teams...</div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : userTeams.length > 0 ? (
           <Card className="border-2 border-green-700 bg-gradient-to-br from-green-950 to-green-900 shadow-xl">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -171,82 +220,32 @@ export function CommonTeamsView({
                       clipRule="evenodd"
                     />
                   </svg>
-                  Your Team
+                  Your Teams ({userTeams.length})
                 </CardTitle>
                 <Badge
                   variant="secondary"
                   className="bg-green-800 text-green-200"
                 >
-                  Team Member
+                  Team Owner/Member
                 </Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <h4 className="font-semibold text-green-300 mb-1">
-                    Team Name
-                  </h4>
-                  <p className="text-green-100">{userTeam.name}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-green-300 mb-1">
-                    Team Number
-                  </h4>
-                  <p className="text-green-100">{userTeam.teamNumber}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-green-300 mb-1">
-                    Organization
-                  </h4>
-                  <p className="text-green-100">{userTeam.organization}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-green-300 mb-1">Members</h4>
-                  <p className="text-green-100">
-                    {userTeam.memberCount} members
-                  </p>
-                </div>
-                {userTeam.description && (
-                  <div className="md:col-span-2">
-                    <h4 className="font-semibold text-green-300 mb-1">
-                      Description
-                    </h4>
-                    <p className="text-green-100">{userTeam.description}</p>
-                  </div>
-                )}
-              </div>
+              <div className="space-y-4">
+                <p className="text-green-200 text-sm">
+                  Teams you own or are a member of across all tournaments
+                </p>
 
-              {/* Team Members */}
-              {userTeam.members && userTeam.members.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="font-semibold text-green-300 mb-3">
-                    Team Members
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {userTeam.members.map((member, index) => (
-                      <div
-                        key={member.id || index}
-                        className="bg-green-900/40 rounded-lg p-3 border border-green-700"
-                      >
-                        <div className="font-medium text-green-200">
-                          {member.name}
-                        </div>
-                        {member.email && (
-                          <div className="text-sm text-green-300">
-                            {member.email}
-                          </div>
-                        )}
-                        {member.organization && (
-                          <div className="text-sm text-green-400">
-                            {member.organization}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                {/* Teams Table */}
+                <div className="bg-green-900/30 rounded-lg border border-green-700">
+                  <LeaderboardTable
+                    data={userTeamRows}
+                    columns={userTeamColumns}
+                    loading={userTeamsLoading}
+                    emptyMessage="No teams found"
+                  />
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         ) : (
@@ -268,12 +267,11 @@ export function CommonTeamsView({
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-yellow-200">
-                    No Team Registered
+                    No Teams Found
                   </h3>
                   <p className="text-yellow-300">
-                    You are not currently part of any team in this tournament.
-                    Contact your team leader or tournament administrator to join
-                    a team.
+                    You are not currently the owner of any teams across all tournaments.
+                    Create a new team or contact a tournament administrator if you believe this is an error.
                   </p>
                 </div>
               </div>

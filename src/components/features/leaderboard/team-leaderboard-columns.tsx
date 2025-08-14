@@ -3,6 +3,10 @@ import { PermissionService } from "@/config/permissions";
 import { UserRole } from "@/types/types";
 import { Button } from "@/components/ui/button";
 import { Eye, Edit } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useTeamsRoleAccess } from "@/hooks/teams/use-teams-role-access";
+import { canUserEditTeam, canUserViewTeam } from "@/hooks/teams/use-teams";
+import { toast } from "sonner";
 
 export interface TeamLeaderboardRow {
   id: string;
@@ -19,6 +23,10 @@ export interface TeamLeaderboardRow {
   opponentWinPercentage: number;
   pointDifferential: number;
   componentScores?: Record<string, number>;
+  // Additional fields for permission checking
+  userId?: string;
+  tournamentId?: string;
+  tournament?: string;
 }
 
 // Base columns available to all users
@@ -132,43 +140,130 @@ const advancedColumns: ColumnDef<TeamLeaderboardRow, any>[] = [
   },
 ];
 
+/**
+ * Team Actions Component
+ *
+ * Handles navigation and permission checking for team actions.
+ * Separated into its own component to use React hooks.
+ *
+ * Features:
+ * - View button: Navigates to /teams/[id] for team details
+ * - Edit button: Navigates to /teams/[id]/edit for team editing
+ * - Role-based access control using useTeamsRoleAccess hook
+ * - Permission checking before navigation
+ * - Error handling with toast notifications
+ * - Proper button states (disabled for unauthorized actions)
+ */
+interface TeamActionsProps {
+  team: TeamLeaderboardRow;
+}
+
+function TeamActions({ team }: TeamActionsProps) {
+  const router = useRouter();
+  const { getAccessDeniedMessage, currentRole, currentUser } = useTeamsRoleAccess();
+
+  // Create a minimal team object for permission checking
+  const teamForPermissions = {
+    id: team.id,
+    userId: team.userId || '', // Use the userId from the team data
+    name: team.teamName,
+    teamNumber: team.teamCode,
+    tournamentId: team.tournamentId,
+    teamMembers: [], // We don't have member data in leaderboard rows
+  } as any;
+
+  // Use the new helper functions for consistent permission checking
+  const showViewButton = canUserViewTeam(
+    teamForPermissions,
+    currentRole,
+    currentUser?.id,
+    currentUser?.email
+  );
+
+  const showEditButton = canUserEditTeam(
+    teamForPermissions,
+    currentRole,
+    currentUser?.id
+  );
+
+  const handleViewTeam = (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    // Check if user can access this team using the helper function
+    if (!showViewButton) {
+      toast.error("Access Denied", {
+        description: getAccessDeniedMessage('view')
+      });
+      return;
+    }
+
+    try {
+      router.push(`/teams/${team.id}`);
+    } catch (error) {
+      toast.error("Navigation Error", {
+        description: "Failed to navigate to team details page"
+      });
+    }
+  };
+
+  const handleEditTeam = (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    // Check if user can edit this team using the helper function
+    if (!showEditButton) {
+      toast.error("Access Denied", {
+        description: getAccessDeniedMessage('edit')
+      });
+      return;
+    }
+
+    try {
+      // Navigate to the dedicated team edit page
+      router.push(`/teams/${team.id}/edit`);
+    } catch (error) {
+      toast.error("Navigation Error", {
+        description: "Failed to navigate to team edit page"
+      });
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      {showViewButton && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 px-3 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300"
+          onClick={handleViewTeam}
+          title="View team details"
+        >
+          <Eye className="h-3 w-3 mr-1" />
+          View
+        </Button>
+      )}
+      {showEditButton && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 px-3 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
+          onClick={handleEditTeam}
+          title="Edit team"
+        >
+          <Edit className="h-3 w-3 mr-1" />
+          Edit
+        </Button>
+      )}
+    </div>
+  );
+}
+
 // Actions column for admin and users with edit permissions
 const actionsColumn: ColumnDef<TeamLeaderboardRow, any> = {
   id: "actions",
   header: "Actions",
   cell: ({ row }) => {
     const team = row.original;
-
-    return (
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 px-3 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300"
-          onClick={(e) => {
-            e.stopPropagation();
-            // TODO: Implement view team functionality
-            console.log('View team:', team.id);
-          }}
-        >
-          <Eye className="h-3 w-3 mr-1" />
-          View
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 px-3 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
-          onClick={(e) => {
-            e.stopPropagation();
-            // TODO: Implement edit team functionality
-            console.log('Edit team:', team.id);
-          }}
-        >
-          <Edit className="h-3 w-3 mr-1" />
-          Edit
-        </Button>
-      </div>
-    );
+    return <TeamActions team={team} />;
   },
   enableSorting: false,
   enableColumnFilter: false,
@@ -193,10 +288,19 @@ export function getTeamLeaderboardColumns(userRole: UserRole | null): ColumnDef<
     columns = [...columns, ...advancedColumns];
   }
 
-  // Add actions column for users with appropriate permissions
-  if (PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_ALL') ||
-      PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'EDIT_ANY') ||
-      PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'MANAGE_OWN')) {
+  // Add actions column based on specific role requirements
+  const shouldShowActionsColumn =
+    // ADMIN: Show Actions column with View and Edit buttons
+    userRole === 'ADMIN' ||
+    // REFEREE roles: Show Actions column with View button only
+    userRole === 'HEAD_REFEREE' ||
+    userRole === 'ALLIANCE_REFEREE' ||
+    // TEAM roles: Show Actions column (buttons will be filtered in component)
+    userRole === 'TEAM_LEADER' ||
+    userRole === 'TEAM_MEMBER' ||
+    userRole === 'COMMON';
+
+  if (shouldShowActionsColumn) {
     columns = [...columns, actionsColumn];
   }
 

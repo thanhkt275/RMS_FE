@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useTeamById, useTeamsMutations } from "@/hooks/teams/use-teams";
+import { useTeamById, useTeamsMutations, canUserEditTeam } from "@/hooks/teams/use-teams";
 import { useAuth } from "@/hooks/common/use-auth";
-import { PermissionService } from "@/config/permissions";
 import { UserRole } from "@/types/types";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ErrorMessage } from "@/components/ui/error-message";
@@ -36,21 +35,8 @@ export default function EditTeamPage({ params }: EditTeamPageProps) {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Check permissions
-  const canEditAny = PermissionService.hasPermission(
-    userRole,
-    "TEAM_MANAGEMENT",
-    "EDIT_ANY"
-  );
-  const canManageOwn = PermissionService.hasPermission(
-    userRole,
-    "TEAM_MANAGEMENT",
-    "MANAGE_OWN"
-  );
-
-  const isTeamMember =
-    team?.userId === user?.id ||
-    team?.teamMembers?.some((member) => member.email === user?.email);
+  // Check if user can edit this team using the new helper function
+  const canEdit = canUserEditTeam(team || null, userRole, user?.id);
 
   // Initialize form data when team loads
   useEffect(() => {
@@ -156,7 +142,7 @@ export default function EditTeamPage({ params }: EditTeamPageProps) {
   }
 
   // Check if user has permission to edit this team
-  if (!canEditAny && !(canManageOwn && isTeamMember)) {
+  if (!canEdit) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <ErrorMessage

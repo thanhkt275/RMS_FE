@@ -24,34 +24,123 @@ export function useTeamById(teamId: string | undefined) {
     queryKey: QueryKeys.teams.byId(teamId ?? ""),
     queryFn: async () => {
       if (!teamId) return null;
-      
-      // Check if user has permission to view teams
-      const canViewAll = PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_ALL') ||
-                        PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_ALL_READONLY');
-      
+
+      // Fetch team data first
       const team = await apiClient.get<Team>(`teams/${teamId}`);
-      
-      // For team members/leaders, check if they can view this specific team
-      if (!canViewAll) {
-        const canViewOwn = PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_OWN');
-        const canViewLimited = PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_LIMITED');
-        
-        if (canViewOwn) {
-          // Check if user is part of this team
-          const isTeamMember = team.userId === userId || 
-                              team.teamMembers?.some(member => member.email === user?.email);
-          if (!isTeamMember) {
-            throw new Error('You can only view your own team details');
+
+      // Role-based access control logic
+      switch (userRole) {
+        case UserRole.ADMIN:
+          // ADMIN: Full access to view and edit all teams
+          return team;
+
+        case UserRole.HEAD_REFEREE:
+        case UserRole.ALLIANCE_REFEREE:
+          // REFEREE: Can view all teams across all tournaments (read-only)
+          return team;
+
+        case UserRole.TEAM_LEADER:
+          // TEAM_LEADER: Can view and edit teams they own only
+          const isTeamOwner = team.userId === userId;
+          if (!isTeamOwner) {
+            throw new Error('Team leaders can only access teams they own');
           }
-        } else if (!canViewLimited) {
-          throw new Error('Insufficient permissions to view team details');
-        }
+          return team;
+
+        case UserRole.TEAM_MEMBER:
+          // TEAM_MEMBER: Can view teams they are associated with (owner OR member)
+          const isOwner = team.userId === userId;
+          const isMember = team.teamMembers?.some(member => member.email === user?.email);
+
+          if (!isOwner && !isMember) {
+            throw new Error('Team members can only view teams they own or are a member of');
+          }
+          return team;
+
+        case UserRole.COMMON:
+          // COMMON: Limited access based on VIEW_LIMITED permission
+          const canViewLimited = PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_LIMITED');
+          if (!canViewLimited) {
+            throw new Error('Insufficient permissions to view team details');
+          }
+          return team;
+
+        default:
+          throw new Error('Invalid user role or insufficient permissions');
       }
-      
-      return team;
     },
     enabled: !!teamId,
   });
+}
+
+/**
+ * Helper function to determine if a user can edit a specific team
+ * Based on the role-based access control rules
+ */
+export function canUserEditTeam(
+  team: Team | null,
+  userRole: UserRole | null,
+  userId: string | undefined
+): boolean {
+  if (!team || !userRole || !userId) return false;
+
+  switch (userRole) {
+    case UserRole.ADMIN:
+      // ADMIN: Can edit all teams
+      return true;
+
+    case UserRole.TEAM_LEADER:
+      // TEAM_LEADER: Can edit teams they own only
+      return team.userId === userId;
+
+    case UserRole.HEAD_REFEREE:
+    case UserRole.ALLIANCE_REFEREE:
+    case UserRole.TEAM_MEMBER:
+    case UserRole.COMMON:
+      // REFEREE, TEAM_MEMBER, COMMON: Read-only access
+      return false;
+
+    default:
+      return false;
+  }
+}
+
+/**
+ * Helper function to determine if a user can view a specific team
+ * Based on the role-based access control rules
+ */
+export function canUserViewTeam(
+  team: Team | null,
+  userRole: UserRole | null,
+  userId: string | undefined,
+  userEmail: string | undefined
+): boolean {
+  if (!team || !userRole) return false;
+
+  switch (userRole) {
+    case UserRole.ADMIN:
+    case UserRole.HEAD_REFEREE:
+    case UserRole.ALLIANCE_REFEREE:
+      // ADMIN and REFEREE: Can view all teams
+      return true;
+
+    case UserRole.TEAM_LEADER:
+      // TEAM_LEADER: Can view teams they own only
+      return team.userId === userId;
+
+    case UserRole.TEAM_MEMBER:
+      // TEAM_MEMBER: Can view teams they own or are a member of
+      const isOwner = team.userId === userId;
+      const isMember = team.teamMembers?.some(member => member.email === userEmail);
+      return isOwner || !!isMember;
+
+    case UserRole.COMMON:
+      // COMMON: Limited access based on permissions
+      return PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_LIMITED');
+
+    default:
+      return false;
+  }
 }
 
 export function useAllTeams() {
@@ -129,6 +218,60 @@ export function useTeamsWithRoleData(tournamentId: string | undefined) {
       return TeamDataFilterService.createTeamsListResponse(teams, userRole, userId);
     },
     enabled: !!tournamentId,
+  });
+}
+
+/**
+ * Hook to fetch all teams where the current user is a member/owner
+ * Supports multi-team membership across different tournaments
+ */
+export function useUserTeams() {
+  const { user } = useAuth();
+  const userRole = user?.role as UserRole | null;
+  const userId = user?.id;
+
+  console.log('🔍 useUserTeams Debug:', { userId, userRole });
+
+  const isEnabled = !!userId && (
+    userRole === UserRole.TEAM_LEADER ||
+    userRole === UserRole.TEAM_MEMBER ||
+    PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_ALL') ||
+    PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_ALL_READONLY')
+  );
+
+  console.log('🔍 useUserTeams Query Enabled:', isEnabled);
+
+  return useQuery({
+    queryKey: [...QueryKeys.teams.all(), 'user-teams', userId],
+    queryFn: async () => {
+      console.log('🔍 useUserTeams queryFn executing...');
+      if (!userId) return [];
+
+      // For TEAM_LEADER and TEAM_MEMBER roles, they should be able to view their own teams
+      // The ownership context will be validated on the backend
+      const canViewOwnTeams = userRole === UserRole.TEAM_LEADER ||
+                             userRole === UserRole.TEAM_MEMBER ||
+                             PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_ALL') ||
+                             PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'VIEW_ALL_READONLY');
+
+      console.log('🔍 useUserTeams canViewOwnTeams:', canViewOwnTeams);
+
+      if (!canViewOwnTeams) {
+        console.log('🔍 useUserTeams: No permission to view teams');
+        return [];
+      }
+
+      try {
+        // Fetch user's teams from the new endpoint
+        const result = await apiClient.get<Team[]>('teams/user/my-teams');
+        console.log('🔍 useUserTeams API result:', result);
+        return result;
+      } catch (error) {
+        console.error('🔍 useUserTeams API error:', error);
+        throw error;
+      }
+    },
+    enabled: isEnabled,
   });
 }
 
