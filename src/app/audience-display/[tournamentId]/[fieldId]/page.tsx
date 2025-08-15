@@ -6,6 +6,7 @@ import { useTournamentFields } from "@/components/features/fields/FieldSelectDro
 import { useUnifiedWebSocket } from "@/hooks/websocket/use-unified-websocket";
 import { useUnifiedAudienceDisplay } from "@/hooks/audience-display/use-unified-audience-display";
 import { useRealtimeScores } from "@/hooks/websocket/use-realtime-scores";
+import { unifiedWebSocketService } from "@/lib/unified-websocket";
 import { useAudienceTimer } from "@/hooks/audience-display/use-audience-timer";
 import { UserRole } from "@/types/types";
 import { AudienceDisplaySettings } from "@/types/types";
@@ -255,6 +256,8 @@ export default function LiveFieldDisplayPage() {
         getTournamentId: () => tournamentId,
         getCurrentDisplayMode: () => displaySettings.displayMode,
         getCurrentDisplaySettings: () => displaySettings,
+        getConnectionStats: () => unifiedWebSocketService.getStats(),
+        forceReconnect: () => unifiedWebSocketService.connect(),
       };
     }
   }, [

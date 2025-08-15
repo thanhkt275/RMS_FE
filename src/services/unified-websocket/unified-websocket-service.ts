@@ -5,11 +5,7 @@
  */
 
 import {
-    WebSocketEvents,
-    WebSocketEventName,
-    WebSocketEventHandler,
-    getStandardizedEventName,
-    LEGACY_EVENT_MAPPING
+    getStandardizedEventName
 } from '@/types/websocket-events';
 
 /**
@@ -98,7 +94,7 @@ import { ConnectionManager, ConnectionStatus } from './connection-manager';
 import { EventManager, EventCallback, EventOptions } from './event-manager';
 import { DebounceManager, DebounceConfig } from './debounce-manager';
 import { RoleManager, FeaturePermission } from './role-manager';
-import { StateSynchronizer, MatchState, StateUpdate } from './state-synchronizer';
+
 // Phase 2 optimizations - now integrated
 import { RoomManager } from '@/hooks/websocket/RoomManager';
 import { FieldFilter } from '@/utils/fieldFilter';
@@ -107,8 +103,6 @@ import {
     CollaborativeStateUpdateData,
     UserSessionEventData,
     UserDisconnectEventData,
-    StateSyncRequestData,
-    StateSyncResponseData,
     SessionHeartbeatData
 } from '@/types/websocket';
 import {
@@ -167,11 +161,9 @@ export interface IUnifiedWebSocketService {
     getCurrentRole(): UserRole;
     onRoleChange(callback: (newRole: UserRole, previousRole: UserRole) => void): () => void;
 
-    // Multi-user Support
+    // Multi-user Support (Simplified - StateSynchronizer removed)
     joinCollaborativeSession(matchId: string): void;
     leaveCollaborativeSession(matchId: string): void;
-    getCollaborativeSessionState(matchId: string): MatchState | null;
-    syncCollaborativeState(update: StateUpdate): MatchState;
     getActiveCollaborators(matchId: string): string[];
     getUserLastSeen(matchId: string, userId: string): number | null;
     handleUserDisconnection(userId: string): void;
@@ -202,7 +194,7 @@ export class UnifiedWebSocketService implements IUnifiedWebSocketService {
     private eventManager: EventManager;
     private debounceManager: DebounceManager;
     private roleManager: RoleManager;
-    private stateSynchronizer: StateSynchronizer;
+
     private roomManager: RoomManager; // Phase 2: Room management with race condition prevention
     private fieldFilter: FieldFilter; // Phase 2: Intelligent event filtering
     private currentTournamentId: string | null = null;
@@ -212,13 +204,15 @@ export class UnifiedWebSocketService implements IUnifiedWebSocketService {
     private sessionHeartbeats: Map<string, NodeJS.Timeout> = new Map();
     private userLastSeen: Map<string, Map<string, number>> = new Map(); // matchId -> userId -> timestamp
     private previousEventData: Map<string, WebSocketEventData> = new Map(); // Store previous data for change detection
+    private connectionRefCount: number = 0; // Track how many components are using this connection
+    private activeRooms: Set<string> = new Set(); // Track active rooms to prevent duplicates
 
     constructor() {
         this.connectionManager = new ConnectionManager();
         this.eventManager = new EventManager(this.connectionManager);
         this.debounceManager = new DebounceManager();
         this.roleManager = new RoleManager();
-        this.stateSynchronizer = new StateSynchronizer();
+
         this.roomManager = new RoomManager(); // Phase 2: Initialize room manager
         this.fieldFilter = FieldFilter.getInstance(); // Phase 2: Initialize field filter
 
@@ -247,11 +241,31 @@ export class UnifiedWebSocketService implements IUnifiedWebSocketService {
     // === Connection Management (Delegation) ===
 
     async connect(url?: string): Promise<void> {
-        return this.connectionManager.connect(url);
+        this.connectionRefCount++;
+        console.log(`[UnifiedWebSocketService] Connection requested (ref count: ${this.connectionRefCount})`);
+        
+        // Only connect if this is the first request or if not already connected
+        if (this.connectionRefCount === 1 || !this.connectionManager.isConnected()) {
+            console.log('[UnifiedWebSocketService] Establishing new connection');
+            return this.connectionManager.connect(url);
+        } else {
+            console.log('[UnifiedWebSocketService] Using existing connection');
+            return Promise.resolve();
+        }
     }
 
     disconnect(): void {
-        this.connectionManager.disconnect();
+        this.connectionRefCount = Math.max(0, this.connectionRefCount - 1);
+        console.log(`[UnifiedWebSocketService] Disconnect requested (ref count: ${this.connectionRefCount})`);
+        
+        // Only disconnect if no components are using the connection
+        if (this.connectionRefCount === 0) {
+            console.log('[UnifiedWebSocketService] Closing connection (no more references)');
+            this.connectionManager.disconnect();
+            this.activeRooms.clear();
+        } else {
+            console.log('[UnifiedWebSocketService] Keeping connection alive (other components still using it)');
+        }
     }
 
     isConnected(): boolean {
@@ -436,17 +450,11 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
             this.currentUserId = `user-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
         }
 
-        // Initialize state for the match if it doesn't exist
-        let currentState = this.stateSynchronizer.getState(matchId);
-        if (!currentState) {
-            currentState = this.stateSynchronizer.initializeMatchState(matchId, {
-                matchId,
-                tournamentId: this.currentTournamentId || ''
-            });
+        // Track user in collaborative session (simplified without StateSynchronizer)
+        if (!this.userLastSeen.has(matchId)) {
+            this.userLastSeen.set(matchId, new Map());
         }
-
-        // Add user to the collaborative session
-        this.stateSynchronizer.addActiveUser(matchId, this.currentUserId);
+        this.userLastSeen.get(matchId)!.set(this.currentUserId, Date.now());
 
         // Emit join event to notify other users
         this.emit('join_collaborative_session', {
@@ -464,14 +472,7 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
             timestamp: Date.now()
         });
 
-        // Request immediate state sync from existing users
-        this.emit('request_state_sync', {
-            matchId,
-            userId: this.currentUserId,
-            timestamp: Date.now()
-        });
-
-        // Set up state synchronization listeners
+        // Set up collaborative listeners
         this.setupCollaborativeListeners(matchId);
 
         // Start session heartbeat
@@ -484,8 +485,11 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
         this.collaborativeSessions.delete(matchId);
 
         if (this.currentUserId) {
-            // Remove user from the collaborative session
-            this.stateSynchronizer.removeActiveUser(matchId, this.currentUserId);
+            // Remove user from tracking (simplified without StateSynchronizer)
+            const users = this.userLastSeen.get(matchId);
+            if (users) {
+                users.delete(this.currentUserId);
+            }
 
             // Emit leave event to notify other users
             this.emit('leave_collaborative_session', {
@@ -507,86 +511,100 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
         // Stop session heartbeat
         this.stopSessionHeartbeat(matchId);
 
-        // Clean up state synchronizer resources for this match
-        this.stateSynchronizer.cleanupMatch(matchId);
+        // Clean up user tracking for this match
+        this.userLastSeen.delete(matchId);
 
         console.log(`[UnifiedWebSocketService] Left collaborative session for match: ${matchId}`);
     }
 
-    getCollaborativeSessionState(matchId: string): MatchState | null {
-        return this.stateSynchronizer.getState(matchId);
-    }
-
-    syncCollaborativeState(update: StateUpdate): MatchState {
-        // Ensure we have a user ID
-        if (!this.currentUserId) {
-            this.currentUserId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        }
-
-        // Add user ID and role to the update
-        const enrichedUpdate: StateUpdate = {
-            ...update,
-            userId: this.currentUserId,
-            userRole: this.roleManager.getCurrentRole(),
-            timestamp: update.timestamp || Date.now()
-        };
-
-        // Sync state through the state synchronizer
-        const newState = this.stateSynchronizer.syncState(enrichedUpdate);
-
-        // State is already updated in the stateSynchronizer.syncState method
-
-        // Emit the state update to other clients
-        this.emit('collaborative_state_update', {
-            matchId: update.matchId,
-            state: newState,
-            update: enrichedUpdate
-        });
-
-        return newState;
-    }
+    // Note: getCollaborativeSessionState and syncCollaborativeState removed
+    // These methods depended on StateSynchronizer which has been removed
+    // State synchronization is now handled by the centralized WebSocket architecture
 
     getActiveCollaborators(matchId: string): string[] {
-        return this.stateSynchronizer.getActiveUsers(matchId);
+        const users = this.userLastSeen.get(matchId);
+        return users ? Array.from(users.keys()) : [];
     }
 
     // === Legacy Support Methods ===
 
     joinTournament(tournamentId: string): void {
+        const roomKey = `tournament:${tournamentId}`;
+        
+        // Prevent duplicate room joins
+        if (this.activeRooms.has(roomKey)) {
+            console.log(`[UnifiedWebSocketService] Already joined tournament: ${tournamentId}`);
+            return;
+        }
+        
         this.currentTournamentId = tournamentId;
+        this.activeRooms.add(roomKey);
+        
         // Phase 2: Use RoomManager for race condition prevention
-        this.roomManager.joinRoom(`tournament:${tournamentId}`, 'tournament').catch(error => {
+        this.roomManager.joinRoom(roomKey, 'tournament').catch(error => {
             console.error(`[UnifiedWebSocketService] Failed to join tournament ${tournamentId}:`, error);
+            this.activeRooms.delete(roomKey);
         });
         console.log(`[UnifiedWebSocketService] Joining tournament: ${tournamentId}`);
     }
 
     leaveTournament(tournamentId: string): void {
+        const roomKey = `tournament:${tournamentId}`;
+        
+        if (!this.activeRooms.has(roomKey)) {
+            console.log(`[UnifiedWebSocketService] Not joined to tournament: ${tournamentId}`);
+            return;
+        }
+        
         if (this.currentTournamentId === tournamentId) {
             this.currentTournamentId = null;
         }
+        
+        this.activeRooms.delete(roomKey);
+        
         // Phase 2: Use RoomManager for proper cleanup
-        this.roomManager.leaveRoom(`tournament:${tournamentId}`).catch(error => {
+        this.roomManager.leaveRoom(roomKey).catch(error => {
             console.error(`[UnifiedWebSocketService] Failed to leave tournament ${tournamentId}:`, error);
         });
         console.log(`[UnifiedWebSocketService] Leaving tournament: ${tournamentId}`);
     }
 
     joinFieldRoom(fieldId: string): void {
+        const roomKey = `field:${fieldId}`;
+        
+        // Prevent duplicate room joins
+        if (this.activeRooms.has(roomKey)) {
+            console.log(`[UnifiedWebSocketService] Already joined field room: ${fieldId}`);
+            return;
+        }
+        
         this.currentFieldId = fieldId;
+        this.activeRooms.add(roomKey);
+        
         // Phase 2: Use RoomManager for race condition prevention
-        this.roomManager.joinRoom(`field:${fieldId}`, 'field').catch(error => {
+        this.roomManager.joinRoom(roomKey, 'field').catch(error => {
             console.error(`[UnifiedWebSocketService] Failed to join field ${fieldId}:`, error);
+            this.activeRooms.delete(roomKey);
         });
         console.log(`[UnifiedWebSocketService] Joining field room: ${fieldId}`);
     }
 
     leaveFieldRoom(fieldId: string): void {
+        const roomKey = `field:${fieldId}`;
+        
+        if (!this.activeRooms.has(roomKey)) {
+            console.log(`[UnifiedWebSocketService] Not joined to field room: ${fieldId}`);
+            return;
+        }
+        
         if (this.currentFieldId === fieldId) {
             this.currentFieldId = null;
         }
+        
+        this.activeRooms.delete(roomKey);
+        
         // Phase 2: Use RoomManager for proper cleanup
-        this.roomManager.leaveRoom(`field:${fieldId}`).catch(error => {
+        this.roomManager.leaveRoom(roomKey).catch(error => {
             console.error(`[UnifiedWebSocketService] Failed to leave field ${fieldId}:`, error);
         });
         console.log(`[UnifiedWebSocketService] Leaving field room: ${fieldId}`);
@@ -801,7 +819,6 @@ private isDataUnchanged(event: string, data: WebSocketEventData): boolean {
     }
 
 
-
     /**
      * Set up collaborative listeners for a match
      */
@@ -809,22 +826,30 @@ private isDataUnchanged(event: string, data: WebSocketEventData): boolean {
         // Listen for collaborative state updates from other clients
         this.on('collaborative_state_update', (data: CollaborativeStateUpdateData) => {
             if (data.matchId === matchId && data.update.userId !== this.currentUserId) {
-                // Apply remote state update
-                this.stateSynchronizer.syncState(data.update);
+                // Note: State synchronization now handled by centralized architecture
+                console.log(`[UnifiedWebSocketService] Received collaborative state update for match ${matchId}`);
             }
         });
 
         // Listen for user join/leave events
         this.on('user_joined_session', (data: UserSessionEventData) => {
             if (data.matchId === matchId) {
-                this.stateSynchronizer.addActiveUser(matchId, data.userId);
+                // Track user in simplified way
+                if (!this.userLastSeen.has(matchId)) {
+                    this.userLastSeen.set(matchId, new Map());
+                }
+                this.userLastSeen.get(matchId)!.set(data.userId, Date.now());
                 console.log(`[UnifiedWebSocketService] User ${data.userId} joined collaborative session for match ${matchId}`);
             }
         });
 
         this.on('user_left_session', (data: UserSessionEventData) => {
             if (data.matchId === matchId) {
-                this.stateSynchronizer.removeActiveUser(matchId, data.userId);
+                // Remove user from tracking
+                const users = this.userLastSeen.get(matchId);
+                if (users) {
+                    users.delete(data.userId);
+                }
                 console.log(`[UnifiedWebSocketService] User ${data.userId} left collaborative session for match ${matchId}`);
             }
         });
@@ -834,38 +859,18 @@ private isDataUnchanged(event: string, data: WebSocketEventData): boolean {
             if (data.userId !== this.currentUserId) {
                 // Remove disconnected user from all active sessions
                 this.collaborativeSessions.forEach(sessionMatchId => {
-                    this.stateSynchronizer.removeActiveUser(sessionMatchId, data.userId);
+                    const users = this.userLastSeen.get(sessionMatchId);
+                    if (users) {
+                        users.delete(data.userId);
+                    }
                 });
                 console.log(`[UnifiedWebSocketService] Cleaned up disconnected user ${data.userId} from all sessions`);
             }
         });
 
-        // Listen for immediate state sync requests (for new joiners)
-        this.on('request_state_sync', (data: StateSyncRequestData) => {
-            if (data.matchId === matchId && data.userId !== this.currentUserId) {
-                const currentState = this.stateSynchronizer.getState(matchId);
-                if (currentState) {
-                    // Send immediate state sync response
-                    this.emit('state_sync_response', {
-                        matchId,
-                        state: currentState,
-                        requesterId: data.userId,
-                        providerId: this.currentUserId,
-                        timestamp: Date.now()
-                    });
-                    console.log(`[UnifiedWebSocketService] Provided state sync for match ${matchId} to user ${data.userId}`);
-                }
-            }
-        });
-
-        // Listen for state sync responses
-        this.on('state_sync_response', (data: StateSyncResponseData) => {
-            if (data.matchId === matchId && data.requesterId === this.currentUserId) {
-                // Initialize our state with the received state
-                this.stateSynchronizer.initializeMatchState(matchId, data.state);
-                console.log(`[UnifiedWebSocketService] Received state sync for match ${matchId} from user ${data.providerId}`);
-            }
-        });
+        // Note: State sync requests/responses removed
+        // These features depended on StateSynchronizer which has been removed
+        // State synchronization is now handled by the centralized WebSocket architecture
 
         // Listen for session heartbeat to track active users
         this.on('session_heartbeat', (data: SessionHeartbeatData) => {
@@ -944,7 +949,6 @@ private isDataUnchanged(event: string, data: WebSocketEventData): boolean {
 
             // Remove inactive users
             inactiveUsers.forEach(userId => {
-                this.stateSynchronizer.removeActiveUser(matchId, userId);
                 users.delete(userId);
                 console.log(`[UnifiedWebSocketService] Cleaned up inactive user ${userId} from match ${matchId}`);
             });
@@ -957,7 +961,10 @@ private isDataUnchanged(event: string, data: WebSocketEventData): boolean {
     handleUserDisconnection(userId: string): void {
         // Remove user from all collaborative sessions
         this.collaborativeSessions.forEach(matchId => {
-            this.stateSynchronizer.removeActiveUser(matchId, userId);
+            const users = this.userLastSeen.get(matchId);
+            if (users) {
+                users.delete(userId);
+            }
         });
 
         // Remove from last seen tracking
@@ -996,8 +1003,7 @@ private isDataUnchanged(event: string, data: WebSocketEventData): boolean {
         // Clear previous event data for change detection
         this.previousEventData.clear();
 
-        // Clean up state synchronizer
-        this.stateSynchronizer.cleanup();
+        // Note: StateSynchronizer cleanup removed (component was removed)
 
         // Clean up debounce manager
         this.debounceManager.cleanup();

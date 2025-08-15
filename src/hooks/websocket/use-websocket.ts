@@ -61,9 +61,10 @@ export interface UseWebSocketReturn {
 }
 
 /**
- * Unified WebSocket hook with type safety and performance optimization
+ * @deprecated Use the new unified useWebSocket from use-websocket-unified.ts instead
+ * This hook is maintained for backward compatibility only
  */
-export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
+export function useWebSocketLegacy(options: UseWebSocketOptions = {}): UseWebSocketReturn {
   const { 
     tournamentId, 
     fieldId, 

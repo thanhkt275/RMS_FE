@@ -43,15 +43,42 @@ export class ConnectionManager {
       return;
     }
 
+    // If we're already connecting, wait for that connection
+    if (this.connectionState === ConnectionState.CONNECTING) {
+      console.log('[ConnectionManager] Connection already in progress, waiting...');
+      return new Promise((resolve, reject) => {
+        const checkConnection = () => {
+          if (this.socket?.connected) {
+            resolve();
+          } else if (this.connectionState === ConnectionState.FAILED) {
+            reject(new Error('Connection failed'));
+          } else {
+            setTimeout(checkConnection, 100);
+          }
+        };
+        checkConnection();
+      });
+    }
+
     this.updateConnectionState(ConnectionState.CONNECTING);
 
     try {
+      // Clean up any existing socket first
+      if (this.socket) {
+        this.socket.removeAllListeners();
+        this.socket.disconnect();
+        this.socket = null;
+      }
+
       this.socket = io(targetUrl, {
         transports: ['websocket'],
         autoConnect: true,
         reconnection: false, // We handle reconnection manually
-        timeout: 10000,
-        forceNew: true
+        timeout: 15000, // Increased timeout
+        forceNew: true,
+        // Add additional options for stability
+        upgrade: true,
+        rememberUpgrade: false,
       });
 
       this.setupSocketEventHandlers();
@@ -60,7 +87,7 @@ export class ConnectionManager {
       await new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Connection timeout'));
-        }, 10000);
+        }, 15000); // Increased timeout
 
         this.socket!.on('connect', () => {
           clearTimeout(timeout);
@@ -196,17 +223,23 @@ export class ConnectionManager {
 
     this.updateConnectionState(ConnectionState.RECONNECTING);
     
-    // Exponential backoff: 1s, 2s, 4s, 8s, 16s
-    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 16000);
+    // Exponential backoff: 2s, 4s, 8s, 16s, 32s (increased initial delay)
+    const delay = Math.min(2000 * Math.pow(2, this.reconnectAttempts), 32000);
     
     console.log(`[ConnectionManager] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
     
-    this.reconnectTimeout = setTimeout(() => {
+    this.reconnectTimeout = setTimeout(async () => {
       this.reconnectAttempts++;
       if (this.currentUrl) {
-        this.connect(this.currentUrl).catch((error) => {
+        try {
+          await this.connect(this.currentUrl);
+        } catch (error) {
           console.error('[ConnectionManager] Reconnection failed:', error);
-        });
+          // Continue with exponential backoff for next attempt
+          if (this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.handleReconnection();
+          }
+        }
       }
     }, delay);
   }

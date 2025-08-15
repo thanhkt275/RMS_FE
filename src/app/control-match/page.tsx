@@ -45,6 +45,7 @@ import {
   AccessDenied,
   AccessDeniedOverlay,
 } from "@/components/features/control-match/access-denied";
+import connectionStatus from "../../components/features/control-match/connection-status";
 
 export default function ControlMatchPage() {
   const queryClient = useQueryClient();
@@ -591,6 +592,19 @@ export default function ControlMatchPage() {
         scoringControl.setBlueMultiplier(1.0);
     }
   };
+  // Add debug interface to window for troubleshooting
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).controlMatchWS = {
+        getConnectionStats: () => unifiedWebSocketService.getStats(),
+        forceReconnect: () => unifiedWebSocketService.connect(),
+        getCurrentContext: () => unifiedWebSocketService.getCurrentContext(),
+        isConnected: () => isConnected,
+        connectionStatus: () => connectionStatus,
+      };
+    }
+  }, [isConnected, connectionStatus]);
+
   return (
     <div className="min-h-screen bg-gray-50 p-0 w-full">
       <div className="w-full">
