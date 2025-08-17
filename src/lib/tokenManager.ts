@@ -29,15 +29,21 @@ export class TokenManager {
    * Retrieve token from localStorage, checking all possible keys
    */
   static getToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    
+    if (typeof window === 'undefined') {
+      console.log('[TokenManager] Window undefined - server side rendering');
+      return null;
+    }
+
+    console.log('[TokenManager] Checking for tokens in localStorage...');
+    console.log('[TokenManager] Available localStorage keys:', Object.keys(localStorage));
+
     // Check primary key first
     let token = localStorage.getItem(TOKEN_KEYS.PRIMARY);
     if (token) {
       console.log('[TokenManager] Token found with primary key:', TOKEN_KEYS.PRIMARY);
       return token;
     }
-    
+
     // Check legacy keys for backward compatibility
     for (const legacyKey of TOKEN_KEYS.LEGACY) {
       token = localStorage.getItem(legacyKey);
@@ -50,8 +56,9 @@ export class TokenManager {
         return token;
       }
     }
-    
+
     console.log('[TokenManager] No token found in localStorage');
+    console.log('[TokenManager] Checked keys:', [TOKEN_KEYS.PRIMARY, ...TOKEN_KEYS.LEGACY]);
     return null;
   }
 
