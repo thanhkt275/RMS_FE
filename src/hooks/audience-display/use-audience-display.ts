@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AudienceDisplaySettings } from "@/types/types";
 import { QueryKeys } from "@/lib/query-keys";
+import { useWebSocket } from "@/websockets/simplified/useWebSocket";
+import { UserRole } from "@/types/types";
 
 // Default settings
 const DEFAULT_SETTINGS: AudienceDisplaySettings = {
@@ -38,6 +40,7 @@ export function useAudienceDisplaySettings() {
  */
 export function useUpdateAudienceDisplay() {
   const queryClient = useQueryClient();
+  const { emit } = useWebSocket({ autoConnect: true, role: UserRole.COMMON, tournamentId: 'all' });
 
   return useMutation({
     mutationFn: (settings: Partial<AudienceDisplaySettings>) => {
@@ -65,6 +68,8 @@ export function useUpdateAudienceDisplay() {
     onSuccess: (data) => {
       // Update the query cache
       queryClient.setQueryData(QueryKeys.audienceDisplay.settings(), data);
+      // Broadcast display mode/settings change over WebSocket
+      emit('display_mode_change' as any, data as any);
     },
   });
 }

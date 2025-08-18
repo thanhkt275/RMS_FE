@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useUnifiedWebSocket } from '@/hooks/websocket/use-unified-websocket';
+import { useWebSocket } from '@/websockets/simplified/useWebSocket';
 import { UserRole, TimerData } from '@/types/types';
 
 export interface UseAudienceTimerOptions {
@@ -40,17 +40,18 @@ export function useAudienceTimer({
   const localIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastSyncTimeRef = useRef<number | null>(null);
 
-  // Unified WebSocket connection
-  const {
-    isConnected,
-    connectionStatus,
-    subscribe,
-  } = useUnifiedWebSocket({
-    tournamentId,
-    fieldId,
+  // Simplified WebSocket connection with unique instance ID to avoid conflicts
+  const { info, on, off, setRoomContext, setUserRole } = useWebSocket({
     autoConnect: true,
-    userRole: UserRole.COMMON, // Audience display is read-only
+    tournamentId: tournamentId || 'all',
+    fieldId,
+    role: UserRole.COMMON, // Audience display is read-only
+    instanceId: 'audience-timer', // Unique instance ID
   });
+  const isConnected = info.state === 'connected';
+  const connectionStatus = info.state;
+  useEffect(() => { setUserRole(UserRole.COMMON); }, [setUserRole]);
+  useEffect(() => { void setRoomContext({ tournamentId: tournamentId || 'all', fieldId }); }, [tournamentId, fieldId, setRoomContext]);
 
   // Update timer ref when state changes
   useEffect(() => {
@@ -117,22 +118,17 @@ export function useAudienceTimer({
     console.log('[useAudienceTimer] Timer state updated:', newTimerData);
   }, [fieldId, calculateDriftCorrectedTime]);
 
-  // Subscribe to timer events from unified service
+  // Subscribe to timer events from simplified service
   useEffect(() => {
     console.log('[useAudienceTimer] Setting up WebSocket subscriptions for tournament:', tournamentId, 'field:', fieldId);
-    const unsubscribeUpdate = subscribe("timer_update", handleTimerUpdate);
-    const unsubscribeStart = subscribe("timer_start", handleTimerUpdate);
-    const unsubscribePause = subscribe("timer_pause", handleTimerUpdate);
-    const unsubscribeReset = subscribe("timer_reset", handleTimerUpdate);
+    const sub = on('timer_update' as any, handleTimerUpdate as any);
     console.log('[useAudienceTimer] WebSocket subscriptions established');
 
     return () => {
-      if (unsubscribeUpdate) unsubscribeUpdate();
-      if (unsubscribeStart) unsubscribeStart();
-      if (unsubscribePause) unsubscribePause();
-      if (unsubscribeReset) unsubscribeReset();
+      off('timer_update' as any, handleTimerUpdate as any);
+      sub?.unsubscribe?.();
     };
-  }, [subscribe, handleTimerUpdate]);
+  }, [on, off, handleTimerUpdate, tournamentId, fieldId]);
 
   // Local timer continuation for smooth countdown
   useEffect(() => {

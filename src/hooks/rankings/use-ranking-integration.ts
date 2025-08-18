@@ -10,7 +10,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { RankingService } from '@/services/ranking.service';
-import { unifiedWebSocketService } from '@/lib/unified-websocket';
+import { useWebSocket } from '@/websockets/simplified/useWebSocket';
 import { RankingQueryKeys } from './use-real-time-rankings';
 import { ScoreData } from '@/types/types';
 import { RankingUpdateEvent } from '@/types/ranking.types';
@@ -45,6 +45,7 @@ export function useRankingIntegration(
   } = options;
 
   const queryClient = useQueryClient();
+  const { emit } = useWebSocket({ autoConnect: true });
 
   // Mutation for triggering ranking updates
   const updateRankingsMutation = useMutation({
@@ -65,14 +66,12 @@ export function useRankingIntegration(
       }
 
       // Emit WebSocket event for real-time updates
-      if (unifiedWebSocketService.isConnected()) {
-        unifiedWebSocketService.emit('ranking_recalculation', {
-          type: 'ranking_recalculation_completed',
-          tournamentId,
-          stageId,
-          timestamp: Date.now(),
-        });
-      }
+      emit('ranking_recalculation' as any, {
+        type: 'ranking_recalculation_completed',
+        tournamentId,
+        stageId,
+        timestamp: Date.now(),
+      } as any);
 
       if (showNotifications) {
         toast.success('Rankings updated successfully');
@@ -199,6 +198,7 @@ export function extractRankingContext(scoreData: ScoreData): {
  */
 export function useRankingUpdateMonitor(tournamentId: string, stageId?: string) {
   const queryClient = useQueryClient();
+  const { on, off } = useWebSocket({ autoConnect: true, tournamentId });
 
   // Listen for ranking update events and invalidate queries
   const handleRankingUpdate = useCallback((event: RankingUpdateEvent) => {
@@ -212,9 +212,13 @@ export function useRankingUpdateMonitor(tournamentId: string, stageId?: string) 
 
   // Set up WebSocket listeners (this would be called in a useEffect)
   const setupListeners = useCallback(() => {
-    const unsubscribe = unifiedWebSocketService.on('ranking_update', handleRankingUpdate);
-    return unsubscribe;
-  }, [handleRankingUpdate]);
+    const handler = (event: RankingUpdateEvent) => handleRankingUpdate(event);
+    const sub = on('ranking_update' as any, handler as any);
+    return () => {
+      off('ranking_update' as any, handler as any);
+      sub?.unsubscribe?.();
+    };
+  }, [handleRankingUpdate, on, off]);
 
   return {
     setupListeners,

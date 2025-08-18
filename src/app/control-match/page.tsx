@@ -11,7 +11,7 @@ import { useMatchesByTournament } from "@/hooks/matches/use-matches-by-tournamen
 import { MatchStatus, UserRole } from "@/types/types";
 import { useTournaments } from "@/hooks/tournaments/use-tournaments";
 import { MatchData } from "@/types/types";
-import { unifiedWebSocketService } from "@/lib/unified-websocket";
+// unifiedWebSocketService removed in favor of simplified hook
 import { Card } from "@/components/ui/card";
 
 import {
@@ -32,8 +32,7 @@ import { useTimerControl } from "@/hooks/control-match/use-timer-control";
 import { useScoringControl } from "@/hooks/control-match/use-scoring-control";
 import { useDisplayControl } from "@/hooks/control-match/use-display-control";
 import { useRoleBasedAccess } from "@/hooks/control-match/use-role-based-access";
-import { useUnifiedMatchControl } from "@/hooks/control-match/use-unified-match-control";
-import { useUnifiedWebSocket } from "@/hooks/websocket/use-unified-websocket";
+import { useWebSocket } from "@/websockets/simplified/useWebSocket";
 
 // Import components
 import { TimerControlPanel } from "@/components/features/control-match/timer-control-panel";
@@ -45,7 +44,6 @@ import {
   AccessDenied,
   AccessDeniedOverlay,
 } from "@/components/features/control-match/access-denied";
-import connectionStatus from "../../components/features/control-match/connection-status";
 
 export default function ControlMatchPage() {
   const queryClient = useQueryClient();
@@ -78,12 +76,28 @@ export default function ControlMatchPage() {
   // State for selected match
   const [selectedMatchId, setSelectedMatchId] = useState<string>("");
 
-  // Initialize unified match control hook
-  const unifiedMatchControl = useUnifiedMatchControl({
+  // Initialize simplified WebSocket for control center
+  const {
+    info,
+    on,
+    off,
+    setRoomContext,
+    getStats,
+    connect,
+    emit,
+    sendDisplayModeChange,
+    sendAnnouncement: wsSendAnnouncement,
+    sendMatchUpdate,
+    sendScoreUpdate,
+    sendTimerUpdate,
+  } = useWebSocket({
+    autoConnect: true,
+    role: roleAccess.currentUser?.role || UserRole.HEAD_REFEREE, // Use actual user role
     tournamentId: selectedTournamentId || "all",
-    fieldId: selectedFieldId ?? undefined,
-    selectedMatchId: selectedMatchId || undefined,
+    fieldId: selectedFieldId || undefined,
+    instanceId: 'control-match', // Unique instance for control match
   });
+  const isConnected = info.state === "connected";
   // Set default tournamentId on load (All Tournaments)
   useEffect(() => {
     if (
@@ -155,12 +169,12 @@ export default function ControlMatchPage() {
     selectedMatchId || ""
   );
 
-  // Send match update to audience display when selected match data loads using unified service
+  // Send match update to audience display when selected match data loads
   useEffect(() => {
     if (!selectedMatch || !selectedMatchId || isLoadingMatchDetails) return;
 
     console.log(
-      "📡 Broadcasting match update for selected match:",
+      "📡 [Control-Match] Broadcasting match update for selected match:",
       selectedMatchId,
       selectedMatch
     );
@@ -177,9 +191,10 @@ export default function ControlMatchPage() {
       })
     );
 
-    // Send match update through unified service with field-specific filtering
-    unifiedMatchControl.sendMatchUpdate({
+    // Prepare match update payload
+    const matchUpdatePayload = {
       id: selectedMatchId,
+      matchId: selectedMatchId, // Include both for compatibility
       matchNumber:
         typeof selectedMatch.matchNumber === "string"
           ? parseInt(selectedMatch.matchNumber, 10)
@@ -190,14 +205,33 @@ export default function ControlMatchPage() {
       redTeams,
       blueTeams,
       scheduledTime: selectedMatch.scheduledTime,
-    } as any);
+    };
+
+    console.log(
+      "🚀 [Control-Match] Sending match update payload:",
+      JSON.stringify(matchUpdatePayload, null, 2)
+    );
+    console.log(
+      "🎯 [Control-Match] WebSocket connection state:",
+      info.state,
+      "Connected:", isConnected
+    );
+    console.log(
+      "🏠 [Control-Match] Current room context:",
+      { tournamentId: selectedTournamentId || "all", fieldId: selectedFieldId }
+    );
+
+    // Send match update via simplified WebSocket with field-specific filtering
+    sendMatchUpdate(matchUpdatePayload as any);
   }, [
     selectedMatch,
     selectedMatchId,
     isLoadingMatchDetails,
     selectedFieldId,
     selectedTournamentId,
-    unifiedMatchControl,
+    sendMatchUpdate,
+    info.state,
+    isConnected,
   ]);
 
   // Helper function to extract red teams from alliances
@@ -252,59 +286,32 @@ export default function ControlMatchPage() {
     setMatchState(data);
   }, []);
 
-  // Initialize unified WebSocket connection
-  const {
-    isConnected,
-    changeDisplayMode,
-    sendAnnouncement,
-    sendMatchUpdate: unifiedSendMatchUpdate,
-    sendMatchStateChange: unifiedSendMatchStateChange,
-    sendScoreUpdate: unifiedSendScoreUpdate,
-    subscribe: unifiedSubscribe,
-  } = useUnifiedWebSocket({
-    tournamentId,
-    fieldId: selectedFieldId || undefined,
-    autoConnect: true,
-    userRole: UserRole.HEAD_REFEREE,
-  });
-
-  // Subscribe to WebSocket events through unified service
+  // Subscribe to WebSocket events through simplified service
   useEffect(() => {
     if (!isConnected) return;
 
-    const unsubscribeTimer = unifiedSubscribe(
-      "timer_update",
-      handleTimerUpdate
-    );
-    const unsubscribeScore = unifiedSubscribe(
-      "score_update",
-      handleScoreUpdate
-    );
-    const unsubscribeMatch = unifiedSubscribe(
-      "match_update",
-      handleMatchUpdate
-    );
-    const unsubscribeMatchState = unifiedSubscribe(
-      "match_state_change",
-      handleMatchStateChange
+    const timerSub = on("timer_update" as any, handleTimerUpdate as any);
+    const scoreSub = on("score_update" as any, handleScoreUpdate as any);
+    const matchSub = on("match_update" as any, handleMatchUpdate as any);
+    const matchStateSub = on(
+      "match_state_change" as any,
+      handleMatchStateChange as any
     );
 
     return () => {
-      unsubscribeTimer();
-      unsubscribeScore();
-      unsubscribeMatch();
-      unsubscribeMatchState();
+      off("timer_update" as any, handleTimerUpdate as any);
+      off("score_update" as any, handleScoreUpdate as any);
+      off("match_update" as any, handleMatchUpdate as any);
+      off("match_state_change" as any, handleMatchStateChange as any);
+      // Also remove subscription handles if needed
+      timerSub?.unsubscribe?.();
+      scoreSub?.unsubscribe?.();
+      matchSub?.unsubscribe?.();
+      matchStateSub?.unsubscribe?.();
     };
-  }, [
-    isConnected,
-    unifiedSubscribe,
-    handleTimerUpdate,
-    handleScoreUpdate,
-    handleMatchUpdate,
-    handleMatchStateChange,
-  ]);
+  }, [isConnected, on, off, handleTimerUpdate, handleScoreUpdate, handleMatchUpdate, handleMatchStateChange]);
 
-  // Create wrapper for sendMatchStateChange to match expected signature
+  // Create wrapper for match state change using simplified emit
   const sendMatchStateChangeWrapper = useCallback(
     (params: {
       matchId: string;
@@ -320,13 +327,15 @@ export default function ControlMatchPage() {
           ? (params.currentPeriod as "auto" | "teleop" | "endgame" | null)
           : null;
 
-      unifiedSendMatchStateChange({
+      emit("match_state_change" as any, {
         matchId: params.matchId,
         status: params.status,
         currentPeriod: validPeriod,
-      });
+        tournamentId: selectedTournamentId || "all",
+        fieldId: selectedFieldId || undefined,
+      } as any);
     },
-    [unifiedSendMatchStateChange]
+    [emit, selectedTournamentId, selectedFieldId]
   );
 
   // Get the match status update mutations - one for manual actions, one for automatic
@@ -375,7 +384,7 @@ export default function ControlMatchPage() {
     }
 
     // Automatically update display settings to show the selected match
-    changeDisplayMode({
+    sendDisplayModeChange({
       displayMode: "match",
       matchId: match.id,
       showTimer,
@@ -390,7 +399,7 @@ export default function ControlMatchPage() {
 
   // Handle display mode change
   const handleDisplayModeChange = () => {
-    changeDisplayMode({
+    sendDisplayModeChange({
       displayMode: displayMode as any,
       matchId: selectedMatchId || null,
       showTimer,
@@ -403,23 +412,39 @@ export default function ControlMatchPage() {
   // Enhanced timer controls with unified match control
   const handleEnhancedStartTimer = () => {
     handleStartTimer();
-    // Update match status and period through unified service
-    unifiedMatchControl.startMatch();
-    unifiedMatchControl.updateMatchPeriod(matchPeriod as any);
+    // Send timer start and update period via simplified service
+    sendTimerUpdate({ action: "start", fieldId: selectedFieldId } as any);
+    if (selectedMatchId) {
+      sendMatchStateChangeWrapper({
+        matchId: selectedMatchId,
+        status: MatchStatus.IN_PROGRESS,
+        currentPeriod: matchPeriod as any,
+      });
+    }
   };
 
   const handleEnhancedResetTimer = () => {
     // Timer control hook handles both WebSocket and API updates internally
     handleResetTimer();
-    // Reset match status and period through unified service
-    unifiedMatchControl.resetMatch();
+    // Reset timer and match status via simplified service
+    sendTimerUpdate({ action: "reset", fieldId: selectedFieldId } as any);
+    if (selectedMatchId) {
+      sendMatchStateChangeWrapper({
+        matchId: selectedMatchId,
+        status: MatchStatus.PENDING,
+        currentPeriod: null,
+      });
+    }
   };
   // Handle submitting final scores and completing the match
   const handleSubmitScores = async () => {
     try {
       await scoringControl.saveScores();
-      // Complete match through unified service
-      await unifiedMatchControl.completeMatch();
+      // Mark match completed via API and notify displays via websocket
+      if (selectedMatchId) {
+        updateMatchStatusWithToast.mutate({ matchId: selectedMatchId, status: MatchStatus.COMPLETED });
+        sendMatchStateChangeWrapper({ matchId: selectedMatchId, status: MatchStatus.COMPLETED, currentPeriod: null });
+      }
       toast.success("Match Completed", {
         description: `Final score: Red ${scoringControl.redTotalScore} - Blue ${scoringControl.blueTotalScore}`,
       });
@@ -431,10 +456,10 @@ export default function ControlMatchPage() {
   // Handle sending an announcement
   const handleSendAnnouncement = () => {
     if (announcementMessage.trim()) {
-      sendAnnouncement(announcementMessage.trim());
+      wsSendAnnouncement({ message: announcementMessage.trim() });
 
       // Switch display mode to announcement
-      changeDisplayMode({
+      sendDisplayModeChange({
         displayMode: "announcement",
         message: announcementMessage.trim(),
         updatedAt: Date.now()
@@ -596,14 +621,58 @@ export default function ControlMatchPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       (window as any).controlMatchWS = {
-        getConnectionStats: () => unifiedWebSocketService.getStats(),
-        forceReconnect: () => unifiedWebSocketService.connect(),
-        getCurrentContext: () => unifiedWebSocketService.getCurrentContext(),
-        isConnected: () => isConnected,
-        connectionStatus: () => connectionStatus,
+        getConnectionStats: () => getStats(),
+        forceReconnect: () => connect(),
+        setRoom: (tournament?: string, field?: string) => setRoomContext({ tournamentId: tournament, fieldId: field }),
+        isConnected: () => info.state === "connected",
+        connectionState: () => info.state,
+        getCurrentRooms: () => {
+          // Use the WebSocket service to get rooms since we don't have getRoomStatus exposed
+          console.log('🏠 [Control-Match] Current WebSocket context:', {
+            selectedTournamentId: selectedTournamentId || "all",
+            selectedFieldId: selectedFieldId || undefined,
+            effectiveTournamentId: selectedTournamentId || "all",
+            effectiveFieldId: selectedFieldId || undefined,
+            timestamp: new Date().toISOString()
+          });
+          return {
+            tournamentId: selectedTournamentId || "all",
+            fieldId: selectedFieldId || undefined
+          };
+        },
+        // Simple ping test for WebSocket communication
+        sendPing: (message: string = 'Hello from control-match!') => {
+          const pingData = {
+            message,
+            from: 'control-match',
+            tournamentId: selectedTournamentId || "all",
+            fieldId: selectedFieldId || undefined,
+            timestamp: Date.now()
+          };
+          console.log('📡 [Control-Match] Sending ping:', pingData);
+          emit('test_ping' as any, pingData as any);
+        },
+        // Debug helpers
+        bypassRoomFilter: () => { (window as any).BYPASS_ROOM_FILTER = true; console.log('🚨 Room filtering BYPASSED'); },
+        enableRoomFilter: () => { (window as any).BYPASS_ROOM_FILTER = false; console.log('✅ Room filtering ENABLED'); },
       };
+      
+      // Log the current room context with detailed analysis
+      const currentContext = {
+        tournamentId: selectedTournamentId || "all",
+        fieldId: selectedFieldId || undefined
+      };
+      console.log('🏠 [Control-Match] Initialized with room context - DETAILED:', {
+        ...currentContext,
+        expectedRooms: [
+          `tournament:${currentContext.tournamentId}`,
+          ...(currentContext.fieldId ? [`field:${currentContext.fieldId}`] : [])
+        ],
+        instanceId: 'control-match',
+        timestamp: new Date().toISOString()
+      });
     }
-  }, [isConnected, connectionStatus]);
+  }, [info.state, getStats, connect, setRoomContext, selectedTournamentId, selectedFieldId, emit]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-0 w-full">

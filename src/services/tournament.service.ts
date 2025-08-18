@@ -1,6 +1,6 @@
 import type { Tournament, UpdateTournamentDto, CreateStageDto } from '@/types/tournament.types';
 import { apiClient } from '@/lib/api-client';
-import { DebounceManager } from '@/services/unified-websocket/debounce-manager';
+import { DebounceManager } from '@/utils/debounce-manager';
 
 export class TournamentService {
   static async getFullDetails(tournamentId: string): Promise<Tournament> {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { unifiedWebSocketService } from '@/lib/unified-websocket';
+import { useWebSocket } from '@/websockets/simplified/useWebSocket';
 import { apiClient } from '@/lib/api-client';
 import { QueryKeys } from '@/lib/query-keys';
 import { MatchStatus, MatchData, MatchStateData } from '@/types/types';
@@ -30,6 +30,15 @@ export function useUnifiedMatchControl({
   selectedMatchId
 }: UnifiedMatchControlOptions) {
   const queryClient = useQueryClient();
+  const { on, off, sendMatchUpdate: wsSendMatchUpdate, emit, setRoomContext } = useWebSocket({
+    autoConnect: true,
+    tournamentId: tournamentId || 'all',
+    fieldId,
+  });
+  // Keep room context synced
+  useEffect(() => {
+    void setRoomContext({ tournamentId: tournamentId || 'all', fieldId });
+  }, [tournamentId, fieldId, setRoomContext]);
   
   // Local state for match control
   const [matchState, setMatchState] = useState<MatchControlState>({
@@ -101,9 +110,9 @@ export function useUnifiedMatchControl({
     // Apply field-specific filtering - only send if fieldId matches or is global
     if (!fieldId || updateData.fieldId === fieldId) {
       console.log('[useUnifiedMatchControl] Sending match update:', updateData);
-      unifiedWebSocketService.sendMatchUpdate(updateData);
+      wsSendMatchUpdate(updateData as any);
     }
-  }, [selectedMatchId, selectedMatch, matchState.matchStatus, tournamentId, fieldId]);
+  }, [selectedMatchId, selectedMatch, matchState.matchStatus, tournamentId, fieldId, wsSendMatchUpdate]);
 
   // Send match state change through unified WebSocket service
   const sendMatchStateChange = useCallback((stateData: Partial<MatchStateData>) => {
@@ -122,8 +131,8 @@ export function useUnifiedMatchControl({
     };
 
     console.log('[useUnifiedMatchControl] Sending match state change:', stateChangeData);
-    unifiedWebSocketService.sendMatchStateChange(stateChangeData);
-  }, [selectedMatchId, matchState.matchStatus, matchState.currentPeriod, tournamentId, fieldId]);
+    emit('match_state_change' as any, stateChangeData as any);
+  }, [selectedMatchId, matchState.matchStatus, matchState.currentPeriod, tournamentId, fieldId, emit]);
 
   // Update match status with WebSocket synchronization
   const updateMatchStatus = useCallback(async (status: MatchStatus) => {
@@ -247,28 +256,18 @@ export function useUnifiedMatchControl({
       }
     };
 
-    // Subscribe to unified WebSocket events
-    const unsubscribeMatchUpdate = unifiedWebSocketService.on('match_update', handleMatchUpdate);
-    const unsubscribeMatchStateChange = unifiedWebSocketService.on('match_state_change', handleMatchStateChange);
+    // Subscribe via simplified WebSocket
+    const subUpdate = on('match_update' as any, handleMatchUpdate as any);
+    const subState = on('match_state_change' as any, handleMatchStateChange as any);
 
     return () => {
-      unsubscribeMatchUpdate();
-      unsubscribeMatchStateChange();
+      off('match_update' as any, handleMatchUpdate as any);
+      off('match_state_change' as any, handleMatchStateChange as any);
+      subUpdate?.unsubscribe?.();
+      subState?.unsubscribe?.();
     };
-  }, [tournamentId, fieldId, selectedMatchId]);
+  }, [tournamentId, fieldId, selectedMatchId, on, off]);
 
-  // Join collaborative session when match is selected
-  useEffect(() => {
-    if (selectedMatchId) {
-      console.log('[useUnifiedMatchControl] Joining collaborative session for match:', selectedMatchId);
-      unifiedWebSocketService.joinCollaborativeSession(selectedMatchId);
-
-      return () => {
-        console.log('[useUnifiedMatchControl] Leaving collaborative session for match:', selectedMatchId);
-        unifiedWebSocketService.leaveCollaborativeSession(selectedMatchId);
-      };
-    }
-  }, [selectedMatchId]);
 
   return {
     // State

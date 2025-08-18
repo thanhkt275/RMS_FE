@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useUnifiedWebSocket } from '../websocket/use-unified-websocket';
+import { useWebSocket } from '@/websockets/simplified/useWebSocket';
 import { apiClient } from '@/lib/api-client';
 import { ScoreData } from '@/types/types';
-import { BaseScoreData, WebSocketConnectionStatus } from '@/types/websocket';
+import { BaseScoreData } from '@/types/websocket';
 
 interface GameElement {
     element: string;
@@ -75,11 +75,15 @@ export function useAudienceScores(
     options: UseAudienceScoresOptions
 ) {
     const { tournamentId, fieldId, enableValidation = true, enableAnimations = true } = options;
-    const unifiedWebSocket = useUnifiedWebSocket({
-        tournamentId: tournamentId || "all", // Ensure we always have a tournament ID
-        fieldId,
+    const { info, on, off, setRoomContext } = useWebSocket({
         autoConnect: true,
+        tournamentId: tournamentId || 'all',
+        fieldId,
     });
+    // Keep room context in sync
+    useEffect(() => {
+        void setRoomContext({ tournamentId: tournamentId || 'all', fieldId });
+    }, [tournamentId, fieldId, setRoomContext]);
 
     // Score state
     const [scores, setScores] = useState<AudienceScoreState>(DEFAULT_SCORE_STATE);
@@ -276,7 +280,7 @@ export function useAudienceScores(
 
     // Subscribe to WebSocket score updates
     useEffect(() => {
-        if (!matchId || !unifiedWebSocket) return;
+        if (!matchId) return;
 
         const handleScoreUpdate = (data: BaseScoreData) => {
             console.log('[AudienceScores] WebSocket score update received:', data);
@@ -296,41 +300,29 @@ export function useAudienceScores(
         };
 
         console.log(`[AudienceScores] Subscribing to score updates for match: ${matchId}`);
-        const unsubscribe = unifiedWebSocket.subscribe<BaseScoreData>('score_update', handleScoreUpdate);
+        const sub = on('score_update' as any, handleScoreUpdate as any);
 
-        return unsubscribe;
-    }, [matchId, fieldId, unifiedWebSocket, updateScores]);
+        return () => {
+            off('score_update' as any, handleScoreUpdate as any);
+            sub?.unsubscribe?.();
+        };
+    }, [matchId, fieldId, on, off, updateScores]);
 
     // Monitor connection status
     useEffect(() => {
-        if (!unifiedWebSocket) return;
-
-        const handleConnectionStatus = (status: { connected: boolean; [key: string]: any }) => {
-            setConnectionState(prev => ({
-                ...prev,
-                isConnected: status.connected,
-            }));
-
-            if (status.connected) {
-                setError(null);
-                console.log('[AudienceScores] WebSocket connected');
-            } else {
-                setError('Connection lost - scores may not be up to date');
-                console.warn('[AudienceScores] WebSocket disconnected');
-            }
-        };
-
-        // Subscribe to connection status updates using the service directly
-        const unsubscribe = unifiedWebSocket.service.onConnectionStatus(handleConnectionStatus);
-
-        // Set initial connection status
+        const connected = info.state === 'connected';
         setConnectionState(prev => ({
             ...prev,
-            isConnected: unifiedWebSocket.isConnected,
+            isConnected: connected,
         }));
-
-        return unsubscribe;
-    }, [unifiedWebSocket]);
+        if (connected) {
+            setError(null);
+            console.log('[AudienceScores] WebSocket connected');
+        } else {
+            setError('Connection lost - scores may not be up to date');
+            console.warn('[AudienceScores] WebSocket disconnected');
+        }
+    }, [info.state]);
 
     // Database fallback for initial score loading
     const loadInitialScores = useCallback(async () => {

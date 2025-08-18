@@ -3,8 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { useUnifiedWebSocket } from '@/hooks/websocket/use-unified-websocket';
-import { unifiedWebSocketService } from '@/lib/unified-websocket';
+import { useWebSocket } from '@/websockets/simplified/useWebSocket';
 import { MatchStatus, UserRole } from '@/types/types';
 
 interface TimerControlProps {
@@ -33,8 +32,11 @@ export default function TimerControl({
   const [currentPeriod, setCurrentPeriod] = useState<string>(matchPeriod);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // WebSocket connection
-  const { startTimer, pauseTimer, resetTimer, subscribe } = useUnifiedWebSocket({ tournamentId, userRole: UserRole.HEAD_REFEREE });
+  // WebSocket connection (simplified API)
+  const { emit, on, off, setRoomContext } = useWebSocket({ autoConnect: true, tournamentId, role: UserRole.HEAD_REFEREE });
+  useEffect(() => {
+    void setRoomContext({ tournamentId });
+  }, [tournamentId, setRoomContext]);
 
   // Format time as MM:SS
   const formatTime = (ms: number) => {
@@ -49,11 +51,14 @@ export default function TimerControl({
     setCurrentPeriod("auto");
     setMatchPeriod?.("auto");
     
-    startTimer({
+    // Immediately broadcast start state
+    emit('timer_update' as any, {
       duration: MATCH_DURATION,
       remaining,
       isRunning: true,
-    });
+      tournamentId,
+      matchId,
+    } as any);
     
     // Broadcast match state change to start in auto period
     if (sendMatchStateChange) {
@@ -68,11 +73,13 @@ export default function TimerControl({
   // Stop timer
   const handleStop = () => {
     setIsRunning(false);
-    pauseTimer({
+    emit('timer_update' as any, {
       duration: MATCH_DURATION,
       remaining,
       isRunning: false,
-    });
+      tournamentId,
+      matchId,
+    } as any);
   };
   // Reset timer
   const handleReset = () => {
@@ -81,11 +88,13 @@ export default function TimerControl({
     setCurrentPeriod("auto");
     setMatchPeriod?.("auto");
     
-    resetTimer({
+    emit('timer_update' as any, {
       duration: MATCH_DURATION,
       remaining: MATCH_DURATION,
       isRunning: false,
-    });
+      tournamentId,
+      matchId,
+    } as any);
     
     // Broadcast match state change to reset period
     if (sendMatchStateChange) {
@@ -103,13 +112,13 @@ export default function TimerControl({
         setRemaining(prev => {
           const newRemaining = prev - 1000;
           // Broadcast the new remaining time to audience-display via timer_update
-          unifiedWebSocketService.emit('timer_update', {
+          emit('timer_update' as any, {
             duration: MATCH_DURATION,
             remaining: newRemaining > 0 ? newRemaining : 0,
             isRunning: newRemaining > 0,
             tournamentId,
             matchId,
-          });
+          } as any);
           if (prev <= 1000) {
             setIsRunning(false);
             return 0;
@@ -124,7 +133,7 @@ export default function TimerControl({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isRunning, remaining, tournamentId, matchId]);
+  }, [isRunning, remaining, tournamentId, matchId, emit]);
 
   // Period transition logic - matches the FRC timing from match-timer-control.tsx
   useEffect(() => {
@@ -198,14 +207,18 @@ export default function TimerControl({
 
   // Listen for timer updates from WebSocket (sync from other clients)
   useEffect(() => {
-    const unsubscribe = subscribe('timer_update', (data: any) => {
-      if (data.tournamentId === tournamentId && data.matchId === matchId) {
+    const handler = (data: any) => {
+      if (data?.tournamentId === tournamentId && data?.matchId === matchId) {
         setRemaining(data.remaining);
         setIsRunning(data.isRunning);
       }
-    });
-    return () => { unsubscribe(); };
-  }, [subscribe, matchId, tournamentId]);
+    };
+    const sub = on('timer_update' as any, handler as any);
+    return () => {
+      off('timer_update' as any, handler as any);
+      sub?.unsubscribe?.();
+    };
+  }, [on, off, matchId, tournamentId]);
 
   return (
     <div className="flex flex-col items-center gap-4">

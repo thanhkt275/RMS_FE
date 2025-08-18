@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/common/use-auth';
 import { UserRole } from '@/types/types';
-import { unifiedWebSocketService } from '@/lib/unified-websocket';
+import { useWebSocket } from '@/websockets/simplified/useWebSocket';
 
 /**
  * Hook for managing role-based access control in the control-match page
  */
 export function useRoleBasedAccess() {
   const { user } = useAuth();
+  // We only need role/permission checks; avoid opening a socket connection here
+  const { setUserRole, canEmit } = useWebSocket({ autoConnect: false });
   const [accessControl, setAccessControl] = useState({
     canControlTimer: false,
     canControlMatch: false,
@@ -23,26 +25,35 @@ export function useRoleBasedAccess() {
   });
 
   useEffect(() => {
-    if (user?.role) {
-      // Set the user role in the unified WebSocket service
-      unifiedWebSocketService.setUserRole(user.role as UserRole);
-      
-      // Get the UI access control information
-      const uiAccess = unifiedWebSocketService.getUIAccessControl();
-      setAccessControl(uiAccess);
-    }
-  }, [user?.role]);
+    if (!user?.role) return;
+    // Set role in the new simplified service (string-compatible)
+    setUserRole(user.role as unknown as any);
 
-  // Subscribe to role changes
-  useEffect(() => {
-    const unsubscribe = unifiedWebSocketService.onRoleChange((newRole, previousRole) => {
-      console.log(`[useRoleBasedAccess] Role changed from ${previousRole} to ${newRole}`);
-      const uiAccess = unifiedWebSocketService.getUIAccessControl();
-      setAccessControl(uiAccess);
+    // Derive access flags from standardized event permissions
+    const canTimer = canEmit('timer_update');
+    const canMatch = canEmit('match_update') || canEmit('match_state_change');
+    const canScore = canEmit('score_update');
+    const canDisplay = canEmit('display_mode_change') || canEmit('announcement');
+
+    // Management flags are role-based (not websocket-driven)
+    const isAdmin = user.role === UserRole.ADMIN;
+
+    setAccessControl({
+      canControlTimer: canTimer,
+      canControlMatch: canMatch,
+      canUpdateScores: canScore,
+      canControlDisplay: canDisplay,
+      canManageTournament: isAdmin,
+      canManageUsers: isAdmin,
+      canManageFields: isAdmin,
+      showTimerControls: canTimer,
+      showMatchControls: canMatch,
+      showScoringPanel: canScore,
+      showDisplayControls: canDisplay,
     });
+  }, [user?.role, setUserRole, canEmit]);
 
-    return unsubscribe;
-  }, []);
+  // No explicit role change subscription needed; we react to auth role changes above
 
   /**
    * Get access denied message for a specific feature

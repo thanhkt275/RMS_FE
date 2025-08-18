@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useUnifiedWebSocket } from "@/hooks/websocket/use-unified-websocket";
+import { useWebSocket } from "@/websockets/simplified/useWebSocket";
 import { MatchStatus, UserRole } from "@/types/types";
 
 interface UseTimerControlProps {
@@ -92,21 +92,17 @@ export function useTimerControl({
     sendMatchStateChangeRef.current = sendMatchStateChange;
   }, [sendMatchStateChange]);
 
-  // Unified WebSocket connection for timer controls
-  const {
-    startTimer,
-    pauseTimer,
-    resetTimer,
-    sendTimerUpdate,
-    subscribe,
-    isConnected,
-    canAccess,
-  } = useUnifiedWebSocket({
-    tournamentId,
-    fieldId: selectedFieldId || undefined,
+  // Simplified WebSocket connection for timer controls
+  const { info, on, off, sendTimerUpdate, canEmit, setUserRole, setRoomContext } = useWebSocket({
     autoConnect: true,
-    userRole
+    tournamentId: tournamentId || 'all',
+    fieldId: selectedFieldId || undefined,
+    role: userRole,
   });
+  const isConnected = info.state === 'connected';
+  // Keep role and room context in sync
+  useEffect(() => { setUserRole(userRole); }, [userRole, setUserRole]);
+  useEffect(() => { void setRoomContext({ tournamentId: tournamentId || 'all', fieldId: selectedFieldId || undefined }); }, [tournamentId, selectedFieldId, setRoomContext]);
 
   // Format timer as MM:SS
   const formatTime = (ms: number): string => {
@@ -151,7 +147,7 @@ export function useTimerControl({
     }
   }, [isConnected, connectionLost]);
 
-  // Listen for timer updates from unified WebSocket service
+  // Listen for timer updates from simplified WebSocket service
   useEffect(() => {
     const handleTimerUpdate = (data: any) => {
       console.log('[useTimerControl] Timer update received:', data);
@@ -188,20 +184,13 @@ export function useTimerControl({
       });
     };
 
-    // Subscribe to multiple timer events from unified service (using standardized event names)
-    const unsubscribeUpdate = subscribe("timer_update", handleTimerUpdate);
-    const unsubscribeStart = subscribe("timer_start", handleTimerUpdate);
-    const unsubscribePause = subscribe("timer_pause", handleTimerUpdate);
-    const unsubscribeReset = subscribe("timer_reset", handleTimerUpdate);
-
-    // Cleanup subscriptions when component unmounts
+    // Subscribe to standardized timer_update event
+    const sub = on('timer_update' as any, handleTimerUpdate as any);
     return () => {
-      if (unsubscribeUpdate) unsubscribeUpdate();
-      if (unsubscribeStart) unsubscribeStart();
-      if (unsubscribePause) unsubscribePause();
-      if (unsubscribeReset) unsubscribeReset();
+      off('timer_update' as any, handleTimerUpdate as any);
+      sub?.unsubscribe?.();
     };
-  }, [subscribe, selectedFieldId, calculateDriftCorrectedTime]);
+  }, [on, off, selectedFieldId, calculateDriftCorrectedTime]);
 
   // Local timer continuation during connection loss
   useEffect(() => {
@@ -404,7 +393,7 @@ export function useTimerControl({
 
   // Timer control handlers with access control
   const handleStartTimer = useCallback(() => {
-    if (!canAccess('timer_control')) {
+    if (!canEmit('timer_update')) {
       console.warn('[useTimerControl] Access denied for timer control');
       return;
     }
@@ -418,8 +407,8 @@ export function useTimerControl({
       period: "auto",
     };
 
-    // Emit timer start event
-    startTimer(timerData);
+    // Emit timer update (start)
+    sendTimerUpdate(timerData);
 
     // Update local state immediately for responsiveness
     setTimerIsRunning(true);
@@ -445,10 +434,10 @@ export function useTimerControl({
     console.log('[useTimerControl] Field ID:', selectedFieldId);
     console.log('[useTimerControl] Timer duration (ms):', timerDuration);
     console.log('[useTimerControl] Timer duration (formatted):', formatTime(timerDuration));
-  }, [canAccess, timerDuration, timerRemaining, startTimer, selectedMatchId, selectedFieldId, tournamentId]);
+  }, [canEmit, timerDuration, timerRemaining, sendTimerUpdate, selectedMatchId, selectedFieldId, tournamentId, isConnected]);
 
   const handlePauseTimer = useCallback(() => {
-    if (!canAccess('timer_control')) {
+    if (!canEmit('timer_update')) {
       console.warn('[useTimerControl] Access denied for timer control');
       return;
     }
@@ -462,18 +451,18 @@ export function useTimerControl({
       period: matchPeriod,
     };
 
-    // Emit timer pause event
-    pauseTimer(timerData);
+    // Emit timer update (pause)
+    sendTimerUpdate(timerData);
 
     // Update local state immediately for responsiveness
     setTimerIsRunning(false);
     setLocalStartTime(null);
 
     console.log('[useTimerControl] Timer paused:', timerData);
-  }, [canAccess, timerDuration, timerRemaining, pauseTimer, selectedFieldId, tournamentId, selectedMatchId, matchPeriod]);
+  }, [canEmit, timerDuration, timerRemaining, sendTimerUpdate, selectedFieldId, tournamentId, selectedMatchId, matchPeriod]);
 
   const handleResetTimer = useCallback(() => {
-    if (!canAccess('timer_control')) {
+    if (!canEmit('timer_update')) {
       console.warn('[useTimerControl] Access denied for timer control');
       return;
     }
@@ -485,8 +474,8 @@ export function useTimerControl({
       period: "auto",
     };
 
-    // Emit timer reset event
-    resetTimer(timerData);
+    // Emit timer update (reset)
+    sendTimerUpdate(timerData);
 
     // Update local state immediately for responsiveness
     setTimerRemaining(timerDuration);
@@ -506,7 +495,7 @@ export function useTimerControl({
     }
 
     console.log('[useTimerControl] Timer reset:', timerData);
-  }, [canAccess, timerDuration, resetTimer, selectedMatchId, selectedFieldId, tournamentId]);
+  }, [canEmit, timerDuration, sendTimerUpdate, selectedMatchId, selectedFieldId, tournamentId]);
 
   return {
     // Timer state

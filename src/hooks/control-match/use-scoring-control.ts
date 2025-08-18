@@ -1,7 +1,7 @@
 
-import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useUnifiedWebSocket } from '../websocket/use-unified-websocket';
+import { useWebSocket } from '@/websockets/simplified/useWebSocket';
 import { useScoringState } from '../scoring/use-scoring-state';
 import { usePersistence } from '../scoring/use-persistence';
 import { useUserActivity } from '../scoring/use-user-activity';
@@ -77,19 +77,22 @@ export function useScoringControl({
 }: UseScoringControlProps): ScoringControlReturn {
   const queryClient = useQueryClient();
 
-  // Stabilize WebSocket hook to prevent re-renders
-  const webSocketOptions = useMemo(() => ({
-    tournamentId: tournamentId || "all", // Ensure we always have a tournament ID
-    fieldId: selectedFieldId || undefined,
+  // Initialize simplified WebSocket with unique instance ID
+  const { info, on, off, sendScoreUpdate, setUserRole, setRoomContext } = useWebSocket({
     autoConnect: true,
-    userRole, // Pass the user role to enable proper permissions
-  }), [tournamentId, selectedFieldId, userRole]);
-
-  const unifiedWebSocket = useUnifiedWebSocket(webSocketOptions);
-
-  // Use ref to access WebSocket methods without causing re-renders
-  const webSocketRef = useRef(unifiedWebSocket);
-  webSocketRef.current = unifiedWebSocket;
+    tournamentId: tournamentId || 'all',
+    fieldId: selectedFieldId || undefined,
+    role: userRole,
+    instanceId: 'control-scoring', // Unique instance ID
+  });
+  const isConnected = info.state === 'connected';
+  // Keep role/room context in sync if props change
+  useEffect(() => {
+    setUserRole(userRole);
+  }, [userRole, setUserRole]);
+  useEffect(() => {
+    void setRoomContext({ tournamentId: tournamentId || 'all', fieldId: selectedFieldId || undefined });
+  }, [tournamentId, selectedFieldId, setRoomContext]);
 
   // Core state management
   const { state, stateService } = useScoringState();
@@ -98,7 +101,7 @@ export function useScoringControl({
   const userActivityService = useUserActivity();
   
   // Data persistence
-  const { saveScores, matchScores, isLoading: isPersisting } = usePersistence({
+  const { saveScores, matchScores } = usePersistence({
     selectedMatchId,
     tournamentId,
     selectedFieldId,
@@ -146,28 +149,31 @@ export function useScoringControl({
     }
   }, [selectedMatchId, selectedFieldId, userActivityService, queryClient]);
 
-  // Subscribe to WebSocket score updates with unified service
+  // Subscribe to WebSocket score updates with simplified service
   useEffect(() => {
     if (!selectedMatchId) return;
-
-    const unsubscribe = webSocketRef.current.subscribe('score_update', handleScoreUpdate);
-    return unsubscribe;
+    const handler = (data: any) => handleScoreUpdate(data as ScoreData);
+    const sub = on('score_update' as any, handler as any);
+    return () => {
+      off('score_update' as any, handler as any);
+      sub?.unsubscribe?.();
+    };
   }, [selectedMatchId, handleScoreUpdate]);
 
   // Process queued score updates when connection is restored
   useEffect(() => {
-    if (webSocketRef.current.isConnected && scoreUpdateQueue.length > 0) {
+    if (isConnected && scoreUpdateQueue.length > 0) {
       console.log(`Processing ${scoreUpdateQueue.length} queued score updates`);
 
       // Send all queued updates
       scoreUpdateQueue.forEach(queuedUpdate => {
-        webSocketRef.current.sendScoreUpdate(queuedUpdate);
+        sendScoreUpdate(queuedUpdate as any);
       });
 
       // Clear the queue
       setScoreUpdateQueue([]);
     }
-  }, [scoreUpdateQueue]);
+  }, [scoreUpdateQueue, isConnected, sendScoreUpdate]);
 
   // Broadcast scores when match changes (but not when state changes)
   useEffect(() => {
@@ -195,7 +201,7 @@ export function useScoringControl({
       };
       
       console.log("📡 Broadcasting scores for NEW match:", selectedMatchId, scoreData);
-      webSocketRef.current.sendScoreUpdate(scoreData);
+      sendScoreUpdate(scoreData as any);
     }
   }, [selectedMatchId, matchScores, tournamentId, selectedFieldId]);
 
@@ -239,15 +245,15 @@ export function useScoringControl({
 
     console.log("📊 Sending real-time score update:", scoreData);
 
-    if (webSocketRef.current.isConnected) {
+    if (isConnected) {
       // Send immediately with automatic debouncing (200ms max latency)
-      webSocketRef.current.sendScoreUpdate(scoreData);
+      sendScoreUpdate(scoreData as any);
     } else {
       // Queue for later when connection is restored
       console.log("📦 Queueing score update (connection lost)");
       setScoreUpdateQueue(prev => [...prev, scoreData]);
     }
-  }, [selectedMatchId, tournamentId, selectedFieldId, state, unifiedWebSocket]);
+  }, [selectedMatchId, tournamentId, selectedFieldId, state, isConnected, sendScoreUpdate]);
 
   // Save scores with real-time update
   const handleSaveScores = useCallback(async () => {

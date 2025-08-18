@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { unifiedWebSocketService } from '@/lib/unified-websocket';
+import { useWebSocket } from '@/websockets/simplified/useWebSocket';
 import { UserRole, MatchData, MatchStateData, AudienceDisplaySettings } from '@/types/types';
 
 export interface UnifiedAudienceDisplayOptions {
@@ -36,6 +36,18 @@ export function useUnifiedAudienceDisplay({
   autoConnect = true
 }: UnifiedAudienceDisplayOptions) {
   
+  // Simplified WebSocket connection
+  const { info, on, off, setRoomContext, setUserRole } = useWebSocket({
+    autoConnect,
+    tournamentId: tournamentId || 'all',
+    fieldId,
+    role: UserRole.COMMON,
+  });
+  const isConnectedWs = info.state === 'connected';
+  // keep room and role synced
+  useEffect(() => { setUserRole(UserRole.COMMON); }, [setUserRole]);
+  useEffect(() => { void setRoomContext({ tournamentId: tournamentId || 'all', fieldId }); }, [tournamentId, fieldId, setRoomContext]);
+
   // Local state for audience display
   const [displayState, setDisplayState] = useState<AudienceDisplayState>({
     matchState: {
@@ -57,61 +69,16 @@ export function useUnifiedAudienceDisplay({
     error: null
   });
 
-  // Connection status tracking
+  // Connection status tracking via simplified info.state
   useEffect(() => {
-    const handleConnectionStatus = (status: any) => {
-      setDisplayState(prev => ({
-        ...prev,
-        isConnected: status.connected,
-        error: status.connected ? null : 'WebSocket connection lost'
-      }));
-    };
+    setDisplayState(prev => ({
+      ...prev,
+      isConnected: isConnectedWs,
+      error: isConnectedWs ? null : 'WebSocket connection lost'
+    }));
+  }, [isConnectedWs]);
 
-    const unsubscribe = unifiedWebSocketService.onConnectionStatus(handleConnectionStatus);
-    return unsubscribe;
-  }, []);
-
-  // Connect to unified WebSocket service
-  useEffect(() => {
-    if (!autoConnect) return;
-
-    console.log('[useUnifiedAudienceDisplay] Connecting to unified WebSocket service');
-    
-    // Set user role for audience display (read-only)
-    unifiedWebSocketService.setUserRole(UserRole.COMMON);
-    
-    // Connect to WebSocket
-    unifiedWebSocketService.connect().catch(error => {
-      console.error('[useUnifiedAudienceDisplay] Connection failed:', error);
-      setDisplayState(prev => ({
-        ...prev,
-        error: 'Failed to connect to WebSocket service'
-      }));
-    });
-
-    // Join tournament room
-    if (tournamentId) {
-      console.log('[useUnifiedAudienceDisplay] Joining tournament:', tournamentId);
-      unifiedWebSocketService.joinTournament(tournamentId);
-    }
-
-    // Join field room if specified
-    if (fieldId) {
-      console.log('[useUnifiedAudienceDisplay] Joining field room:', fieldId);
-      unifiedWebSocketService.joinFieldRoom(fieldId);
-    }
-
-    return () => {
-      console.log('[useUnifiedAudienceDisplay] Disconnecting from unified WebSocket service');
-      if (fieldId) {
-        unifiedWebSocketService.leaveFieldRoom(fieldId);
-      }
-      if (tournamentId) {
-        unifiedWebSocketService.leaveTournament(tournamentId);
-      }
-      unifiedWebSocketService.disconnect();
-    };
-  }, [tournamentId, fieldId, autoConnect]);
+  // No manual connect/disconnect needed; useWebSocket manages lifecycle
 
   // Handle match updates with field-specific filtering
   const handleMatchUpdate = useCallback((data: MatchData) => {
@@ -193,26 +160,23 @@ export function useUnifiedAudienceDisplay({
     console.log('[useUnifiedAudienceDisplay] Updated display mode for field:', fieldId);
   }, [fieldId, tournamentId]);
 
-  // Subscribe to unified WebSocket events
+  // Subscribe to simplified WebSocket events
   useEffect(() => {
     console.log('[useUnifiedAudienceDisplay] Setting up event subscriptions');
-
-    // Subscribe to match updates
-    const unsubscribeMatchUpdate = unifiedWebSocketService.on('match_update', handleMatchUpdate);
-    
-    // Subscribe to match state changes
-    const unsubscribeMatchStateChange = unifiedWebSocketService.on('match_state_change', handleMatchStateChange);
-    
-    // Subscribe to display mode changes
-    const unsubscribeDisplayModeChange = unifiedWebSocketService.on('display_mode_change', handleDisplayModeChange);
+    const subMatchUpdate = on('match_update' as any, handleMatchUpdate as any);
+    const subMatchState = on('match_state_change' as any, handleMatchStateChange as any);
+    const subDisplayMode = on('display_mode_change' as any, handleDisplayModeChange as any);
 
     return () => {
       console.log('[useUnifiedAudienceDisplay] Cleaning up event subscriptions');
-      unsubscribeMatchUpdate();
-      unsubscribeMatchStateChange();
-      unsubscribeDisplayModeChange();
+      off('match_update' as any, handleMatchUpdate as any);
+      off('match_state_change' as any, handleMatchStateChange as any);
+      off('display_mode_change' as any, handleDisplayModeChange as any);
+      subMatchUpdate?.unsubscribe?.();
+      subMatchState?.unsubscribe?.();
+      subDisplayMode?.unsubscribe?.();
     };
-  }, [handleMatchUpdate, handleMatchStateChange, handleDisplayModeChange]);
+  }, [handleMatchUpdate, handleMatchStateChange, handleDisplayModeChange, on, off]);
 
   // Create match transition animations
   const triggerMatchTransition = useCallback((newMatchId: string) => {
@@ -268,19 +232,10 @@ export function useUnifiedAudienceDisplay({
     getTournamentId: () => tournamentId,
 
     // Connection management
-    reconnect: () => {
-      console.log('[useUnifiedAudienceDisplay] Manually reconnecting...');
-      unifiedWebSocketService.connect().catch(error => {
-        console.error('[useUnifiedAudienceDisplay] Manual reconnection failed:', error);
-        setDisplayState(prev => ({
-          ...prev,
-          error: 'Failed to reconnect to WebSocket service'
-        }));
-      });
-    },
+    reconnect: () => { /* managed by service; no-op */ },
 
     // Debug helpers
-    getConnectionStatus: () => unifiedWebSocketService.getConnectionStatus(),
-    getStats: () => unifiedWebSocketService.getStats()
+    getConnectionStatus: () => info.state,
+    getStats: () => ({ state: info.state })
   };
 }
