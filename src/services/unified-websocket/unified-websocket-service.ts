@@ -104,6 +104,7 @@ export interface EmitOptions extends EventOptions {
     debounce?: boolean;
     rateLimit?: number;
     debounceConfig?: DebounceConfig;
+    skipChangeDetection?: boolean;
 }
 
 /**
@@ -235,8 +236,8 @@ export class UnifiedWebSocketService implements IUnifiedWebSocketService {
     // === Event Management (Delegation) ===
 
 emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
-    // Check if there's an actual change in data
-    if (this.isDataUnchanged(event, data)) {
+    // Check if there's an actual change in data (unless skipChangeDetection is true)
+    if (!options?.skipChangeDetection && this.isDataUnchanged(event, data)) {
         console.log(`[UnifiedWebSocketService] No changes detected for event: ${event}`);
         return;
     }

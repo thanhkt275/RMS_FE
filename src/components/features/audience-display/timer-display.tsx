@@ -22,6 +22,8 @@ export function TimerDisplay({
     connectionStatus,
     showConnectionStatus: showStatus,
     connectionMessage,
+    matchPeriod,
+    matchStatus,
     formatTime,
   } = useAudienceTimer({ tournamentId, fieldId });
 
@@ -85,14 +87,14 @@ export function TimerDisplay({
           {formatTime(timer.remaining)}
         </div>
 
-        {/* Period Indicator */}
-        {timer.period && (
+        {/* Period Indicator - Use synchronized match period */}
+        {(matchPeriod || timer.period) && (
           <Badge
             className={`mt-2 text-white text-lg px-4 py-2 ${getPeriodColor(
-              timer.period
-            )}`}
+              matchPeriod || timer.period
+            )} transition-all duration-500`}
           >
-            {getPeriodText(timer.period)}
+            {getPeriodText(matchPeriod || timer.period)}
           </Badge>
         )}
 
@@ -121,12 +123,34 @@ export function TimerDisplay({
         )}
       </div>
 
+      {/* Match Period and Status Info */}
+      {(matchStatus || matchPeriod !== 'auto') && (
+        <div className="mt-4 flex justify-center gap-2">
+          {matchStatus && (
+            <Badge variant="outline" className="text-xs">
+              Status: {matchStatus}
+            </Badge>
+          )}
+          {matchPeriod && matchPeriod !== 'auto' && (
+            <Badge variant="outline" className="text-xs">
+              Period: {matchPeriod.toUpperCase()}
+            </Badge>
+          )}
+        </div>
+      )}
+
       {/* Debug Info (development only) */}
       {process.env.NODE_ENV === "development" && (
         <div className="mt-4 text-xs text-gray-500 bg-gray-50 p-2 rounded">
           <div>Duration: {formatTime(timer.duration)}</div>
+          <div>Remaining: {formatTime(timer.remaining)}</div>
+          <div>Elapsed: {formatTime(timer.duration - timer.remaining)}</div>
           <div>Status: {connectionStatus}</div>
+          <div>Match Status: {matchStatus || 'N/A'}</div>
+          <div>Match Period: {matchPeriod}</div>
+          <div>Timer Period: {timer.period || 'N/A'}</div>
           <div>Field: {fieldId || "All"}</div>
+          <div>Running: {timer.isRunning ? 'Yes' : 'No'}</div>
           {timer.startedAt && (
             <div>Started: {new Date(timer.startedAt).toLocaleTimeString()}</div>
           )}

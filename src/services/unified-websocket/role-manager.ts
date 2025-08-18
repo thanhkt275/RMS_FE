@@ -161,6 +161,9 @@ export class RoleManager {
       'score_update',
       'scoreUpdateRealtime',
       'timer_update',
+      'start_timer',      // Allow all users to receive timer start events for display synchronization
+      'pause_timer',      // Allow all users to receive timer pause events for display synchronization
+      'reset_timer',      // Allow all users to receive timer reset events for display synchronization
       'match_state_change',
       'announcement',
       'ranking_update',

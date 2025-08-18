@@ -147,7 +147,9 @@ export function extractRelevantTimerFields(data: any) {
     remaining: data.remaining,
     isRunning: data.isRunning,
     startedAt: data.startedAt,
-    pausedAt: data.pausedAt
+    pausedAt: data.pausedAt,
+    period: data.period,
+    timestamp: data.timestamp // Include timestamp to ensure continuous updates are detected
   };
 }
 

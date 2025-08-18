@@ -267,8 +267,7 @@ export default function LiveFieldDisplayPage() {
     leaveFieldRoom,
     fieldId,
     tournamentId,
-    displaySettings,
-  ]);   // Room joining is automatically handled by useUnifiedWebSocket hook
+  ]);
   // Log the rooms being joined for debugging
   useEffect(() => {
     if (tournamentId && fieldId) {
@@ -306,38 +305,46 @@ export default function LiveFieldDisplayPage() {
           unifiedMatchState
         );
 
-        setMatchState((prevState: any) => ({
-          ...prevState,
-          matchId: unifiedMatchState.matchId,
-          matchNumber: unifiedMatchState.matchNumber,
-          status: unifiedMatchState.status,
-          currentPeriod: unifiedMatchState.currentPeriod,
-          redTeams: unifiedMatchState.redTeams,
-          blueTeams: unifiedMatchState.blueTeams,
-        }));
+        setMatchState((prevState: any) => {
+          // Only update if there are actual changes
+          const hasChanges = 
+            prevState.matchId !== unifiedMatchState.matchId ||
+            prevState.matchNumber !== unifiedMatchState.matchNumber ||
+            prevState.status !== unifiedMatchState.status ||
+            prevState.currentPeriod !== unifiedMatchState.currentPeriod;
+          
+          if (hasChanges) {
+            return {
+              ...prevState,
+              matchId: unifiedMatchState.matchId,
+              matchNumber: unifiedMatchState.matchNumber,
+              status: unifiedMatchState.status,
+              currentPeriod: unifiedMatchState.currentPeriod,
+              redTeams: unifiedMatchState.redTeams,
+              blueTeams: unifiedMatchState.blueTeams,
+            };
+          }
+          return prevState;
+        });
 
         // Update display settings if needed
-        if (
-          unifiedDisplaySettings.displayMode !== displaySettings.displayMode
-        ) {
-          setDisplaySettings({
-            ...displaySettings,
-            displayMode: unifiedDisplaySettings.displayMode,
-            matchId: unifiedMatchState.matchId,
-            updatedAt: Date.now(),
-          });
-        }
+        setDisplaySettings((prevSettings) => {
+          if (unifiedDisplaySettings.displayMode !== prevSettings.displayMode) {
+            return {
+              ...prevSettings,
+              displayMode: unifiedDisplaySettings.displayMode,
+              matchId: unifiedMatchState.matchId,
+              updatedAt: Date.now(),
+            };
+          }
+          return prevSettings;
+        });
       }
     };
 
-    // Sync immediately and then on interval to catch updates
+    // Sync only once when the effect runs - remove the interval
     syncMatchState();
-    const syncInterval = setInterval(syncMatchState, 1000);
-
-    return () => {
-      clearInterval(syncInterval);
-    };
-  }, [tournamentId, fieldId, unifiedAudienceDisplay, displaySettings]);
+  }, [tournamentId, fieldId]);
 
   // Track connection status and attempts
   const [connectionAttempts, setConnectionAttempts] = useState<number>(0);
@@ -442,6 +449,70 @@ export default function LiveFieldDisplayPage() {
       }
     });
 
+    // Subscribe to timer start events
+    const unsubStartTimer = unifiedSubscribe<any>("start_timer", (data) => {
+      if (data.fieldId === fieldId || !data.fieldId) {
+        console.log(
+          "✅ [Unified WebSocket] Timer started for field:",
+          fieldId,
+          data
+        );
+        
+        // Ensure the timer data has the correct structure for local countdown
+        const timerData = {
+          ...data,
+          isRunning: true,
+          startedAt: data.startedAt || Date.now(),
+          remaining: data.remaining || data.duration || 150000
+        };
+        
+        setTimer(timerData);
+        console.log("🟢 [Timer Start] Set timer state:", timerData);
+      }
+    });
+
+    // Subscribe to timer pause events
+    const unsubPauseTimer = unifiedSubscribe<any>("pause_timer", (data) => {
+      if (data.fieldId === fieldId || !data.fieldId) {
+        console.log(
+          "✅ [Unified WebSocket] Timer paused for field:",
+          fieldId,
+          data
+        );
+        
+        // Ensure the timer is marked as NOT running for pause events
+        const timerData = {
+          ...data,
+          isRunning: false,
+          pausedAt: data.pausedAt || Date.now()
+        };
+        
+        setTimer(timerData);
+        console.log("🟡 [Timer Pause] Set timer state:", timerData);
+      }
+    });
+
+    // Subscribe to timer reset events
+    const unsubResetTimer = unifiedSubscribe<any>("reset_timer", (data) => {
+      if (data.fieldId === fieldId || !data.fieldId) {
+        console.log(
+          "✅ [Unified WebSocket] Timer reset for field:",
+          fieldId,
+          data
+        );
+        
+        // Ensure the timer is marked as NOT running for reset events
+        const timerData = {
+          ...data,
+          isRunning: false,
+          remaining: data.remaining || data.duration || 150000
+        };
+        
+        setTimer(timerData);
+        console.log("🔴 [Timer Reset] Set timer state:", timerData);
+      }
+    });
+
     // Subscribe to real-time score updates
     const unsubRealtimeScore = unifiedSubscribe<any>(
       "scoreUpdateRealtime",
@@ -487,14 +558,17 @@ export default function LiveFieldDisplayPage() {
           setScore(realtimeScoreData);
 
           // Ensure we're in match display mode
-          if (displaySettings.displayMode !== "match") {
-            setDisplaySettings({
-              ...displaySettings,
-              displayMode: "match",
-              matchId: data.matchId,
-              updatedAt: Date.now(),
-            });
-          }
+          setDisplaySettings((prevSettings) => {
+            if (prevSettings.displayMode !== "match") {
+              return {
+                ...prevSettings,
+                displayMode: "match",
+                matchId: data.matchId,
+                updatedAt: Date.now(),
+              };
+            }
+            return prevSettings;
+          });
         }
       }
     );
@@ -538,6 +612,9 @@ export default function LiveFieldDisplayPage() {
       );
       unsubDisplayMode();
       unsubTimer();
+      unsubStartTimer();
+      unsubPauseTimer();
+      unsubResetTimer();
       unsubRealtimeScore();
       unsubAnnouncement();
     };
@@ -547,27 +624,26 @@ export default function LiveFieldDisplayPage() {
     fieldId,
     tournamentId,
     matchState?.matchId,
-    displaySettings.displayMode,
   ]);
 
-  // Robust timer countdown effect: always use latest timer state from server, prevent drift
+  // Audience display now relies ONLY on WebSocket updates from control-match
+  // No local countdown to prevent sync issues
   useEffect(() => {
-    if (
-      !timer?.isRunning ||
-      typeof timer.remaining !== "number" ||
-      timer.remaining <= 0
-    )
-      return;
-    const interval = setInterval(() => {
-      setTimer((prev: any) => {
-        // Only decrement if still running and remaining > 0
-        if (!prev?.isRunning || prev.remaining <= 0) return prev;
-        // Decrement by 1000ms, but never go below 0
-        return { ...prev, remaining: Math.max(0, prev.remaining - 1000) };
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [timer?.isRunning, timer?.remaining]);
+    console.log('🕒 [Timer State Monitor] Timer state changed:', {
+      isRunning: timer?.isRunning,
+      remaining: timer?.remaining,
+      timer: timer
+    });
+    
+    if (timer?.isRunning) {
+      console.log('✅ [Timer State Monitor] Timer is running - waiting for WebSocket updates from control-match');
+    } else {
+      console.log('⏸️ [Timer State Monitor] Timer is stopped');
+    }
+    
+    // No local countdown interval - audience display is purely reactive to WebSocket events
+    // This prevents sync issues between control-match and audience display
+  }, [timer]);
 
   // Effect to automatically update match period based on timer
   useEffect(() => {

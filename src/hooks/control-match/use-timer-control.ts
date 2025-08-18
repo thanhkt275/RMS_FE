@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useUnifiedWebSocket } from "@/hooks/websocket/use-unified-websocket";
+import { unifiedWebSocketService } from "@/lib/unified-websocket";
 import { MatchStatus, UserRole } from "@/types/types";
+
 
 interface UseTimerControlProps {
   tournamentId: string;
@@ -202,7 +204,64 @@ export function useTimerControl({
     };
   }, [subscribe, selectedFieldId, calculateDriftCorrectedTime]);
 
-  // Local timer continuation during connection loss
+  // Main timer countdown logic with WebSocket emissions
+  useEffect(() => {
+    if (!timerIsRunning) return;
+
+    console.log('[useTimerControl] Starting main timer countdown');
+    
+    const interval = setInterval(() => {
+      setTimerRemaining(prevRemaining => {
+        const newRemaining = Math.max(0, prevRemaining - 1000); // Decrease by 1 second (1000ms)
+        
+        // Emit timer update via WebSocket every second
+        // Allow emission even without fieldId (tournament-wide timer)
+        if (isConnected && tournamentId) {
+          const currentTime = Date.now();
+          const timerData = {
+            duration: timerDuration,
+            remaining: newRemaining,
+            isRunning: true, // Always true during countdown - only stop when timer is manually paused/stopped
+            startedAt: localStartTime || currentTime,
+            timestamp: currentTime, // Add timestamp for better sync
+            tournamentId,
+            fieldId: selectedFieldId || null, // Allow null fieldId for tournament-wide timer
+            period: matchPeriod, // Include current match period
+          };
+
+          // Use the unified WebSocket service to emit timer updates
+          // Use direct emit with debounce disabled for continuous updates
+          unifiedWebSocketService.emit('timer_update', timerData as any, {
+            fieldId: selectedFieldId || undefined, // Use undefined if no field selected
+            tournamentId: tournamentId,
+            debounce: false, // Disable debouncing for continuous timer updates
+            skipChangeDetection: true, // Skip data change detection for continuous timer updates
+          });
+
+
+          console.log('[useTimerControl] Emitted timer_update:', {
+            ...timerData,
+            remainingFormatted: `${Math.floor(newRemaining / 60000)}:${Math.floor((newRemaining % 60000) / 1000).toString().padStart(2, '0')}`
+          });
+        }
+        
+        // Stop timer when it reaches 0
+        if (newRemaining <= 0) {
+          setTimerIsRunning(false);
+          console.log('[useTimerControl] Timer completed');
+        }
+        
+        return newRemaining;
+      });
+    }, 1000); // Update every 1000ms (1 second)
+
+    return () => {
+      clearInterval(interval);
+      console.log('[useTimerControl] Cleaned up timer interval');
+    };
+  }, [timerIsRunning, timerDuration, localStartTime, isConnected, selectedFieldId, tournamentId]);
+
+  // Local timer continuation during connection loss (fallback)
   useEffect(() => {
     if (!timerIsRunning || !connectionLost || !localStartTime) return;
 
@@ -339,20 +398,36 @@ export function useTimerControl({
       return;
     }
 
+    const currentTime = Date.now();
     const timerData = {
       duration: timerDuration,
       remaining: timerRemaining,
       isRunning: true, // Start the timer as running
+      startedAt: currentTime,
+      timestamp: currentTime,
     };
 
     startTimer(timerData);
 
     // Update local state immediately for responsiveness
     setTimerIsRunning(true);
-    setLocalStartTime(Date.now());
+    setLocalStartTime(currentTime);
 
     // Set to auto period when starting
     setMatchPeriod("auto");
+
+    // Emit immediate timer update for real-time sync
+    if (isConnected && tournamentId) {
+      unifiedWebSocketService.emit('timer_update', {
+        ...timerData,
+        tournamentId,
+        fieldId: selectedFieldId || null,
+        period: 'auto',
+      } as any, {
+        fieldId: selectedFieldId || undefined,
+        tournamentId: tournamentId,
+      });
+    }
 
     // Broadcast match state change via WebSocket (immediate)
     if (sendMatchStateChangeRef.current && selectedMatchId) {
@@ -365,7 +440,7 @@ export function useTimerControl({
     }
 
     console.log('[useTimerControl] Timer started:', timerData);
-  }, [canAccess, timerDuration, timerRemaining, startTimer, selectedMatchId, selectedFieldId]);
+  }, [canAccess, timerDuration, timerRemaining, startTimer, selectedMatchId, selectedFieldId, isConnected, tournamentId]);
 
   const handlePauseTimer = useCallback(() => {
     if (!canAccess('timer_control')) {
@@ -373,10 +448,13 @@ export function useTimerControl({
       return;
     }
 
+    const currentTime = Date.now();
     const timerData = {
       duration: timerDuration,
       remaining: timerRemaining,
       isRunning: false,
+      pausedAt: currentTime,
+      timestamp: currentTime,
     };
 
     pauseTimer(timerData);
@@ -385,8 +463,20 @@ export function useTimerControl({
     setTimerIsRunning(false);
     setLocalStartTime(null);
 
+    // Emit immediate timer update for real-time sync
+    if (isConnected && tournamentId) {
+      unifiedWebSocketService.emit('timer_update', {
+        ...timerData,
+        tournamentId,
+        fieldId: selectedFieldId || null,
+      } as any, {
+        fieldId: selectedFieldId || undefined,
+        tournamentId: tournamentId,
+      });
+    }
+
     console.log('[useTimerControl] Timer paused:', timerData);
-  }, [canAccess, timerDuration, timerRemaining, pauseTimer]);
+  }, [canAccess, timerDuration, timerRemaining, pauseTimer, isConnected, tournamentId, selectedFieldId]);
 
   const handleResetTimer = useCallback(() => {
     if (!canAccess('timer_control')) {
@@ -394,10 +484,12 @@ export function useTimerControl({
       return;
     }
 
+    const currentTime = Date.now();
     const timerData = {
       duration: timerDuration,
       remaining: timerDuration, // Reset to full duration
       isRunning: false,
+      timestamp: currentTime,
     };
 
     resetTimer(timerData);
@@ -408,6 +500,19 @@ export function useTimerControl({
     setMatchPeriod("auto");
     setLocalStartTime(null);
     setServerTimestamp(null);
+
+    // Emit immediate timer update for real-time sync
+    if (isConnected && tournamentId) {
+      unifiedWebSocketService.emit('timer_update', {
+        ...timerData,
+        tournamentId,
+        fieldId: selectedFieldId || null,
+        period: 'auto',
+      } as any, {
+        fieldId: selectedFieldId || undefined,
+        tournamentId: tournamentId,
+      });
+    }
 
     // Broadcast match state change to reset via WebSocket (immediate)
     if (sendMatchStateChangeRef.current && selectedMatchId) {
@@ -420,7 +525,7 @@ export function useTimerControl({
     }
 
     console.log('[useTimerControl] Timer reset:', timerData);
-  }, [canAccess, timerDuration, resetTimer, selectedMatchId, selectedFieldId]);
+  }, [canAccess, timerDuration, resetTimer, selectedMatchId, selectedFieldId, isConnected, tournamentId]);
 
   return {
     // Timer state
