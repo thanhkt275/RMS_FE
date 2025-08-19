@@ -161,7 +161,10 @@ export default function LiveFieldDisplayPage() {
   });
 
   // Unified audience display hook for match handling
-  const unifiedAudienceDisplay = useUnifiedAudienceDisplay({
+  const {
+    matchState: unifiedMatchState,
+    displaySettings: unifiedDisplaySettings,
+  } = useUnifiedAudienceDisplay({
     tournamentId,
     fieldId,
     autoConnect: true,
@@ -288,63 +291,14 @@ export default function LiveFieldDisplayPage() {
   // Note: WebSocket connection and room joining is now handled by useUnifiedWebSocket hook
   // No need for manual connection and room management here
 
-  // Sync match state from unified audience display hook
+  // Sync local state with reactive data from the unified audience display hook
   useEffect(() => {
-    if (!tournamentId) return;
-
-    console.log("🔔 [Unified Audience Display] Setting up match state sync");
-
-    // Update local state when unified audience display receives match updates
-    const syncMatchState = () => {
-      const unifiedMatchState = unifiedAudienceDisplay.getCurrentMatch();
-      const unifiedDisplaySettings = unifiedAudienceDisplay.displaySettings;
-
-      if (unifiedMatchState.matchId) {
-        console.log(
-          "✅ [Unified Audience Display] Syncing match state:",
-          unifiedMatchState
-        );
-
-        setMatchState((prevState: any) => {
-          // Only update if there are actual changes
-          const hasChanges = 
-            prevState.matchId !== unifiedMatchState.matchId ||
-            prevState.matchNumber !== unifiedMatchState.matchNumber ||
-            prevState.status !== unifiedMatchState.status ||
-            prevState.currentPeriod !== unifiedMatchState.currentPeriod;
-          
-          if (hasChanges) {
-            return {
-              ...prevState,
-              matchId: unifiedMatchState.matchId,
-              matchNumber: unifiedMatchState.matchNumber,
-              status: unifiedMatchState.status,
-              currentPeriod: unifiedMatchState.currentPeriod,
-              redTeams: unifiedMatchState.redTeams,
-              blueTeams: unifiedMatchState.blueTeams,
-            };
-          }
-          return prevState;
-        });
-
-        // Update display settings if needed
-        setDisplaySettings((prevSettings) => {
-          if (unifiedDisplaySettings.displayMode !== prevSettings.displayMode) {
-            return {
-              ...prevSettings,
-              displayMode: unifiedDisplaySettings.displayMode,
-              matchId: unifiedMatchState.matchId,
-              updatedAt: Date.now(),
-            };
-          }
-          return prevSettings;
-        });
-      }
-    };
-
-    // Sync only once when the effect runs - remove the interval
-    syncMatchState();
-  }, [tournamentId, fieldId]);
+    if (unifiedMatchState?.matchId) {
+      setMatchState(unifiedMatchState);
+    }
+    // Use the display settings from the hook directly
+    setDisplaySettings(unifiedDisplaySettings);
+  }, [unifiedMatchState, unifiedDisplaySettings]);
 
   // Track connection status and attempts
   const [connectionAttempts, setConnectionAttempts] = useState<number>(0);
