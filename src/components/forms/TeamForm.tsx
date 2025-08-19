@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/form";
 import { Gender } from "@/types/user.types";
 import { useTeamsMutations } from "@/hooks/api/use-teams";
+import { ProvinceComboBox } from "@/components/comboboxes/ProvinceComboBox";
+import { format } from "date-fns";
 
 const TeamMemberSchema = z.object({
   id: z.string().optional(),
@@ -53,6 +55,26 @@ const TeamMemberSchema = z.object({
   ward: z.string().min(1, "Ward is required"),
   organization: z.string().optional(),
   organizationAddress: z.string().optional(),
+  dateOfBirth: z
+    .string()
+    .refine((val) => {
+      const dob = new Date(val);
+      if (isNaN(dob.getTime())) return false;
+
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+      const hasHadBirthdayThisYear =
+        today.getMonth() > dob.getMonth() ||
+        (today.getMonth() === dob.getMonth() && today.getDate() >= dob.getDate());
+
+      if (!hasHadBirthdayThisYear) {
+        age -= 1;
+      }
+
+      return age >= 10 && age <= 18;
+    }, {
+      message: "Age must be between 10 and 18 years",
+    }),
 });
 
 const formSchema = z.object({
@@ -80,8 +102,10 @@ const referralOptions = [
 
 export default function TeamForm({
   defaultValues,
+  maxTeamMembers,
 }: {
   defaultValues?: FormValues;
+  maxTeamMembers?: number;
 }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -104,6 +128,7 @@ export default function TeamForm({
           ward: "",
           organization: "",
           organizationAddress: "",
+          dateOfBirth: format(new Date(), 'yyyy-MM-dd'),
         },
       ],
       referralSource: "",
@@ -159,7 +184,6 @@ export default function TeamForm({
         if (dirtyMembers.length > 0) {
           payload.teamMembers = dirtyMembers;
         }
-        console.log("Submitting update with payload:", payload);
 
         await updateTeam.mutateAsync(payload);
       } else {
@@ -213,13 +237,14 @@ export default function TeamForm({
                       }`}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex flex-col space-y-4">
+                        {/* Full Name */}
                         <FormField
                           control={form.control}
                           name={`teamMembers.${index}.name`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Full Name</FormLabel>
+                              <FormLabel>Full Name (required)</FormLabel>
                               <FormControl>
                                 <Input {...field} disabled={isLoading} />
                               </FormControl>
@@ -228,40 +253,50 @@ export default function TeamForm({
                           )}
                         />
 
-                        <FormField
-                          control={form.control}
-                          name={`teamMembers.${index}.gender`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Gender</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value ?? ""}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select gender" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value={Gender.MALE}>
-                                    Male
-                                  </SelectItem>
-                                  <SelectItem value={Gender.FEMALE}>
-                                    Female
-                                  </SelectItem>
-                                  <SelectItem value={Gender.OTHER}>
-                                    Other
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                        {/* Gender + Date of Birth in one row */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name={`teamMembers.${index}.gender`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Gender</FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value ?? ""}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select gender" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value={Gender.MALE}>Male</SelectItem>
+                                    <SelectItem value={Gender.FEMALE}>Female</SelectItem>
+                                    <SelectItem value={Gender.OTHER}>Other</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-                      <div className="flex flex-col space-y-4">
+                          <FormField
+                            control={form.control}
+                            name={`teamMembers.${index}.dateOfBirth`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Date of Birth (required)</FormLabel>
+                                <FormControl>
+                                  <Input type="date" {...field} value={format(new Date(field.value), 'yyyy-MM-dd')} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {/* Email */}
                         <FormField
                           control={form.control}
                           name={`teamMembers.${index}.email`}
@@ -269,17 +304,14 @@ export default function TeamForm({
                             <FormItem>
                               <FormLabel>Email</FormLabel>
                               <FormControl>
-                                <Input
-                                  type="email"
-                                  {...field}
-                                  disabled={isLoading}
-                                />
+                                <Input type="email" {...field} disabled={isLoading} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
 
+                        {/* Phone Number */}
                         <FormField
                           control={form.control}
                           name={`teamMembers.${index}.phoneNumber`}
@@ -294,26 +326,28 @@ export default function TeamForm({
                           )}
                         />
 
+                        {/* Province */}
                         <FormField
                           control={form.control}
                           name={`teamMembers.${index}.province`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Province/City</FormLabel>
+                              <FormLabel>Province/City (required)</FormLabel>
                               <FormControl>
-                                <Input {...field} disabled={isLoading} />
+                                <ProvinceComboBox {...field} disabled={isLoading} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
 
+                        {/* Ward */}
                         <FormField
                           control={form.control}
                           name={`teamMembers.${index}.ward`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>District</FormLabel>
+                              <FormLabel>District (required)</FormLabel>
                               <FormControl>
                                 <Input {...field} disabled={isLoading} />
                               </FormControl>
@@ -322,6 +356,7 @@ export default function TeamForm({
                           )}
                         />
 
+                        {/* Organization */}
                         <FormField
                           control={form.control}
                           name={`teamMembers.${index}.organization`}
@@ -336,6 +371,7 @@ export default function TeamForm({
                           )}
                         />
 
+                        {/* Organization Address */}
                         <FormField
                           control={form.control}
                           name={`teamMembers.${index}.organizationAddress`}
@@ -380,12 +416,18 @@ export default function TeamForm({
                     ward: "",
                     organization: "",
                     organizationAddress: "",
+                    dateOfBirth: format(new Date(), 'yyyy-MM-dd'),
                   })
                 }
-                disabled={isLoading}
+                disabled={isLoading || (typeof maxTeamMembers === "number" && fields.length >= maxTeamMembers)}
               >
                 Add Member
               </Button>
+              {maxTeamMembers && fields.length >= maxTeamMembers && (
+                <div className="text-sm text-red-500 mt-2">
+                  You have reached the maximum number of team members ({maxTeamMembers}).
+                </div>
+              )}
 
               <FormField
                 control={form.control}

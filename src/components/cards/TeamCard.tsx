@@ -42,5 +42,5 @@ export default function TeamCard() {
       }
     : undefined;
 
-  return <TeamForm defaultValues={defaultValues} />;
+  return <TeamForm defaultValues={defaultValues} maxTeamMembers={tournament.maxTeamMembers} />;
 }
