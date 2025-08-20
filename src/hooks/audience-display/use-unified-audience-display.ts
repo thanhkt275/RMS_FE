@@ -1,6 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import {
+  AudienceMatchState,
+} from '@/types/audience-display.types';
+import { AudienceDisplaySettings, MatchData, MatchStateData, UserRole } from '@/types/types';
 import { unifiedWebSocketService } from '@/lib/unified-websocket';
-import { UserRole, MatchData, MatchStateData, AudienceDisplaySettings } from '@/types/types';
+import { apiClient } from '@/lib/api-client';
+import { useState, useEffect, useCallback } from 'react';
 
 export interface UnifiedAudienceDisplayOptions {
   tournamentId: string;
@@ -8,15 +12,6 @@ export interface UnifiedAudienceDisplayOptions {
   autoConnect?: boolean;
 }
 
-export interface AudienceMatchState {
-  matchId: string | null;
-  matchNumber: number | null;
-  name: string | null;
-  status: string | null;
-  currentPeriod: 'auto' | 'teleop' | 'endgame' | null;
-  redTeams: Array<{ name: string }>;
-  blueTeams: Array<{ name: string }>;
-}
 
 export interface AudienceDisplayState {
   matchState: AudienceMatchState;
@@ -59,7 +54,7 @@ export function useUnifiedAudienceDisplay({
 
   // Connection status tracking
   useEffect(() => {
-    const handleConnectionStatus = (status: any) => {
+    const handleConnectionStatus = (status: { connected: boolean }) => {
       setDisplayState(prev => ({
         ...prev,
         isConnected: status.connected,
@@ -123,24 +118,34 @@ export function useUnifiedAudienceDisplay({
       return;
     }
 
-    // Update match state
-    setDisplayState(prev => ({
-      ...prev,
-      matchState: {
-        ...prev.matchState,
-        matchId: data.id || prev.matchState.matchId,
-        matchNumber: data.matchNumber || prev.matchState.matchNumber,
-        status: data.status || prev.matchState.status,
-        redTeams: (data as any).redTeams || prev.matchState.redTeams,
-        blueTeams: (data as any).blueTeams || prev.matchState.blueTeams
-      },
-      displaySettings: {
-        ...prev.displaySettings,
-        displayMode: "match",
-        matchId: data.id,
-        updatedAt: Date.now()
-      }
-    }));
+    // Update match state, preserving existing team data when new data is not provided
+    setDisplayState(prev => {
+      // Only update teams if new data is provided and not empty
+      const hasNewRedTeams = data.redTeams && data.redTeams.length > 0;
+      const hasNewBlueTeams = data.blueTeams && data.blueTeams.length > 0;
+      
+      // Preserve existing team data when new data is not provided
+      const redTeams = hasNewRedTeams ? data.redTeams : prev.matchState.redTeams;
+      const blueTeams = hasNewBlueTeams ? data.blueTeams : prev.matchState.blueTeams;
+
+      return {
+        ...prev,
+        matchState: {
+          ...prev.matchState,
+          matchId: data.id || prev.matchState.matchId,
+          matchNumber: data.matchNumber || prev.matchState.matchNumber,
+          status: data.status || prev.matchState.status,
+          redTeams: redTeams || [],
+          blueTeams: blueTeams || []
+        },
+        displaySettings: {
+          ...prev.displaySettings,
+          displayMode: "match",
+          matchId: data.id,
+          updatedAt: Date.now()
+        }
+      };
+    });
 
     console.log('[useUnifiedAudienceDisplay] Updated match state for field:', fieldId);
   }, [fieldId]);
@@ -150,8 +155,8 @@ export function useUnifiedAudienceDisplay({
     console.log('[useUnifiedAudienceDisplay] Received match state change:', data);
 
     // Apply field-specific filtering
-    if (fieldId && (data as any).fieldId && (data as any).fieldId !== fieldId) {
-      console.log('[useUnifiedAudienceDisplay] Ignoring match state change for different field:', (data as any).fieldId);
+    if (fieldId && data.fieldId && data.fieldId !== fieldId) {
+      console.log('[useUnifiedAudienceDisplay] Ignoring match state change for different field:', data.fieldId);
       return;
     }
 

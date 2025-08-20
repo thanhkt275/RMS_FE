@@ -5,6 +5,8 @@ import { apiClient } from '@/lib/api-client';
 import { QueryKeys } from '@/lib/query-keys';
 import { MatchStatus, MatchData, MatchStateData } from '@/types/types';
 
+import { Match } from '@/types/match.types';
+
 export interface UnifiedMatchControlOptions {
   tournamentId: string;
   fieldId?: string;
@@ -12,7 +14,7 @@ export interface UnifiedMatchControlOptions {
 }
 
 export interface MatchControlState {
-  selectedMatch: any | null;
+  selectedMatch: Match | null;
   matchStatus: MatchStatus;
   currentPeriod: 'auto' | 'teleop' | 'endgame' | null;
   isLoading: boolean;
@@ -89,12 +91,35 @@ export function useUnifiedMatchControl({
       return;
     }
 
+    // Extract team information from the selected match
+    let redTeams = undefined;
+    let blueTeams = undefined;
+    
+    if (selectedMatch?.alliances) {
+      const redAlliance = selectedMatch.alliances.find((a: any) => a.color === 'RED');
+      const blueAlliance = selectedMatch.alliances.find((a: any) => a.color === 'BLUE');
+      
+      redTeams = redAlliance?.teamAlliances.map((ta: any) => ({
+        id: ta.team?.id || ta.teamId,
+        name: ta.team?.name || `Team ${ta.team?.teamNumber || ta.teamId}`,
+        teamNumber: ta.team?.teamNumber
+      })) || [];
+      
+      blueTeams = blueAlliance?.teamAlliances.map((ta: any) => ({
+        id: ta.team?.id || ta.teamId,
+        name: ta.team?.name || `Team ${ta.team?.teamNumber || ta.teamId}`,
+        teamNumber: ta.team?.teamNumber
+      })) || [];
+    }
+
     const updateData: MatchData = {
       id: selectedMatchId,
       matchNumber: selectedMatch?.matchNumber || 0,
       status: matchData.status || matchState.matchStatus,
       tournamentId,
       fieldId,
+      redTeams,
+      blueTeams,
       ...matchData
     };
 

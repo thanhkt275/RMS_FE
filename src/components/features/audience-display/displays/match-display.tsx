@@ -5,7 +5,9 @@ import { formatTimeMsPad } from '@/lib/utils';
 
 // Types should ideally be in a central file
 interface Team {
+  id: string;
   name: string;
+  teamNumber?: string;
 }
 
 interface AudienceMatchState {
@@ -66,7 +68,9 @@ const AllianceCard = ({
         <div className="text-6xl font-semibold text-white space-y-4 min-h-[16rem]">
           {teams && teams.length > 0 ? (
             teams.map((team, index) => (
-              <div key={`${team.name}-${index}`}>{team.name}</div>
+              <div key={`${team.id}-${index}`}>
+                {team.teamNumber ? `${team.teamNumber} - ${team.name}` : team.name}
+              </div>
             ))
           ) : (
             <>

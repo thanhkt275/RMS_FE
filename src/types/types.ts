@@ -202,6 +202,8 @@ export interface MatchData {
   status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
   tournamentId: string;
   fieldId?: string;
+  redTeams?: Array<{ id: string; name: string; teamNumber?: string }>;
+  blueTeams?: Array<{ id: string; name: string; teamNumber?: string }>;
   // Add other match properties as needed
 }
 

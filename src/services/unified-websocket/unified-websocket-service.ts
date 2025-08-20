@@ -700,7 +700,7 @@ private isDataUnchanged(event: string, data: WebSocketEventData): boolean {
             event,
             data.tournamentId || 'no-tournament',
             data.fieldId || 'no-field',
-            data.matchId || 'no-match'
+            data.matchId || data.id || 'no-match'
         ];
         return contextParts.join(':');
     }
