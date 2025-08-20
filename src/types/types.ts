@@ -464,6 +464,8 @@ export interface Tournament {
   createdAt: string;
   updatedAt: string;
   numberOfFields?: number;
+  maxTeams?: number;
+  maxTeamMembers?: number;
   admin?: {
     id: string;
     username: string;
