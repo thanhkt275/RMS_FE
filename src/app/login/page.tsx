@@ -27,6 +27,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [rateLimitWarning, setRateLimitWarning] = useState<string | null>(null);
+  const [emailVerificationNotice, setEmailVerificationNotice] = useState<string | null>(null);
 
   // Redirect if user is already logged in - use useEffect to avoid early return
   useEffect(() => {
@@ -49,6 +50,7 @@ export default function LoginPage() {
     try {
       setLoginError(null);
       setRateLimitWarning(null);
+      setEmailVerificationNotice(null);
       setIsLoading(true);
       
       // Perform login
@@ -62,6 +64,11 @@ export default function LoginPage() {
       // Handle specific error types
       if (error.status === 429) {
         setRateLimitWarning("Too many login attempts. Please wait a moment before trying again.");
+      } else if (error.message?.toLowerCase().includes('verify') || 
+                 error.message?.toLowerCase().includes('verification') ||
+                 error.message?.toLowerCase().includes('not verified') ||
+                 error.status === 403) {
+        setEmailVerificationNotice("Please check your email and verify your account before logging in. Don't forget to check your spam folder.");
       } else {
         setLoginError(error.message || "Login failed. Please check your credentials.");
       }
@@ -113,6 +120,16 @@ export default function LoginPage() {
           {rateLimitWarning && (
             <Alert className="bg-yellow-50 text-yellow-800 border-yellow-200">
               <AlertDescription>{rateLimitWarning}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Email verification notice */}
+          {emailVerificationNotice && (
+            <Alert className="bg-blue-50 text-blue-800 border-blue-200">
+              <AlertDescription>
+                <p className="font-medium">Email Verification Required</p>
+                <p>{emailVerificationNotice}</p>
+              </AlertDescription>
             </Alert>
           )}
 

@@ -186,7 +186,11 @@ const CombinedMatchTimerControl: React.FC<CombinedMatchTimerControlProps> = ({
       </CardContent>
       <CardFooter className="flex justify-between">
         <Button onClick={handleStartTimer} disabled={!selectedMatchId}>Start Timer</Button>
-        <Button onClick={handlePauseTimer} disabled={!selectedMatchId}>Pause Timer</Button>
+        <Button onClick={() => {
+          handlePauseTimer();
+          // Change match status to PENDING when pausing
+          handleMatchStatusChange(MatchStatus.PENDING, "auto");
+        }} disabled={!selectedMatchId}>Pause Timer</Button>
         <Button onClick={handleReset} disabled={!selectedMatchId}>Reset Timer</Button>
         <Button
           onClick={() => handleMatchStatusChange(MatchStatus.IN_PROGRESS, matchPeriod as any)}

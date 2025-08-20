@@ -9,7 +9,7 @@ export { ScoreCalculationService } from './services/score-calculation.service';
 export { DataTransformationService } from './services/data-transformation.service';
 export { UserActivityService } from './services/user-activity.service';
 export { ApiService } from './services/api.service';
-export { WebSocketServiceAdapter } from './services/websocket.service';
+// All WebSocket functionality is handled by the unified WebSocket service
 export { CacheService } from './services/cache.service';
 export { DefaultScoringStrategy, FRCScoringStrategy } from './services/scoring-strategy.service';
 

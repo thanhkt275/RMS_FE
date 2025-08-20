@@ -20,6 +20,7 @@ interface MatchSelectorProps {
   getRedTeams: (match: any) => string[];
   getBlueTeams: (match: any) => string[];
   matchScoresMap: Record<string, { redTotalScore: number; blueTotalScore: number }>;
+  matchState?: any; // Live match state from WebSocket
   isLoading?: boolean;
 }
 
@@ -32,6 +33,7 @@ export function MatchSelector({
   getRedTeams,
   getBlueTeams,
   matchScoresMap,
+  matchState,
   isLoading = false,
 }: MatchSelectorProps) {
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>(undefined);
@@ -95,6 +97,11 @@ export function MatchSelector({
           const blueTeams = getBlueTeams(match);
           const scores = matchScoresMap[match.id];
           const isSelected = selectedMatchId === match.id;
+          
+          // Use live status from WebSocket for the selected match, fallback to database status
+          const currentStatus = (isSelected && matchState?.matchId === match.id) 
+            ? matchState.status 
+            : match.status;
 
           return (
             <div
@@ -116,12 +123,18 @@ export function MatchSelector({
                   <Badge 
                     variant="outline" 
                     className={`font-semibold px-3 py-1 rounded-full border-2 text-xs
-                      ${match.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : ''}
-                      ${match.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800 border-blue-300' : ''}
-                      ${match.status === 'COMPLETED' ? 'bg-green-100 text-green-800 border-green-300' : ''}
+                      ${currentStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : ''}
+                      ${currentStatus === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800 border-blue-300' : ''}
+                      ${currentStatus === 'COMPLETED' ? 'bg-green-100 text-green-800 border-green-300' : ''}
                     `}
                   >
-                    {match.status.replace('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
+                    {currentStatus.replace('_', ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                    {/* Show live indicator for selected match with WebSocket data */}
+                    {isSelected && matchState?.matchId === match.id && (
+                      <span className="ml-1 inline-flex items-center">
+                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                      </span>
+                    )}
                   </Badge>
                 </div>
                 {match.scheduledTime && (

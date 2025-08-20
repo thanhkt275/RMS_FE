@@ -205,6 +205,27 @@ export const PERMISSIONS: IPermissionSystem = {
       [UserRole.ADMIN],
       { description: 'Delete any team (with appropriate safeguards)' }
     ),
+    // New team-specific permissions for role-based teams page
+    VIEW_ALL_READONLY: PermissionHelper.createPermission(
+      [UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE],
+      { description: 'View all teams in read-only mode for referees' }
+    ),
+    VIEW_LIMITED: PermissionHelper.createPermission(
+      [UserRole.COMMON],
+      { description: 'View limited team information for common users' }
+    ),
+    IMPORT_EXPORT: PermissionHelper.createPermission(
+      [UserRole.ADMIN],
+      { description: 'Import and export team data' }
+    ),
+    VIEW_SENSITIVE_DATA: PermissionHelper.createPermission(
+      [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE],
+      { description: 'View sensitive team data like member emails and detailed information' }
+    ),
+    VIEW_PUBLIC_DATA: PermissionHelper.createPermission(
+      [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.ALLIANCE_REFEREE, UserRole.TEAM_LEADER, UserRole.TEAM_MEMBER, UserRole.COMMON],
+      { description: 'View public team data like name and organization' }
+    ),
   },
 
   /**

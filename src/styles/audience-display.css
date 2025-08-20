@@ -1,0 +1,190 @@
+/* Audience Display Match Transition Animations */
+
+.audience-display-container {
+  transition: all 0.3s ease-in-out;
+}
+
+.audience-display-container.match-transition {
+  animation: matchTransition 0.5s ease-in-out;
+}
+
+@keyframes matchTransition {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  25% {
+    opacity: 0.7;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+  75% {
+    opacity: 0.7;
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Match information display transitions */
+.match-info-transition {
+  transition: all 0.3s ease-in-out;
+}
+
+.match-info-enter {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.match-info-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.match-info-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.match-info-exit-active {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+/* Scoreboard transition effects */
+.scoreboard-transition {
+  transition: all 0.2s ease-in-out;
+}
+
+.score-update-flash {
+  animation: scoreFlash 0.4s ease-in-out;
+}
+
+@keyframes scoreFlash {
+  0% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(59, 130, 246, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* Timer display transitions */
+.timer-transition {
+  transition: all 0.2s ease-in-out;
+}
+
+.timer-period-change {
+  animation: periodChange 0.6s ease-in-out;
+}
+
+@keyframes periodChange {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.6;
+  }
+  75% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Team information transitions */
+.team-info-transition {
+  transition: all 0.3s ease-in-out;
+}
+
+.team-change-highlight {
+  animation: teamHighlight 0.8s ease-in-out;
+}
+
+@keyframes teamHighlight {
+  0% {
+    border-color: transparent;
+    box-shadow: none;
+  }
+  50% {
+    border-color: #3b82f6;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+  }
+  100% {
+    border-color: transparent;
+    box-shadow: none;
+  }
+}
+
+/* Status indicator transitions */
+.status-indicator {
+  transition: all 0.2s ease-in-out;
+}
+
+.status-change {
+  animation: statusPulse 0.5s ease-in-out;
+}
+
+@keyframes statusPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Connection status indicators */
+.connection-indicator {
+  transition: all 0.3s ease-in-out;
+}
+
+.connection-lost {
+  animation: connectionAlert 1s ease-in-out infinite;
+}
+
+@keyframes connectionAlert {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .audience-display-container.match-transition {
+    animation-duration: 0.3s;
+  }
+  
+  .match-info-transition,
+  .scoreboard-transition,
+  .timer-transition,
+  .team-info-transition {
+    transition-duration: 0.2s;
+  }
+}

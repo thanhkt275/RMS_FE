@@ -17,7 +17,8 @@ import {
   SettingsIcon, 
   LogOutIcon, 
   MenuIcon, 
-  XIcon 
+  XIcon,
+  UserCogIcon
 } from "lucide-react";
 
 export function Sidebar() {
@@ -53,6 +54,11 @@ export function Sidebar() {
       icon: TrophyIcon,
     },
     {
+      title: "Teams",
+      href: "/teams",
+      icon: UsersIcon,
+    },
+    {
       title: "Schedule",
       href: "/schedule",
       icon: CalendarIcon,
@@ -69,7 +75,7 @@ export function Sidebar() {
     {
       title: "Users",
       href: "/admin/users",
-      icon: UsersIcon,
+      icon: UserCogIcon,
       adminOnly: true,
     },
     {

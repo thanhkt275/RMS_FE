@@ -49,6 +49,25 @@ You can begin development by editing `src/app/page.tsx`. Changes are reflected a
 - **Reusable UI Components**: Modular design for dialogs, forms, tables, and more.
 - **WebSocket Support**: Real-time updates for matches and audience display.
 
+## API Endpoints Reference
+
+### Important Notes for Developers
+
+When working with the backend API, please use the correct endpoints:
+
+#### ✅ Correct Endpoints
+- **Get stages by tournament**: `GET /api/stages?tournamentId={id}`
+- **Get tournament details**: `GET /api/tournaments/{id}/details`
+- **Get tournament fields**: `GET /api/tournaments/{id}/fields`
+
+#### ❌ Incorrect Endpoints (Do NOT use)
+- ~~`GET /api/tournaments/{id}/stages`~~ - This endpoint does not exist
+
+### Common API Patterns
+- Use query parameters for filtering: `/api/stages?tournamentId={id}`
+- Use path parameters for specific resources: `/api/stages/{id}`
+- Use `/details` suffix for full resource data: `/api/tournaments/{id}/details`
+
 ## How to Contribute
 
 1. Clone the repository and install dependencies:

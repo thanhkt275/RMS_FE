@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Form,
   FormControl,
@@ -30,7 +31,7 @@ const formSchema = z
         "Username can only contain letters, numbers, and underscores"
       ),
     name: z.string().min(1, "Name is required"),
-    email: z.string().email("Please provide a valid email address").min(1),
+    email: z.string().min(1, "Email is required").email("Please provide a valid email address"),
     phoneNumber: z
       .string()
       .min(10, "Phone number must be at least 10 digits")
@@ -54,9 +55,11 @@ export default function RegisterForm() {
   const { user, register, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    mode: "onChange",
     defaultValues: {
       username: "",
       name: "",
@@ -79,9 +82,11 @@ export default function RegisterForm() {
         values.name,
         values.phoneNumber
       );
+      setRegistrationSuccess(true);
+      // Redirect to login after showing success message
       setTimeout(() => {
         router.replace("/login");
-      }, 100);
+      }, 5000);
     } catch (error: any) {
     } finally {
       setIsLoading(false);
@@ -100,6 +105,17 @@ export default function RegisterForm() {
 
   return (
     <Form {...form}>
+      {/* Registration success message */}
+      {registrationSuccess && (
+        <Alert className="bg-green-50 text-green-800 border-green-200 mb-4">
+          <AlertDescription>
+            <p className="font-medium">Registration Successful!</p>
+            <p>Please check your email and verify your account before logging in. Don't forget to check your spam folder.</p>
+            <p className="text-sm mt-2">You will be redirected to the login page in a few seconds...</p>
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div className="flex gap-4">
           <div className="flex-1">

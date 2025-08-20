@@ -106,34 +106,31 @@ export function MatchStatusDisplay({
               </div>
             )}
           </div>
-          <Badge
-            variant="outline"
-            className={`font-semibold px-3 py-1 rounded-full border-2 text-xs
-              ${match.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : ''}
-              ${match.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800 border-blue-300' : ''}
-              ${match.status === 'COMPLETED' ? 'bg-green-100 text-green-800 border-green-300' : ''}
-            `}
-          >
-            {match.status.replace('_', ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}
-          </Badge>
-        </div>
-        {/* Match State from WebSocket */}
-        {matchState && (
-          <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <div className="text-base font-bold text-blue-900">Live Match State</div>
-            </div>
-            <div className="text-sm font-medium text-blue-900">
-              Status: <span className="font-bold">{matchState.status}</span>
-              {matchState.currentPeriod && (
-                <span className="ml-3">
-                  Period: <span className="font-bold">{matchState.currentPeriod}</span>
-                </span>
-              )}
-            </div>
+          <div className="space-y-2">
+            <Badge
+              variant="outline"
+              className={`font-semibold px-3 py-1 rounded-full border-2 text-xs
+                ${(matchState?.status || match.status) === 'PENDING' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : ''}
+                ${(matchState?.status || match.status) === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800 border-blue-300' : ''}
+                ${(matchState?.status || match.status) === 'COMPLETED' ? 'bg-green-100 text-green-800 border-green-300' : ''}
+              `}
+            >
+              {(matchState?.status || match.status).replace('_', ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}
+            </Badge>
+            {/* Live indicator when WebSocket data is available */}
+            {matchState && (
+              <div className="flex items-center gap-1 text-xs text-green-700">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="font-medium">Live</span>
+                {matchState.currentPeriod && (
+                  <span className="ml-2 bg-green-100 px-2 py-0.5 rounded font-medium">
+                    {matchState.currentPeriod}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-        )}
+        </div>
         {/* Teams and Scores */}
         <div className="grid grid-cols-2 gap-6">
           {/* Red Alliance */}

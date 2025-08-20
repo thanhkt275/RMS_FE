@@ -437,7 +437,7 @@ export default function TeamForm({
                     <FormLabel>How did you hear about us?</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value ?? ""}
+                      value={field.value ?? ""}
                     >
                       <FormControl>
                         <SelectTrigger>
