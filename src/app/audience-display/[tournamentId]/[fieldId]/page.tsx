@@ -293,9 +293,61 @@ export default function LiveFieldDisplayPage() {
 
   // Sync local state with reactive data from the unified audience display hook
   useEffect(() => {
+    console.log('📺 [AudienceDisplay] Syncing unified match state:', unifiedMatchState);
+    console.log('📺 [AudienceDisplay] Unified match state teams - Red:', unifiedMatchState?.redTeams?.length || 0, 'Blue:', unifiedMatchState?.blueTeams?.length || 0);
+    
     if (unifiedMatchState?.matchId) {
-      setMatchState(unifiedMatchState);
+      const isNewMatch = unifiedMatchState.matchId !== matchState.matchId;
+      console.log('📺 [AudienceDisplay] Is new match?:', isNewMatch, 'Current:', matchState.matchId, 'New:', unifiedMatchState.matchId);
+      
+      // Check if we have complete team data
+      const hasRedTeams = unifiedMatchState.redTeams && unifiedMatchState.redTeams.length > 0;
+      const hasBlueTeams = unifiedMatchState.blueTeams && unifiedMatchState.blueTeams.length > 0;
+      
+      console.log('📺 [AudienceDisplay] Team data check - hasRedTeams:', hasRedTeams, 'hasBlueTeams:', hasBlueTeams);
+      
+      // For new matches, reset team data and update with new data if available
+      // For same match, preserve existing team data when new data is not provided
+      if (isNewMatch) {
+        console.log('📺 [AudienceDisplay] NEW MATCH - Resetting and updating state');
+        setMatchState({
+          matchId: unifiedMatchState.matchId,
+          matchNumber: unifiedMatchState.matchNumber,
+          status: unifiedMatchState.status,
+          name: unifiedMatchState.name,
+          currentPeriod: unifiedMatchState.currentPeriod,
+          redTeams: hasRedTeams ? unifiedMatchState.redTeams : [],
+          blueTeams: hasBlueTeams ? unifiedMatchState.blueTeams : []
+        });
+        
+        // For new matches, if team data is missing, fetch immediately
+        if (!hasRedTeams || !hasBlueTeams) {
+          console.log('📺 [AudienceDisplay] NEW MATCH with missing team data, fetching complete match details for:', unifiedMatchState.matchId);
+          fetchAndSyncMatch(unifiedMatchState.matchId);
+        }
+      } else {
+        console.log('📺 [AudienceDisplay] SAME MATCH - Preserving existing data where appropriate');
+        setMatchState((prev: any) => ({
+          ...prev,
+          matchId: unifiedMatchState.matchId,
+          matchNumber: unifiedMatchState.matchNumber || prev.matchNumber,
+          status: unifiedMatchState.status || prev.status,
+          name: unifiedMatchState.name || prev.name,
+          currentPeriod: unifiedMatchState.currentPeriod || prev.currentPeriod,
+          // Only update teams if we have new valid data, otherwise preserve existing
+          redTeams: hasRedTeams ? unifiedMatchState.redTeams : prev.redTeams,
+          blueTeams: hasBlueTeams ? unifiedMatchState.blueTeams : prev.blueTeams
+        }));
+        
+        // For same match, only fetch if we still don't have team data
+        if ((!hasRedTeams && (!matchState.redTeams || matchState.redTeams.length === 0)) ||
+            (!hasBlueTeams && (!matchState.blueTeams || matchState.blueTeams.length === 0))) {
+          console.log('📺 [AudienceDisplay] SAME MATCH still missing team data, fetching complete match details for:', unifiedMatchState.matchId);
+          fetchAndSyncMatch(unifiedMatchState.matchId);
+        }
+      }
     }
+    
     // Use the display settings from the hook directly
     setDisplaySettings(unifiedDisplaySettings);
   }, [unifiedMatchState, unifiedDisplaySettings]);
@@ -327,8 +379,77 @@ export default function LiveFieldDisplayPage() {
   // Helper to fetch and sync full match details and score
   async function fetchAndSyncMatch(matchId: string) {
     try {
+      console.log('🤼 [API Fallback] Fetching match details for:', matchId);
+      
       // Fetch match metadata (teams, period, status, etc.)
       const matchDetails = await apiClient.get<any>(`/matches/${matchId}`);
+      console.log('🤼 [API Fallback] Raw match details received:', matchDetails);
+      console.log('🤼 [API Fallback] Match alliances:', matchDetails.alliances);
+      
+      // Extract team data from alliances
+      let redTeams = [];
+      let blueTeams = [];
+      
+      if (matchDetails.alliances && Array.isArray(matchDetails.alliances)) {
+        const redAlliance = matchDetails.alliances.find(
+          (alliance: any) => alliance.color === "RED"
+        );
+        const blueAlliance = matchDetails.alliances.find(
+          (alliance: any) => alliance.color === "BLUE"
+        );
+        
+        console.log('🤼 [API Fallback] Red alliance:', redAlliance);
+        console.log('🤼 [API Fallback] Blue alliance:', blueAlliance);
+        
+        // Extract team numbers and format them like the WebSocket data
+        if (redAlliance?.teamAlliances) {
+          redTeams = redAlliance.teamAlliances.map((ta: any) => {
+            const originalTeamNumber = ta.team?.teamNumber || ta.team?.name || 'Unknown';
+            const teamName = ta.team?.name || 'Unknown Team';
+            const extractTeamNumber = (teamStr: string): string => {
+              const str = String(teamStr);
+              const match = str.match(/\d+$/);
+              if (match) {
+                const numericPart = match[0];
+                return numericPart.replace(/^0+/, '') || numericPart.slice(-1);
+              }
+              return str;
+            };
+            const shortNumber = extractTeamNumber(originalTeamNumber);
+            return {
+              name: teamName,
+              teamNumber: shortNumber,
+              originalTeamNumber: String(originalTeamNumber)
+            };
+          });
+        }
+        
+        if (blueAlliance?.teamAlliances) {
+          blueTeams = blueAlliance.teamAlliances.map((ta: any) => {
+            const originalTeamNumber = ta.team?.teamNumber || ta.team?.name || 'Unknown';
+            const teamName = ta.team?.name || 'Unknown Team';
+            const extractTeamNumber = (teamStr: string): string => {
+              const str = String(teamStr);
+              const match = str.match(/\d+$/);
+              if (match) {
+                const numericPart = match[0];
+                return numericPart.replace(/^0+/, '') || numericPart.slice(-1);
+              }
+              return str;
+            };
+            const shortNumber = extractTeamNumber(originalTeamNumber);
+            return {
+              name: teamName,
+              teamNumber: shortNumber,
+              originalTeamNumber: String(originalTeamNumber)
+            };
+          });
+        }
+      }
+      
+      console.log('🤼 [API Fallback] Extracted red teams:', redTeams);
+      console.log('🤼 [API Fallback] Extracted blue teams:', blueTeams);
+      
       setMatchState((prev: any) => ({
         ...prev,
         matchId: matchDetails.id,
@@ -336,16 +457,19 @@ export default function LiveFieldDisplayPage() {
         name: matchDetails.name || matchDetails.match_name || "",
         status: matchDetails.status || "",
         currentPeriod: matchDetails.currentPeriod || matchDetails.period || "",
-        redTeams: matchDetails.redTeams || matchDetails.red_teams || [],
-        blueTeams: matchDetails.blueTeams || matchDetails.blue_teams || [],
+        redTeams: redTeams.length > 0 ? redTeams : prev.redTeams,
+        blueTeams: blueTeams.length > 0 ? blueTeams : prev.blueTeams,
       }));
+      
       // Fetch score breakdown
       const scoreDetails = await apiClient.get(
         `/match-scores/match/${matchId}`
       );
       setScore(scoreDetails);
+      
+      console.log('🤼 [API Fallback] Successfully updated match state with team counts - Red:', redTeams.length, 'Blue:', blueTeams.length);
     } catch (error) {
-      console.error("Error syncing match data:", error);
+      console.error('🤼 [API Fallback] Error syncing match data:', error);
     }
   }
 
@@ -580,8 +704,7 @@ export default function LiveFieldDisplayPage() {
     matchState?.matchId,
   ]);
 
-  // Audience display now relies ONLY on WebSocket updates from control-match
-  // No local countdown to prevent sync issues
+  // Local countdown for smooth timer display on audience
   useEffect(() => {
     console.log('🕒 [Timer State Monitor] Timer state changed:', {
       isRunning: timer?.isRunning,
@@ -589,15 +712,40 @@ export default function LiveFieldDisplayPage() {
       timer: timer
     });
     
-    if (timer?.isRunning) {
-      console.log('✅ [Timer State Monitor] Timer is running - waiting for WebSocket updates from control-match');
-    } else {
+    if (!timer?.isRunning) {
       console.log('⏸️ [Timer State Monitor] Timer is stopped');
+      return;
     }
+
+    console.log('✅ [Timer State Monitor] Timer is running - starting local countdown');
     
-    // No local countdown interval - audience display is purely reactive to WebSocket events
-    // This prevents sync issues between control-match and audience display
-  }, [timer]);
+    // Create local countdown for smooth display
+    const interval = setInterval(() => {
+      setTimer((prevTimer:any) => {
+        if (!prevTimer || !prevTimer.isRunning) {
+          return prevTimer;
+        }
+        
+        const newRemaining = Math.max(0, prevTimer.remaining - 1000);
+        
+        console.log('🕰️ [Local Countdown] Updated timer:', {
+          previous: prevTimer.remaining,
+          new: newRemaining,
+          formatted: `${Math.floor(newRemaining / 60000)}:${Math.floor((newRemaining % 60000) / 1000).toString().padStart(2, '0')}`
+        });
+        
+        return {
+          ...prevTimer,
+          remaining: newRemaining
+        };
+      });
+    }, 1000); // Update every second
+
+    return () => {
+      clearInterval(interval);
+      console.log('🧹 [Timer State Monitor] Cleaned up local countdown interval');
+    };
+  }, [timer?.isRunning]);
 
   // Effect to automatically update match period based on timer
   useEffect(() => {

@@ -329,14 +329,26 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
     }
 
     sendMatchUpdate(data: MatchData): void {
+        console.log('🎠 [UnifiedWebSocketService] sendMatchUpdate called with data:', data);
+        console.log('🎠 [UnifiedWebSocketService] Data redTeams:', data.redTeams);
+        console.log('🎠 [UnifiedWebSocketService] Data blueTeams:', data.blueTeams);
+        console.log('🎠 [UnifiedWebSocketService] Team counts - Red:', data.redTeams?.length || 0, 'Blue:', data.blueTeams?.length || 0);
+        console.log('🎠 [UnifiedWebSocketService] Data fieldId:', data.fieldId);
+        console.log('🎠 [UnifiedWebSocketService] Data tournamentId:', data.tournamentId);
+        console.log('🎠 [UnifiedWebSocketService] Current user role:', this.roleManager.getCurrentRole());
+        
         if (!this.canAccess('match_control')) {
-            console.warn('[UnifiedWebSocketService] Access denied for match control');
+            console.warn('🎠 [UnifiedWebSocketService] Access denied for match control');
             return;
         }
 
+        console.log('🎠 [UnifiedWebSocketService] EMITTING match_update event at:', new Date().toISOString());
+        
         this.emit('match_update', data as any as WebSocketEventData, {
             tournamentId: data.tournamentId
         });
+        
+        console.log('🎠 [UnifiedWebSocketService] sendMatchUpdate COMPLETED');
     }
 
     // === Role-based Access Control ===

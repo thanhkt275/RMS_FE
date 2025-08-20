@@ -86,8 +86,13 @@ export function useUnifiedMatchControl({
 
   // Send match update through unified WebSocket service
   const sendMatchUpdate = useCallback((matchData: Partial<MatchData>) => {
+    console.log('🎯 [useUnifiedMatchControl] sendMatchUpdate START');
+    console.log('🎯 [useUnifiedMatchControl] selectedMatchId:', selectedMatchId);
+    console.log('🎯 [useUnifiedMatchControl] selectedMatch:', selectedMatch);
+    console.log('🎯 [useUnifiedMatchControl] matchData input:', matchData);
+    
     if (!selectedMatchId) {
-      console.warn('[useUnifiedMatchControl] No match selected for update');
+      console.warn('🎯 [useUnifiedMatchControl] No match selected for update');
       return;
     }
 
@@ -95,21 +100,54 @@ export function useUnifiedMatchControl({
     let redTeams = undefined;
     let blueTeams = undefined;
     
+    console.log('🎯 [useUnifiedMatchControl] selectedMatch.alliances:', selectedMatch?.alliances);
+    
+    // Extract numeric part from team numbers (e.g., "NIH00005" -> "5")
+    const extractTeamNumber = (teamStr: string | number | undefined): string => {
+      if (!teamStr) return 'Unknown';
+      const str = String(teamStr);
+      // Match pattern like "NIH00005" and extract "005", then remove leading zeros
+      const match = str.match(/\d+$/);
+      if (match) {
+        const numericPart = match[0];
+        return numericPart.replace(/^0+/, '') || numericPart.slice(-1);
+      }
+      return str; // fallback to original if no pattern match
+    };
+
     if (selectedMatch?.alliances) {
       const redAlliance = selectedMatch.alliances.find((a: any) => a.color === 'RED');
       const blueAlliance = selectedMatch.alliances.find((a: any) => a.color === 'BLUE');
       
-      redTeams = redAlliance?.teamAlliances.map((ta: any) => ({
-        id: ta.team?.id || ta.teamId,
-        name: ta.team?.name || `Team ${ta.team?.teamNumber || ta.teamId}`,
-        teamNumber: ta.team?.teamNumber
-      })) || [];
+      console.log('🎯 [useUnifiedMatchControl] redAlliance:', redAlliance);
+      console.log('🎯 [useUnifiedMatchControl] blueAlliance:', blueAlliance);
       
-      blueTeams = blueAlliance?.teamAlliances.map((ta: any) => ({
-        id: ta.team?.id || ta.teamId,
-        name: ta.team?.name || `Team ${ta.team?.teamNumber || ta.teamId}`,
-        teamNumber: ta.team?.teamNumber
-      })) || [];
+      redTeams = redAlliance?.teamAlliances.map((ta: any) => {
+        const originalTeamNumber = ta.team?.teamNumber || ta.team?.name;
+        const shortNumber = extractTeamNumber(originalTeamNumber);
+        return {
+          id: ta.team?.id || ta.teamId,
+          name: shortNumber,
+          teamNumber: shortNumber,
+          originalTeamNumber: String(originalTeamNumber)
+        };
+      }) || [];
+      
+      blueTeams = blueAlliance?.teamAlliances.map((ta: any) => {
+        const originalTeamNumber = ta.team?.teamNumber || ta.team?.name;
+        const shortNumber = extractTeamNumber(originalTeamNumber);
+        return {
+          id: ta.team?.id || ta.teamId,
+          name: shortNumber,
+          teamNumber: shortNumber,
+          originalTeamNumber: String(originalTeamNumber)
+        };
+      }) || [];
+      
+      console.log('🎯 [useUnifiedMatchControl] Extracted redTeams:', redTeams);
+      console.log('🎯 [useUnifiedMatchControl] Extracted blueTeams:', blueTeams);
+    } else {
+      console.warn('🎯 [useUnifiedMatchControl] No alliances data in selectedMatch');
     }
 
     const updateData: MatchData = {
@@ -123,11 +161,19 @@ export function useUnifiedMatchControl({
       ...matchData
     };
 
+    console.log('🎯 [useUnifiedMatchControl] Final updateData before send:', updateData);
+    console.log('🎯 [useUnifiedMatchControl] Team counts - Red:', redTeams?.length || 0, 'Blue:', blueTeams?.length || 0);
+    console.log('🎯 [useUnifiedMatchControl] Field filtering check - fieldId:', fieldId, 'updateData.fieldId:', updateData.fieldId);
+
     // Apply field-specific filtering - only send if fieldId matches or is global
     if (!fieldId || updateData.fieldId === fieldId) {
-      console.log('[useUnifiedMatchControl] Sending match update:', updateData);
+      console.log('🎯 [useUnifiedMatchControl] SENDING match update via WebSocket at:', new Date().toISOString());
       unifiedWebSocketService.sendMatchUpdate(updateData);
+    } else {
+      console.log('🎯 [useUnifiedMatchControl] SKIPPING match update due to field filter mismatch');
     }
+    
+    console.log('🎯 [useUnifiedMatchControl] sendMatchUpdate END');
   }, [selectedMatchId, selectedMatch, matchState.matchStatus, tournamentId, fieldId]);
 
   // Send match state change through unified WebSocket service
@@ -176,8 +222,8 @@ export function useUnifiedMatchControl({
         isLoading: false
       }));
 
-      // Send WebSocket updates only after successful database update
-      sendMatchUpdate({ status });
+      // Send WebSocket state change update.
+      // The main match_update is sent from the control-match page when match data is loaded.
       sendMatchStateChange({ status });
 
     } catch (error) {
@@ -188,7 +234,7 @@ export function useUnifiedMatchControl({
         error: error instanceof Error ? error.message : 'Failed to update match status'
       }));
     }
-  }, [selectedMatchId, matchState.matchStatus, updateMatchStatusMutation, sendMatchUpdate, sendMatchStateChange]);
+  }, [selectedMatchId, matchState.matchStatus, updateMatchStatusMutation, sendMatchStateChange]);
 
   // Update match period with WebSocket synchronization
   const updateMatchPeriod = useCallback((period: 'auto' | 'teleop' | 'endgame' | null) => {

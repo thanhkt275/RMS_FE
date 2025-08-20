@@ -29,6 +29,7 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
   } = options;
 
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isReady, setIsReady] = useState<boolean>(false);
   const [connectionStatus, setConnectionStatus] = useState<string>('disconnected');
   
   // Use refs to track current values without causing re-renders
@@ -135,12 +136,23 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
 
   // Score updates
   const sendScoreUpdate = useCallback((scoreData: Omit<ScoreData, 'tournamentId' | 'fieldId'>) => {
-    const tournamentId = currentTournamentRef.current;
-    const fieldId = currentFieldRef.current;
+    const currentTournamentId = currentTournamentRef.current || tournamentId;
+    const currentFieldId = currentFieldRef.current || fieldId;
     
-    if (!tournamentId) {
+    console.log('[useUnifiedWebSocket] sendScoreUpdate called:', {
+      tournamentIdFromOptions: tournamentId,
+      fieldIdFromOptions: fieldId,
+      currentTournamentRef: currentTournamentRef.current,
+      currentFieldRef: currentFieldRef.current,
+      finalTournamentId: currentTournamentId,
+      finalFieldId: currentFieldId,
+      scoreData,
+      timestamp: new Date().toISOString()
+    });
+    
+    if (!currentTournamentId) {
       console.error('[useUnifiedWebSocket] No tournament ID available for sendScoreUpdate', {
-        tournamentIdFromOptions: options.tournamentId,
+        tournamentIdFromOptions: tournamentId,
         currentTournamentRef: currentTournamentRef.current,
         scoreData,
         timestamp: new Date().toISOString()
@@ -150,19 +162,19 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
 
     unifiedWebSocketService.sendScoreUpdate({
       ...scoreData,
-      tournamentId,
-      fieldId: fieldId || undefined,
+      tournamentId: currentTournamentId,
+      fieldId: currentFieldId || undefined,
     });
-  }, []);
+  }, [tournamentId, fieldId]);
 
   // Match updates
   const sendMatchUpdate = useCallback((matchData: Omit<MatchData, 'tournamentId' | 'fieldId'>) => {
-    const tournamentId = currentTournamentRef.current;
-    const fieldId = currentFieldRef.current;
+    const currentTournamentId = currentTournamentRef.current || tournamentId;
+    const currentFieldId = currentFieldRef.current || fieldId;
     
-    if (!tournamentId) {
+    if (!currentTournamentId) {
       console.error('[useUnifiedWebSocket] No tournament ID available for sendMatchUpdate', {
-        tournamentIdFromOptions: options.tournamentId,
+        tournamentIdFromOptions: tournamentId,
         currentTournamentRef: currentTournamentRef.current,
         timestamp: new Date().toISOString()
       });
@@ -171,51 +183,62 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
 
     unifiedWebSocketService.sendMatchUpdate({
       ...matchData,
-      tournamentId,
-      fieldId: fieldId || undefined,
+      tournamentId: currentTournamentId,
+      fieldId: currentFieldId || undefined,
     });
-  }, []);
+  }, [tournamentId, fieldId]);
 
   const sendMatchStateChange = useCallback((stateData: Omit<MatchStateData, 'tournamentId' | 'fieldId'>) => {
-    const tournamentId = currentTournamentRef.current;
-    const fieldId = currentFieldRef.current;
+    const currentTournamentId = currentTournamentRef.current || tournamentId;
+    const currentFieldId = currentFieldRef.current || fieldId;
     
-    if (!tournamentId) {
+    if (!currentTournamentId) {
       console.error('[useUnifiedWebSocket] No tournament ID available for sendMatchStateChange');
       return;
     }
 
     unifiedWebSocketService.sendMatchStateChange({
       ...stateData,
-      tournamentId,
-      fieldId: fieldId || undefined,
+      tournamentId: currentTournamentId,
+      fieldId: currentFieldId || undefined,
     });
-  }, []);
+  }, [tournamentId, fieldId]);
 
   // Display mode changes
   const changeDisplayMode = useCallback((settings: Omit<AudienceDisplaySettings, 'tournamentId' | 'fieldId'>) => {
-    const tournamentId = currentTournamentRef.current;
-    const fieldId = currentFieldRef.current;
+    const currentTournamentId = currentTournamentRef.current || tournamentId;
+    const currentFieldId = currentFieldRef.current || fieldId;
     
-    if (!tournamentId) {
+    console.log('[useUnifiedWebSocket] changeDisplayMode called:', {
+      tournamentIdFromOptions: tournamentId,
+      fieldIdFromOptions: fieldId,
+      currentTournamentRef: currentTournamentRef.current,
+      currentFieldRef: currentFieldRef.current,
+      finalTournamentId: currentTournamentId,
+      finalFieldId: currentFieldId,
+      settings,
+      timestamp: new Date().toISOString()
+    });
+    
+    if (!currentTournamentId) {
       console.error('[useUnifiedWebSocket] No tournament ID available for changeDisplayMode');
       return;
     }
 
     unifiedWebSocketService.sendDisplayModeChange({
       ...settings,
-      tournamentId,
-      fieldId: fieldId || undefined,
+      tournamentId: currentTournamentId,
+      fieldId: currentFieldId || undefined,
       updatedAt: Date.now(),
     });
-  }, []);
+  }, [tournamentId, fieldId]);
 
   // Announcements
   const sendAnnouncement = useCallback((message: string, duration?: number) => {
-    const tournamentId = currentTournamentRef.current;
-    const fieldId = currentFieldRef.current;
+    const currentTournamentId = currentTournamentRef.current || tournamentId;
+    const currentFieldId = currentFieldRef.current || fieldId;
     
-    if (!tournamentId) {
+    if (!currentTournamentId) {
       console.error('[useUnifiedWebSocket] No tournament ID available for sendAnnouncement');
       return;
     }
@@ -223,10 +246,10 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
     unifiedWebSocketService.sendAnnouncement({
       message,
       duration,
-      tournamentId,
-      fieldId: fieldId || undefined,
+      tournamentId: currentTournamentId,
+      fieldId: currentFieldId || undefined,
     });
-  }, []);
+  }, [tournamentId, fieldId]);
 
   // Collaborative session management
   const joinCollaborativeSession = useCallback((matchId: string) => {
@@ -251,6 +274,7 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
     const handleConnectionStatus = (status: any) => {
       console.log(`[useUnifiedWebSocket] Connection status update:`, status);
       setIsConnected(status.connected && status.state === 'CONNECTED');
+      setIsReady(status.ready && status.connected && status.state === 'CONNECTED');
       setConnectionStatus(status.state || 'disconnected');
     };
 
@@ -260,6 +284,7 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
     // Set initial connection status
     const currentStatus = unifiedWebSocketService.getConnectionStatus();
     setIsConnected(currentStatus.connected && currentStatus.state === 'CONNECTED');
+    setIsReady(currentStatus.ready && currentStatus.connected && currentStatus.state === 'CONNECTED');
     setConnectionStatus(currentStatus.state || 'disconnected');
     
     console.log(`[useUnifiedWebSocket] Initial connection status:`, currentStatus);
@@ -292,14 +317,18 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
     };
   }, [autoConnect, userRole, connect, tournamentId, fieldId, leaveFieldRoom, leaveTournament]);
 
-  // Join rooms when connection is established
+  // Join rooms when connection is ready (not just connected)
   useEffect(() => {
-    if (!isConnected) return;
+    if (!isReady) {
+      console.log(`[useUnifiedWebSocket] Connection not ready yet. Connected: ${isConnected}, Ready: ${isReady}`);
+      return;
+    }
 
     // Add a small delay to ensure socket is fully ready before joining rooms
     const delayTimeout = setTimeout(() => {
-      // Double-check that we're still connected before joining
-      if (unifiedWebSocketService.isConnected()) {
+      // Double-check that we're still ready before joining
+      const currentStatus = unifiedWebSocketService.getConnectionStatus();
+      if (currentStatus.ready && currentStatus.connected) {
         // Join tournament if provided
         if (tournamentId) {
           console.log(`[useUnifiedWebSocket] Joining tournament: ${tournamentId}`);
@@ -312,16 +341,17 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
           joinFieldRoom(fieldId);
         }
       } else {
-        console.warn('[useUnifiedWebSocket] Connection lost before joining rooms');
+        console.warn('[useUnifiedWebSocket] Connection not ready before joining rooms');
       }
-    }, 100); // 100ms delay to ensure socket is fully ready
+    }, 100); // 100ms delay for extra safety
 
     return () => clearTimeout(delayTimeout);
-  }, [isConnected, tournamentId, fieldId, joinTournament, joinFieldRoom]);
+  }, [isReady, tournamentId, fieldId, joinTournament, joinFieldRoom]);
 
   return {
     // Connection state
     isConnected,
+    isReady,
     connectionStatus,
     
     // Connection management

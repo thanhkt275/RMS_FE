@@ -11,6 +11,7 @@ export enum ConnectionState {
 export interface ConnectionStatus {
   state: ConnectionState;
   connected: boolean;
+  ready: boolean; // Indicates if connection is fully ready for operations
   reconnectAttempts: number;
   lastConnected?: Date;
   lastError?: string;
@@ -28,6 +29,7 @@ export class ConnectionManager {
   private readonly maxReconnectAttempts = 5;
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private connectionState: ConnectionState = ConnectionState.DISCONNECTED;
+  private ready = false; // Track if connection is fully ready
   private statusCallbacks: Set<ConnectionStatusCallback> = new Set();
   private currentUrl?: string;
 
@@ -87,6 +89,7 @@ export class ConnectionManager {
    */
   disconnect(): void {
     this.clearReconnectTimeout();
+    this.ready = false; // Mark as not ready when disconnecting
     
     if (this.socket) {
       this.socket.removeAllListeners();
@@ -106,12 +109,20 @@ export class ConnectionManager {
   }
 
   /**
+   * Check if connection is ready for operations (connected + ready)
+   */
+  isReady(): boolean {
+    return this.isConnected() && this.ready;
+  }
+
+  /**
    * Get current connection status
    */
   getConnectionStatus(): ConnectionStatus {
     return {
       state: this.connectionState,
       connected: this.isConnected(),
+      ready: this.ready,
       reconnectAttempts: this.reconnectAttempts,
       lastConnected: this.connectionState === ConnectionState.CONNECTED ? new Date() : undefined
     };
@@ -159,11 +170,19 @@ export class ConnectionManager {
       this.reconnectAttempts = 0;
       this.clearReconnectTimeout();
       this.updateConnectionState(ConnectionState.CONNECTED);
-      this.syncStateOnReconnect();
+      
+      // Add a small delay to ensure socket is fully ready before marking as ready
+      setTimeout(() => {
+        this.ready = true;
+        console.log('[ConnectionManager] Connection is now ready for operations');
+        this.updateConnectionState(ConnectionState.CONNECTED); // Trigger status update with ready=true
+        this.syncStateOnReconnect();
+      }, 200); // 200ms delay to ensure socket is fully ready
     });
 
     this.socket.on('disconnect', (reason) => {
       console.log(`[ConnectionManager] Disconnected: ${reason}`);
+      this.ready = false; // Mark as not ready when disconnected
       this.updateConnectionState(ConnectionState.DISCONNECTED);
       
       // Only attempt reconnection if it wasn't a manual disconnect

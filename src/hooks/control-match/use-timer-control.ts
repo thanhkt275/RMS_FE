@@ -399,11 +399,15 @@ export function useTimerControl({
     }
 
     const currentTime = Date.now();
+    // Calculate the actual start time based on current remaining time
+    // If timer has 120 seconds left, the effective start time should be 30 seconds ago (for a 150s timer)
+    const effectiveStartTime = currentTime - (timerDuration - timerRemaining);
+    
     const timerData = {
       duration: timerDuration,
-      remaining: timerRemaining,
+      remaining: timerRemaining, // Use current remaining time
       isRunning: true, // Start the timer as running
-      startedAt: currentTime,
+      startedAt: effectiveStartTime, // Use calculated effective start time
       timestamp: currentTime,
     };
 
@@ -411,10 +415,13 @@ export function useTimerControl({
 
     // Update local state immediately for responsiveness
     setTimerIsRunning(true);
-    setLocalStartTime(currentTime);
+    setLocalStartTime(effectiveStartTime);
 
-    // Set to auto period when starting
-    setMatchPeriod("auto");
+    // Only set to auto period when starting from full duration
+    if (timerRemaining === timerDuration) {
+      setMatchPeriod("auto");
+    }
+    // Otherwise keep current period
 
     // Emit immediate timer update for real-time sync
     if (isConnected && tournamentId) {
