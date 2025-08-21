@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTeamById, useTeamsMutations, canUserEditTeam } from "@/hooks/teams/use-teams";
 import { useAuth } from "@/hooks/common/use-auth";
-import { UserRole } from "@/types/types";
+import { UserRole } from "@/types/user.types";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { ArrowLeft, Users, Plus, Trash2, Save, X } from "lucide-react";
@@ -48,6 +48,7 @@ export default function EditTeamPage({ params }: EditTeamPageProps) {
           team.teamMembers?.map((member) => ({
             name: member.name,
             gender: member.gender,
+            dateOfBirth: member.dateOfBirth,
             phoneNumber: member.phoneNumber,
             email: member.email,
             province: member.province,
@@ -87,6 +88,7 @@ export default function EditTeamPage({ params }: EditTeamPageProps) {
         {
           name: "",
           gender: null,
+          dateOfBirth: "",
           phoneNumber: "",
           email: "",
           province: "",
@@ -285,6 +287,21 @@ export default function EditTeamPage({ params }: EditTeamPageProps) {
                         <option value="FEMALE">Female</option>
                         <option value="OTHER">Other</option>
                       </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Date of Birth *
+                      </label>
+                      <input
+                        type="date"
+                        value={member.dateOfBirth}
+                        onChange={(e) =>
+                          updateMember(index, "dateOfBirth", e.target.value)
+                        }
+                        className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
                     </div>
 
                     <div>

@@ -63,11 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       setError(null);
-      console.log("[AuthProvider] Checking authentication...");
 
       const currentUser = await authService.getCurrentUser();
-      console.log("[AuthProvider] Auth check response:", currentUser);
-
       setUser(currentUser as User | null);
     } catch (err) {
       console.error("[AuthProvider] Auth check failed:", err);

@@ -1,4 +1,4 @@
-import { UserRole } from '@/types/types';
+import { UserRole } from '@/types/user.types';
 import { WebSocketEventData } from '@/types/websocket';
 
 /**

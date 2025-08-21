@@ -96,9 +96,9 @@ import {
     ScoreData,
     MatchStateData,
     AudienceDisplaySettings,
-    AnnouncementData,
-    UserRole
+    AnnouncementData
 } from '@/types/types';
+import { UserRole } from '@/types/user.types';
 
 export interface EmitOptions extends EventOptions {
     debounce?: boolean;

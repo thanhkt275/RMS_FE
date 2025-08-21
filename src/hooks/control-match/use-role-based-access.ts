@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/common/use-auth';
-import { UserRole } from '@/types/types';
+import { UserRole } from '@/types/user.types'; // Use the same UserRole enum as auth
 import { unifiedWebSocketService } from '@/lib/unified-websocket';
 
 /**
  * Hook for managing role-based access control in the control-match page
  */
 export function useRoleBasedAccess() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [accessControl, setAccessControl] = useState({
     canControlTimer: false,
     canControlMatch: false,
@@ -116,6 +116,7 @@ export function useRoleBasedAccess() {
     // Current user info
     currentRole: user?.role as UserRole || UserRole.COMMON,
     currentUser: user,
+    isLoading, // Add loading state
     
     // Utility functions
     canAccess,

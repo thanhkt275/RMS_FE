@@ -357,7 +357,7 @@ export class EnhancedAuthService implements IAuthService {
       }
 
       // Log other errors
-      console.error("Failed to get current user:", error);
+      console.error("[authService] Failed to get current user:", error);
       return null;
     }
   }

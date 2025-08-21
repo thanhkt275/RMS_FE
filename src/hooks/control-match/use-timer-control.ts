@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useUnifiedWebSocket } from "@/hooks/websocket/use-unified-websocket";
 import { unifiedWebSocketService } from "@/lib/unified-websocket";
-import { MatchStatus, UserRole } from "@/types/types";
+import { MatchStatus } from "@/types/types";
+import { UserRole } from "@/types/user.types"; // Use the same UserRole enum as auth
+import { toast } from "sonner";
 
 
 interface UseTimerControlProps {
@@ -39,6 +41,10 @@ interface TimerControlReturn {
   handlePauseTimer: () => void;
   handleResetTimer: () => void;
 
+  // RBAC state
+  canControlTimer: boolean;
+  hasTimerPermission: boolean;
+
   // Utility functions
   formatTime: (ms: number) => string;
 }
@@ -48,10 +54,12 @@ export function useTimerControl({
   selectedFieldId,
   initialDuration = 150000, // 2:30 in ms
   selectedMatchId,
-  userRole = UserRole.HEAD_REFEREE,
+  userRole,
   sendMatchStateChange,
   updateMatchStatusAPI,
 }: UseTimerControlProps): TimerControlReturn {
+  // RBAC validation - only ADMIN and HEAD_REFEREE can control timer
+  const hasTimerPermission = userRole === UserRole.ADMIN || userRole === UserRole.HEAD_REFEREE;
   // Timer configuration state
   const [timerDuration, setTimerDuration] = useState<number>(initialDuration);
   const [matchPeriod, setMatchPeriod] = useState<string>("auto");
@@ -286,7 +294,10 @@ export function useTimerControl({
 
   // Period transition logic - matches the FRC timing
   useEffect(() => {
-    if (!timerIsRunning) return;
+    // Allow completion logic to run even when timer is stopped (for auto-completion when timer reaches 0)
+    const shouldRunCompletionCheck = timerRemaining <= 0 && matchPeriod !== "completed";
+    
+    if (!timerIsRunning && !shouldRunCompletionCheck) return;
 
     const elapsedTime = timerDuration - timerRemaining;
 
@@ -297,6 +308,8 @@ export function useTimerControl({
       timerDuration,
       elapsedSeconds: Math.floor(elapsedTime / 1000),
       remainingSeconds: Math.floor(timerRemaining / 1000),
+      timerIsRunning,
+      shouldRunCompletionCheck
     });
 
     // For FRC match timing:
@@ -304,72 +317,105 @@ export function useTimerControl({
     // - Teleop: 30-120 seconds elapsed (2:00 to 0:30 remaining)  
     // - Endgame: 120+ seconds elapsed (last 30 seconds, 0:30 to 0:00 remaining)
 
-    // Transition to teleop after 30 seconds (when 2:00 remains for 2:30 match)
-    if (matchPeriod === "auto" && elapsedTime >= 30000) {
-      console.log('[useTimerControl] Transitioning from auto to teleop at', elapsedTime / 1000, 'seconds elapsed (', timerRemaining / 1000, 'seconds remaining)');
-      setMatchPeriod("teleop");
+    // Only run period transitions when timer is actively running
+    if (timerIsRunning) {
+      // Transition to teleop after 30 seconds (when 2:00 remains for 2:30 match)
+      if (matchPeriod === "auto" && elapsedTime >= 30000) {
+        console.log('[useTimerControl] Transitioning from auto to teleop at', elapsedTime / 1000, 'seconds elapsed (', timerRemaining / 1000, 'seconds remaining)');
+        setMatchPeriod("teleop");
 
-      // Broadcast match state change via WebSocket (immediate)
-      if (sendMatchStateChangeRef.current && selectedMatchId) {
-        sendMatchStateChangeRef.current({
-          matchId: selectedMatchId,
-          status: MatchStatus.IN_PROGRESS,
-          currentPeriod: "teleop",
-          fieldId: selectedFieldId || undefined,
-        });
+        // Broadcast match state change via WebSocket (immediate)
+        if (sendMatchStateChangeRef.current && selectedMatchId) {
+          sendMatchStateChangeRef.current({
+            matchId: selectedMatchId,
+            status: MatchStatus.IN_PROGRESS,
+            currentPeriod: "teleop",
+            fieldId: selectedFieldId || undefined,
+          });
+        }
+
+        // Update API status
+        if (updateMatchStatusAPI && selectedMatchId) {
+          updateMatchStatusAPI({
+            matchId: selectedMatchId,
+            status: MatchStatus.IN_PROGRESS,
+          });
+        }
       }
+      // Transition to endgame in the last 30 seconds (when 0:30 remains)
+      else if ((matchPeriod === "auto" || matchPeriod === "teleop") && timerRemaining <= 30000 && timerRemaining > 0) {
+        console.log('[useTimerControl] Transitioning to endgame at', timerRemaining / 1000, 'seconds remaining');
+        setMatchPeriod("endgame");
 
-      // Update API status
-      if (updateMatchStatusAPI && selectedMatchId) {
-        updateMatchStatusAPI({
-          matchId: selectedMatchId,
-          status: MatchStatus.IN_PROGRESS,
-        });
-      }
-    }
-    // Transition to endgame in the last 30 seconds (when 0:30 remains)
-    else if ((matchPeriod === "auto" || matchPeriod === "teleop") && timerRemaining <= 30000 && timerRemaining > 0) {
-      console.log('[useTimerControl] Transitioning to endgame at', timerRemaining / 1000, 'seconds remaining');
-      setMatchPeriod("endgame");
+        // Broadcast match state change via WebSocket (immediate)
+        if (sendMatchStateChangeRef.current && selectedMatchId) {
+          sendMatchStateChangeRef.current({
+            matchId: selectedMatchId,
+            status: MatchStatus.IN_PROGRESS,
+            currentPeriod: "endgame",
+            fieldId: selectedFieldId || undefined,
+          });
+        }
 
-      // Broadcast match state change via WebSocket (immediate)
-      if (sendMatchStateChangeRef.current && selectedMatchId) {
-        sendMatchStateChangeRef.current({
-          matchId: selectedMatchId,
-          status: MatchStatus.IN_PROGRESS,
-          currentPeriod: "endgame",
-          fieldId: selectedFieldId || undefined,
-        });
-      }
-
-      // Update API status
-      if (updateMatchStatusAPI && selectedMatchId) {
-        updateMatchStatusAPI({
-          matchId: selectedMatchId,
-          status: MatchStatus.IN_PROGRESS,
-        });
+        // Update API status
+        if (updateMatchStatusAPI && selectedMatchId) {
+          updateMatchStatusAPI({
+            matchId: selectedMatchId,
+            status: MatchStatus.IN_PROGRESS,
+          });
+        }
       }
     }
     // Set match status to COMPLETED when timer reaches 0
     else if (timerRemaining <= 0 && matchPeriod !== "completed") {
-      console.log('[useTimerControl] Match completed');
+      console.log('[useTimerControl] Match completed - Auto-setting status to COMPLETED');
+      console.log('[useTimerControl] Completion check:', {
+        timerRemaining,
+        matchPeriod,
+        selectedMatchId,
+        hasStateChangeCallback: !!sendMatchStateChangeRef.current,
+        hasAPICallback: !!updateMatchStatusAPI
+      });
+      
       setMatchPeriod("completed");
 
       // Broadcast match state change via WebSocket (immediate)
       if (sendMatchStateChangeRef.current && selectedMatchId) {
+        console.log('[useTimerControl] Broadcasting COMPLETED status via WebSocket');
         sendMatchStateChangeRef.current({
           matchId: selectedMatchId,
           status: MatchStatus.COMPLETED,
           currentPeriod: null,
           fieldId: selectedFieldId || undefined,
         });
+      } else {
+        console.warn('[useTimerControl] Cannot broadcast completion: missing callback or matchId', {
+          hasCallback: !!sendMatchStateChangeRef.current,
+          selectedMatchId
+        });
       }
 
       // Update API status
       if (updateMatchStatusAPI && selectedMatchId) {
+        console.log('[useTimerControl] Updating match status to COMPLETED via API');
         updateMatchStatusAPI({
           matchId: selectedMatchId,
           status: MatchStatus.COMPLETED,
+        });
+      } else {
+        console.warn('[useTimerControl] Cannot update API: missing callback or matchId', {
+          hasAPICallback: !!updateMatchStatusAPI,
+          selectedMatchId
+        });
+      }
+    } else {
+      // Debug why auto-completion didn't trigger
+      if (timerRemaining <= 0) {
+        console.log('[useTimerControl] Timer reached 0 but completion blocked:', {
+          timerRemaining,
+          matchPeriod,
+          isAlreadyCompleted: matchPeriod === "completed",
+          shouldComplete: timerRemaining <= 0 && matchPeriod !== "completed"
         });
       }
     }
@@ -391,10 +437,25 @@ export function useTimerControl({
     }
   }, [selectedMatchId, timerDuration]);
 
-  // Timer control handlers with access control
+  // Timer control handlers with enhanced RBAC
   const handleStartTimer = useCallback(() => {
+    // Primary RBAC check - only ADMIN and HEAD_REFEREE allowed
+    if (!hasTimerPermission) {
+      const message = `Access denied: Timer control requires ADMIN or HEAD_REFEREE role. Current role: ${userRole}`;
+      console.warn('[useTimerControl]', message);
+      toast.error('Timer Control Access Denied', {
+        description: `Only Admins and Head Referees can control the timer. Your role: ${userRole}`
+      });
+      return;
+    }
+    
+    // Secondary WebSocket permission check
     if (!canAccess('timer_control')) {
-      console.warn('[useTimerControl] Access denied for timer control');
+      const message = 'WebSocket service denied timer control access';
+      console.warn('[useTimerControl]', message);
+      toast.error('Timer Control Unavailable', {
+        description: 'Timer control is currently unavailable. Please check your connection and permissions.'
+      });
       return;
     }
 
@@ -447,11 +508,26 @@ export function useTimerControl({
     }
 
     console.log('[useTimerControl] Timer started:', timerData);
-  }, [canAccess, timerDuration, timerRemaining, startTimer, selectedMatchId, selectedFieldId, isConnected, tournamentId]);
+  }, [hasTimerPermission, canAccess, timerDuration, timerRemaining, startTimer, selectedMatchId, selectedFieldId, isConnected, tournamentId, userRole]);
 
   const handlePauseTimer = useCallback(() => {
+    // Primary RBAC check - only ADMIN and HEAD_REFEREE allowed
+    if (!hasTimerPermission) {
+      const message = `Access denied: Timer control requires ADMIN or HEAD_REFEREE role. Current role: ${userRole}`;
+      console.warn('[useTimerControl]', message);
+      toast.error('Timer Control Access Denied', {
+        description: `Only Admins and Head Referees can control the timer. Your role: ${userRole}`
+      });
+      return;
+    }
+    
+    // Secondary WebSocket permission check
     if (!canAccess('timer_control')) {
-      console.warn('[useTimerControl] Access denied for timer control');
+      const message = 'WebSocket service denied timer control access';
+      console.warn('[useTimerControl]', message);
+      toast.error('Timer Control Unavailable', {
+        description: 'Timer control is currently unavailable. Please check your connection and permissions.'
+      });
       return;
     }
 
@@ -483,11 +559,26 @@ export function useTimerControl({
     }
 
     console.log('[useTimerControl] Timer paused:', timerData);
-  }, [canAccess, timerDuration, timerRemaining, pauseTimer, isConnected, tournamentId, selectedFieldId]);
+  }, [hasTimerPermission, canAccess, timerDuration, timerRemaining, pauseTimer, isConnected, tournamentId, selectedFieldId, userRole]);
 
   const handleResetTimer = useCallback(() => {
+    // Primary RBAC check - only ADMIN and HEAD_REFEREE allowed
+    if (!hasTimerPermission) {
+      const message = `Access denied: Timer control requires ADMIN or HEAD_REFEREE role. Current role: ${userRole}`;
+      console.warn('[useTimerControl]', message);
+      toast.error('Timer Control Access Denied', {
+        description: `Only Admins and Head Referees can control the timer. Your role: ${userRole}`
+      });
+      return;
+    }
+    
+    // Secondary WebSocket permission check
     if (!canAccess('timer_control')) {
-      console.warn('[useTimerControl] Access denied for timer control');
+      const message = 'WebSocket service denied timer control access';
+      console.warn('[useTimerControl]', message);
+      toast.error('Timer Control Unavailable', {
+        description: 'Timer control is currently unavailable. Please check your connection and permissions.'
+      });
       return;
     }
 
@@ -532,7 +623,7 @@ export function useTimerControl({
     }
 
     console.log('[useTimerControl] Timer reset:', timerData);
-  }, [canAccess, timerDuration, resetTimer, selectedMatchId, selectedFieldId, isConnected, tournamentId]);
+  }, [hasTimerPermission, canAccess, timerDuration, resetTimer, selectedMatchId, selectedFieldId, isConnected, tournamentId, userRole]);
 
   return {
     // Timer state
@@ -549,6 +640,10 @@ export function useTimerControl({
     handleStartTimer,
     handlePauseTimer,
     handleResetTimer,
+
+    // RBAC state
+    canControlTimer: canAccess('timer_control'),
+    hasTimerPermission,
 
     // Utility functions
     formatTime,

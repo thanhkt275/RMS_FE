@@ -251,7 +251,7 @@ export default function ControlMatchPage() {
     setMatchState(data);
   }, []);
 
-  // Initialize unified WebSocket connection
+  // Initialize unified WebSocket connection with actual user role
   const {
     isConnected,
     changeDisplayMode,
@@ -264,7 +264,7 @@ export default function ControlMatchPage() {
     tournamentId,
     fieldId: selectedFieldId || undefined,
     autoConnect: true,
-    userRole: UserRole.HEAD_REFEREE,
+    userRole: roleAccess.currentRole, // Use actual user role from auth
   });
 
   // Subscribe to WebSocket events through unified service
@@ -337,7 +337,7 @@ export default function ControlMatchPage() {
     updateMatchStatusSilent.mutate({ matchId, status });
   }, []); // Empty dependency array since we're using the mutation directly
 
-  // Initialize timer control hook with API update function
+  // Initialize timer control hook with API update function and proper RBAC
   const {
     timerDuration,
     timerRemaining,
@@ -349,11 +349,15 @@ export default function ControlMatchPage() {
     handlePauseTimer,
     handleResetTimer,
     formatTime,
+    canControlTimer,
+    hasTimerPermission,
   } = useTimerControl({
     tournamentId,
     selectedFieldId,
     selectedMatchId,
+    userRole: roleAccess.currentRole, // Pass actual user role for RBAC validation
     sendMatchStateChange: sendMatchStateChangeWrapper,
+    updateMatchStatusAPI, // Pass the API update function
   });
 
   // Initialize scoring control hook
@@ -743,7 +747,7 @@ export default function ControlMatchPage() {
                 onPauseTimer={handlePauseTimer}
                 onResetTimer={handleEnhancedResetTimer}
                 formatTime={formatTime}
-                disabled={!isConnected || !selectedMatchId}
+                disabled={!isConnected || !selectedMatchId || !hasTimerPermission}
               />
             ) : (
               <AccessDenied

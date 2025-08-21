@@ -115,39 +115,51 @@ export function useUnifiedMatchControl({
       return str; // fallback to original if no pattern match
     };
 
-    if (selectedMatch?.alliances) {
+    if (selectedMatch?.alliances && Array.isArray(selectedMatch.alliances)) {
       const redAlliance = selectedMatch.alliances.find((a: any) => a.color === 'RED');
       const blueAlliance = selectedMatch.alliances.find((a: any) => a.color === 'BLUE');
       
       console.log('🎯 [useUnifiedMatchControl] redAlliance:', redAlliance);
       console.log('🎯 [useUnifiedMatchControl] blueAlliance:', blueAlliance);
       
-      redTeams = redAlliance?.teamAlliances.map((ta: any) => {
-        const originalTeamNumber = ta.team?.teamNumber || ta.team?.name;
-        const shortNumber = extractTeamNumber(originalTeamNumber);
-        return {
-          id: ta.team?.id || ta.teamId,
-          name: shortNumber,
-          teamNumber: shortNumber,
-          originalTeamNumber: String(originalTeamNumber)
-        };
-      }) || [];
+      // Safely extract red teams with validation
+      if (redAlliance?.teamAlliances && Array.isArray(redAlliance.teamAlliances)) {
+        redTeams = redAlliance.teamAlliances.map((ta: any) => {
+          const originalTeamNumber = ta.team?.teamNumber || ta.team?.name;
+          const shortNumber = extractTeamNumber(originalTeamNumber);
+          return {
+            id: ta.team?.id || ta.teamId,
+            name: shortNumber,
+            teamNumber: shortNumber,
+            originalTeamNumber: String(originalTeamNumber)
+          };
+        });
+      } else {
+        console.warn('🎯 [useUnifiedMatchControl] Red alliance teamAlliances is invalid:', redAlliance?.teamAlliances);
+        redTeams = [];
+      }
       
-      blueTeams = blueAlliance?.teamAlliances.map((ta: any) => {
-        const originalTeamNumber = ta.team?.teamNumber || ta.team?.name;
-        const shortNumber = extractTeamNumber(originalTeamNumber);
-        return {
-          id: ta.team?.id || ta.teamId,
-          name: shortNumber,
-          teamNumber: shortNumber,
-          originalTeamNumber: String(originalTeamNumber)
-        };
-      }) || [];
+      // Safely extract blue teams with validation
+      if (blueAlliance?.teamAlliances && Array.isArray(blueAlliance.teamAlliances)) {
+        blueTeams = blueAlliance.teamAlliances.map((ta: any) => {
+          const originalTeamNumber = ta.team?.teamNumber || ta.team?.name;
+          const shortNumber = extractTeamNumber(originalTeamNumber);
+          return {
+            id: ta.team?.id || ta.teamId,
+            name: shortNumber,
+            teamNumber: shortNumber,
+            originalTeamNumber: String(originalTeamNumber)
+          };
+        });
+      } else {
+        console.warn('🎯 [useUnifiedMatchControl] Blue alliance teamAlliances is invalid:', blueAlliance?.teamAlliances);
+        blueTeams = [];
+      }
       
       console.log('🎯 [useUnifiedMatchControl] Extracted redTeams:', redTeams);
       console.log('🎯 [useUnifiedMatchControl] Extracted blueTeams:', blueTeams);
     } else {
-      console.warn('🎯 [useUnifiedMatchControl] No alliances data in selectedMatch');
+      console.warn('🎯 [useUnifiedMatchControl] No alliances data in selectedMatch:', selectedMatch);
     }
 
     const updateData: MatchData = {

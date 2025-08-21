@@ -67,11 +67,37 @@ const AllianceCard = ({
       <CardContent className="space-y-8">
         <div className="text-6xl font-semibold text-white space-y-4 min-h-[16rem]">
           {teams && teams.length > 0 ? (
-            teams.map((team, index) => (
-              <div key={`${team.id}-${index}`}>
-                {team.teamNumber ? `${team.teamNumber} - ${team.name}` : team.name}
-              </div>
-            ))
+            teams.map((team, index) => {
+              // Handle different team data formats
+              const displayName = (() => {
+                if (team.teamNumber && team.name) {
+                  // If both teamNumber and name exist, show "number - name"
+                  return `${team.teamNumber} - ${team.name}`;
+                } else if (team.teamNumber) {
+                  // If only teamNumber exists, show just the number
+                  return team.teamNumber;
+                } else if (team.name) {
+                  // If only name exists, check if it looks like a team number or actual name
+                  const nameStr = String(team.name);
+                  
+                  // If name looks like a team identifier (starts with letters followed by numbers)
+                  // or is all numbers, treat it as a team number
+                  if (/^[A-Z]+\d+$/.test(nameStr) || /^\d+$/.test(nameStr)) {
+                    return nameStr; // Show as-is for team identifiers like "NIH00003"
+                  } else {
+                    return nameStr; // Show actual team names
+                  }
+                } else {
+                  return `Team ${index + 1}`; // Fallback
+                }
+              })();
+
+              return (
+                <div key={`${team.id || index}-${index}`}>
+                  {displayName}
+                </div>
+              );
+            })
           ) : (
             <>
               <div>Team A</div>

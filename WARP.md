@@ -1,3 +1,7 @@
+# WARP.md
+
+This file provides guidance to WARP (warp.dev) when working with code in this repository.
+
 # Robotics Tournament Management System - Frontend
 
 A comprehensive web application for managing robotics competitions and tournaments, built with Next.js and featuring real-time updates, role-based access control, and a sophisticated tournament management system.
@@ -130,6 +134,21 @@ src/
 5. **TEAM_MEMBER** - Limited team-related access
 6. **COMMON** - Public/viewer access
 
+### Timer Control Restrictions
+
+**IMPORTANT**: Timer control is restricted to ADMIN and HEAD_REFEREE roles only for security and match integrity:
+
+- **ADMIN**: Full timer control (start, pause, reset, duration changes)
+- **HEAD_REFEREE**: Full timer control (start, pause, reset, duration changes)
+- **ALLIANCE_REFEREE**: No timer control access (scoring only)
+- **Other Roles**: No timer control access
+
+The system implements multiple layers of validation:
+1. Client-side UI disabling based on role permissions
+2. Hook-level RBAC validation with user-friendly error messages
+3. WebSocket service permission checks
+4. Server-side validation (when implemented)
+
 ### Permission System Architecture
 
 The system uses a feature-based permission model defined in `src/config/permissions.ts`:
@@ -167,6 +186,31 @@ Protected route examples:
 
 // Team management
 "/team-management" → requires TEAM_MANAGEMENT.CREATE_OWN (with ownership)
+```
+
+### Component-Level RBAC
+
+Components implement granular permission checks:
+
+```typescript
+// Timer control with enhanced RBAC
+const { hasTimerPermission, canControlTimer } = useTimerControl({
+  userRole: roleAccess.currentRole,
+  // ... other props
+});
+
+// Conditional rendering based on permissions
+{roleAccess.showTimerControls ? (
+  <TimerControlPanel 
+    disabled={!hasTimerPermission} 
+    // ... other props
+  />
+) : (
+  <AccessDenied 
+    feature="Timer Control"
+    requiredRoles={[UserRole.ADMIN, UserRole.HEAD_REFEREE]}
+  />
+)}
 ```
 
 ## Tournament Management System

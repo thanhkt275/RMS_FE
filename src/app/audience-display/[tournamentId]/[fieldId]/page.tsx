@@ -406,19 +406,42 @@ export default function LiveFieldDisplayPage() {
           redTeams = redAlliance.teamAlliances.map((ta: any) => {
             const originalTeamNumber = ta.team?.teamNumber || ta.team?.name || 'Unknown';
             const teamName = ta.team?.name || 'Unknown Team';
+            
+            // Improved team number extraction and processing
             const extractTeamNumber = (teamStr: string): string => {
               const str = String(teamStr);
+              
+              // If it looks like a team identifier (e.g., "NIH00003"), return as-is
+              if (/^[A-Z]+\d+$/.test(str)) {
+                return str;
+              }
+              
+              // If it's all numbers, clean up leading zeros but preserve the number
+              if (/^\d+$/.test(str)) {
+                return str.replace(/^0+/, '') || str.slice(-1);
+              }
+              
+              // Extract trailing numbers (for cases like "Team 007")
               const match = str.match(/\d+$/);
               if (match) {
                 const numericPart = match[0];
                 return numericPart.replace(/^0+/, '') || numericPart.slice(-1);
               }
+              
               return str;
             };
-            const shortNumber = extractTeamNumber(originalTeamNumber);
+            
+            const processedTeamNumber = extractTeamNumber(originalTeamNumber);
+            
+            // Determine if we should separate teamNumber and name
+            const shouldSeparate = teamName !== 'Unknown Team' && 
+                                 teamName !== originalTeamNumber && 
+                                 !/^[A-Z]+\d+$/.test(teamName);
+            
             return {
-              name: teamName,
-              teamNumber: shortNumber,
+              id: ta.team?.id || `${ta.team?.teamNumber || ta.team?.name}-${Math.random()}`,
+              name: shouldSeparate ? teamName : '',
+              teamNumber: processedTeamNumber,
               originalTeamNumber: String(originalTeamNumber)
             };
           });
@@ -428,19 +451,42 @@ export default function LiveFieldDisplayPage() {
           blueTeams = blueAlliance.teamAlliances.map((ta: any) => {
             const originalTeamNumber = ta.team?.teamNumber || ta.team?.name || 'Unknown';
             const teamName = ta.team?.name || 'Unknown Team';
+            
+            // Improved team number extraction and processing
             const extractTeamNumber = (teamStr: string): string => {
               const str = String(teamStr);
+              
+              // If it looks like a team identifier (e.g., "NIH00003"), return as-is
+              if (/^[A-Z]+\d+$/.test(str)) {
+                return str;
+              }
+              
+              // If it's all numbers, clean up leading zeros but preserve the number
+              if (/^\d+$/.test(str)) {
+                return str.replace(/^0+/, '') || str.slice(-1);
+              }
+              
+              // Extract trailing numbers (for cases like "Team 007")
               const match = str.match(/\d+$/);
               if (match) {
                 const numericPart = match[0];
                 return numericPart.replace(/^0+/, '') || numericPart.slice(-1);
               }
+              
               return str;
             };
-            const shortNumber = extractTeamNumber(originalTeamNumber);
+            
+            const processedTeamNumber = extractTeamNumber(originalTeamNumber);
+            
+            // Determine if we should separate teamNumber and name
+            const shouldSeparate = teamName !== 'Unknown Team' && 
+                                 teamName !== originalTeamNumber && 
+                                 !/^[A-Z]+\d+$/.test(teamName);
+            
             return {
-              name: teamName,
-              teamNumber: shortNumber,
+              id: ta.team?.id || `${ta.team?.teamNumber || ta.team?.name}-${Math.random()}`,
+              name: shouldSeparate ? teamName : '',
+              teamNumber: processedTeamNumber,
               originalTeamNumber: String(originalTeamNumber)
             };
           });

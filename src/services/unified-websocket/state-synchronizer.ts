@@ -1,4 +1,5 @@
-import { TimerData, ScoreData, MatchData, MatchStateData, UserRole } from '@/types/types';
+import { TimerData, ScoreData, MatchData, MatchStateData } from '@/types/types';
+import { UserRole } from '@/types/user.types';
 import { WebSocketEventData } from '@/types/websocket';
 
 /**

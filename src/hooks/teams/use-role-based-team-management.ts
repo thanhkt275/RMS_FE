@@ -157,17 +157,21 @@ export function useRoleBasedTeamManagement(
       }
 
       // Convert DTO to service format
+      // Note: Using type assertions for fields not in FilteredTeamMemberDto but required by backend
       const createRequest = {
         name: data.name,
         tournamentId: data.tournamentId,
         referralSource: data.referralSource,
         teamMembers: data.members.map(member => ({
           name: member.name,
+          gender: (member as any).gender || null,
+          dateOfBirth: (member as any).dateOfBirth || '',
           email: member.email,
           phoneNumber: member.phoneNumber,
           province: member.province || '',
           ward: member.ward || '',
           organization: member.organization,
+          organizationAddress: (member as any).organizationAddress,
         }))
       };
 
@@ -208,17 +212,21 @@ export function useRoleBasedTeamManagement(
       }
 
       // Convert DTO to service format
+      // Note: Using type assertions for fields not in FilteredTeamMemberDto but required by backend
       const updateRequest = {
         name: data.name || '',
         tournamentId: '', // This should be provided or fetched
         referralSource: data.referralSource || '',
         teamMembers: data.members?.map(member => ({
           name: member.name,
+          gender: (member as any).gender || null,
+          dateOfBirth: (member as any).dateOfBirth || '',
           email: member.email,
           phoneNumber: member.phoneNumber,
           province: member.province || '',
           ward: member.ward || '',
           organization: member.organization,
+          organizationAddress: (member as any).organizationAddress,
         })) || []
       };
 
