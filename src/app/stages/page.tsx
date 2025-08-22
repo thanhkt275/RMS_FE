@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/common/use-auth";
 import { useTournaments } from "@/hooks/tournaments/use-tournaments";
+import { useUserTournamentPreferences, usePublicTournamentPreferences } from "@/hooks/common/use-tournament-preferences";
 import { useStage, useDeleteStage, useStagesByTournament } from "@/hooks/stages/use-stages";
 import { useMatchesByStage, useDeleteMatch } from "@/hooks/matches/use-matches";
 import { useStageReadiness } from "@/hooks/stages/use-stage-advancement";
@@ -48,7 +49,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { PlusIcon, PencilIcon, TrashIcon, InfoIcon, CalendarIcon, ArrowLeftIcon, ListIcon, ClipboardIcon, BarChart3Icon, AlarmClock, Medal, Crown } from "lucide-react";
+import { PlusIcon, PencilIcon, TrashIcon, InfoIcon, CalendarIcon, ArrowLeftIcon, ListIcon, ClipboardIcon, BarChart3Icon, AlarmClock, Medal, Crown, SaveIcon, CheckCircleIcon } from "lucide-react";
 import StageDialog from "./stage-dialog";
 import MatchSchedulerDialog from "./match-scheduler-dialog";
 import EndStageDialog from "@/components/features/stages/end-stage-dialog";
@@ -58,10 +59,21 @@ import { MatchService } from "@/services/match-service";
 export default function StagesPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
-  const { data: tournaments, isLoading: tournamentsLoading } = useTournaments();
+  const { data: tournamentData, isLoading: tournamentsLoading } = useTournaments();
   
-  // State for selected tournament and stages
-  const [selectedTournamentId, setSelectedTournamentId] = useState<string>("");
+  // Tournament selection with auto-save preferences
+  const tournaments = useMemo(() => tournamentData || [], [tournamentData]);
+  
+  // Use different preference hooks based on authentication status
+  const {
+    selectedTournamentId,
+    setSelectedTournamentId,
+    isLoading: preferencesLoading,
+    hasStoredPreference,
+    lastSavedAt
+  } = user 
+    ? useUserTournamentPreferences(user.id, tournaments, true)
+    : usePublicTournamentPreferences(tournaments, true);
   const { 
     data: stagesData, 
     isLoading: stagesLoading, 
@@ -235,6 +247,22 @@ export default function StagesPage() {
     }
   };
 
+  // Format relative time for auto-save status
+  const formatLastSaved = (timestamp: number) => {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const seconds = Math.floor((diff % 60000) / 1000);
+    
+    if (minutes > 0) {
+      return `${minutes}m ago`;
+    } else if (seconds > 10) {
+      return `${seconds}s ago`;
+    } else {
+      return "just now";
+    }
+  };
+
   // Get selected tournament (for validation)
   const selectedTournament = tournaments?.find(t => t.id === selectedTournamentId);
 
@@ -319,8 +347,20 @@ export default function StagesPage() {
         {!selectedStageId && (
           <Card className="mb-8 bg-white border border-gray-200 shadow-lg rounded-xl">
             <CardHeader>
-              <CardTitle className="text-gray-900">Select Tournament</CardTitle>
-              <CardDescription className="text-gray-600">Choose a tournament to manage its stages</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-gray-900">Select Tournament</CardTitle>
+                  <CardDescription className="text-gray-600">Choose a tournament to manage its stages</CardDescription>
+                </div>
+                
+                {/* Auto-save preferences indicator */}
+                {hasStoredPreference && (
+                  <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+                    <SaveIcon size={14} />
+                    <span>Auto-save enabled</span>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid gap-6">
@@ -328,7 +368,7 @@ export default function StagesPage() {
                   <Select
                     value={selectedTournamentId}
                     onValueChange={setSelectedTournamentId}
-                    disabled={tournamentsLoading}
+                    disabled={tournamentsLoading || preferencesLoading}
                   >
                     <SelectTrigger className="w-full md:w-[400px] bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg">
                       <SelectValue placeholder="Select a tournament" />
@@ -341,8 +381,10 @@ export default function StagesPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {tournamentsLoading && (
-                    <p className="text-sm text-gray-600">Loading tournaments...</p>
+                  {(tournamentsLoading || preferencesLoading) && (
+                    <p className="text-sm text-gray-600">
+                      {tournamentsLoading ? "Loading tournaments..." : "Loading preferences..."}
+                    </p>
                   )}
                   {!tournamentsLoading && tournaments?.length === 0 && (
                     <div className="flex items-center gap-2 text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
@@ -355,13 +397,29 @@ export default function StagesPage() {
             </CardContent>
             {selectedTournament && (
               <CardFooter className="bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-                <div className="text-sm text-gray-700">
-                  <span className="font-medium">Selected:</span> {selectedTournament.name}
-                  <div className="text-xs text-gray-600 flex items-center gap-1 mt-1">
-                    <CalendarIcon size={12} />
-                    {formatDate(selectedTournament.startDate)} - {formatDate(selectedTournament.endDate)}
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-gray-700">
+                    <span className="font-medium">Selected:</span> {selectedTournament.name}
+                    <div className="text-xs text-gray-600 flex items-center gap-1 mt-1">
+                      <CalendarIcon size={12} />
+                      {formatDate(selectedTournament.startDate)} - {formatDate(selectedTournament.endDate)}
+                    </div>
                   </div>
+                  
+                  {/* Auto-save status indicator */}
+                  {hasStoredPreference && (
+                    <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200">
+                      <CheckCircleIcon size={12} />
+                      <span>Auto-saved</span>
+                      {lastSavedAt && (
+                        <span className="text-green-500 ml-1">
+                          {formatLastSaved(lastSavedAt)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
+                
                 {selectedTournamentId && (
                   <Button 
                     onClick={() => setIsCreateDialogOpen(true)}

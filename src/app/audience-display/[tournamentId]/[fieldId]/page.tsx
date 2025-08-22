@@ -12,7 +12,7 @@ import TeamsDisplay from "../../../../components/features/audience-display/displ
 import ScheduleDisplay, {
   Match,
 } from "../../../../components/features/audience-display/displays/schedule-display";
-import { useTeams } from "@/hooks/teams/use-teams";
+import { usePublicTeams } from "@/hooks/teams/use-public-teams";
 import { apiClient } from "@/lib/api-client";
 import { useInjectTextShadowStyle } from "../../../../hooks/common/use-inject-text-shadow-style";
 import { useAnnouncement } from "../../../../hooks/control-match/use-announcement";
@@ -98,7 +98,7 @@ export default function LiveFieldDisplayPage() {
     setShowAnnouncement,
     announcementCountdown,
     setAnnouncementCountdown,
-  } = useAnnouncement();
+  } = useAnnouncement({ disableAutoCountdown: true }); // Disable auto countdown to prevent conflicts
 
   // Validate field exists for this tournament
   const [fieldError, setFieldError] = useState<string | null>(null);
@@ -115,9 +115,9 @@ export default function LiveFieldDisplayPage() {
     }
   }, [fields, fieldId, field, tournament, isLoadingFields, tournamentId]);
 
-  // Fetch teams for the tournament
+  // Fetch teams for the tournament (public access)
   const { data: teams = [], isLoading: isLoadingTeams } =
-    useTeams(tournamentId);
+    usePublicTeams(tournamentId);
 
   // Fetch match schedule for the tournament
   const { data: matches = [], isLoading: isLoadingMatches } =
@@ -236,14 +236,141 @@ export default function LiveFieldDisplayPage() {
             fieldId,
           }),
         // Announcements
-        sendAnnouncement: (message: string, duration?: number) =>
-          sendAnnouncement(message, duration),
-        showTestAnnouncement: (message: string, seconds: number = 10) => {
+        sendAnnouncement: (announcementData: any) =>
+          sendAnnouncement(announcementData),
+        showTestAnnouncement: (message: string, seconds: number = 10, type: string = 'text', title?: string) => {
           // Helper for testing announcements with countdown directly
-          setAnnouncement(message);
+          const announcementData = {
+            type: type as any,
+            content: message,
+            title: title,
+            duration: seconds
+          };
+          console.log('🧪 [Test] Creating test announcement:', announcementData);
+          setAnnouncement(announcementData);
           setShowAnnouncement(true);
-          setAnnouncementCountdown(seconds);
-          setTimeout(() => setShowAnnouncement(false), seconds * 1000);
+          setAnnouncementCountdown(seconds); // Use the actual seconds parameter
+          
+          // Auto-hide and switch to blank after duration
+          setTimeout(() => {
+            setShowAnnouncement(false);
+            setDisplaySettings(prev => ({
+              ...prev,
+              displayMode: "blank",
+              updatedAt: Date.now()
+            }));
+          }, seconds * 1000);
+        },
+        
+        // Enhanced multimedia testing functions
+        testImageAnnouncement: (imageUrl?: string, title?: string, duration: number = 15) => {
+          const testUrl = imageUrl || 'https://picsum.photos/800/600?random=1';
+          const announcementData = {
+            type: 'image' as const,
+            content: testUrl,
+            title: title || 'Test Image',
+            duration: duration
+          };
+          console.log('🖼️ [Test] Testing image announcement:', announcementData);
+          setAnnouncement(announcementData);
+          setShowAnnouncement(true);
+          setAnnouncementCountdown(duration);
+          setTimeout(() => {
+            setShowAnnouncement(false);
+            setDisplaySettings(prev => ({ ...prev, displayMode: "blank", updatedAt: Date.now() }));
+          }, duration * 1000);
+        },
+        
+        testVideoAnnouncement: (videoUrl?: string, title?: string, duration: number = 30) => {
+          const testUrl = videoUrl || 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4';
+          const announcementData = {
+            type: 'video' as const,
+            content: testUrl,
+            title: title || 'Test Video',
+            duration: duration
+          };
+          console.log('🎥 [Test] Testing video announcement:', announcementData);
+          setAnnouncement(announcementData);
+          setShowAnnouncement(true);
+          setAnnouncementCountdown(duration);
+          setTimeout(() => {
+            setShowAnnouncement(false);
+            setDisplaySettings(prev => ({ ...prev, displayMode: "blank", updatedAt: Date.now() }));
+          }, duration * 1000);
+        },
+        
+        testYouTubeAnnouncement: (youtubeUrl?: string, title?: string, duration: number = 60) => {
+          const testUrl = youtubeUrl || 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+          const announcementData = {
+            type: 'youtube' as const,
+            content: testUrl,
+            title: title || 'Test YouTube Video',
+            duration: duration
+          };
+          console.log('🎥 [Test] Testing YouTube announcement:', announcementData);
+          setAnnouncement(announcementData);
+          setShowAnnouncement(true);
+          setAnnouncementCountdown(duration);
+          setTimeout(() => {
+            setShowAnnouncement(false);
+            setDisplaySettings(prev => ({ ...prev, displayMode: "blank", updatedAt: Date.now() }));
+          }, duration * 1000);
+        },
+        
+        testTextAnnouncement: (message?: string, title?: string, duration: number = 10) => {
+          const testMessage = message || 'This is a test text announcement with multimedia support!';
+          const announcementData = {
+            type: 'text' as const,
+            content: testMessage,
+            title: title || 'Test Announcement',
+            duration: duration
+          };
+          console.log('📝 [Test] Testing text announcement:', announcementData);
+          setAnnouncement(announcementData);
+          setShowAnnouncement(true);
+          setAnnouncementCountdown(duration);
+          setTimeout(() => {
+            setShowAnnouncement(false);
+            setDisplaySettings(prev => ({ ...prev, displayMode: "blank", updatedAt: Date.now() }));
+          }, duration * 1000);
+        },
+        
+        // Quick test suite
+        runTestSuite: () => {
+          console.log('🧪 [Test Suite] Starting multimedia announcement test suite...');
+          
+          // Test text first
+          setTimeout(() => {
+            (window as any).audienceDisplayWS.testTextAnnouncement('Testing text announcements...', 'Text Test', 3);
+          }, 500);
+          
+          // Test image
+          setTimeout(() => {
+            (window as any).audienceDisplayWS.testImageAnnouncement('https://picsum.photos/800/600', 'Image Test', 3);
+          }, 4000);
+          
+          // Test video
+          setTimeout(() => {
+            (window as any).audienceDisplayWS.testVideoAnnouncement('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'Video Test', 5);
+          }, 8000);
+          
+          // Test YouTube
+          setTimeout(() => {
+            (window as any).audienceDisplayWS.testYouTubeAnnouncement('https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'YouTube Test', 5);
+          }, 14000);
+          
+          console.log('🧪 [Test Suite] Test suite scheduled. Watch for announcements!');
+        },
+        
+        // Debug current announcement state
+        getAnnouncementState: () => {
+          return {
+            announcement,
+            showAnnouncement,
+            announcementCountdown,
+            isAnnouncementValid: !!(announcement && announcement.content),
+            overlayWillRender: !!(showAnnouncement && announcement?.content)
+          };
         },
 
         // Room management
@@ -699,34 +826,153 @@ export default function LiveFieldDisplayPage() {
 
     // Subscribe to announcements
     const unsubAnnouncement = unifiedSubscribe<{
-      message: string;
+      announcementData?: any;
+      // Legacy support for old message format
+      message?: string;
       duration?: number;
       fieldId?: string;
       tournamentId: string;
+      // New format fields
+      type?: string;
+      content?: string;
+      title?: string;
     }>("announcement", (data) => {
       console.log("🔔 [Unified WebSocket] Announcement received:", data);
+      console.log("🔔 [Announcement Debug] Raw data stringified:", JSON.stringify(data, null, 2));
+      console.log("🔔 [Announcement Debug] Data keys:", Object.keys(data || {}));
+      console.log("🔔 [Announcement Debug] Data.type:", data.type);
+      console.log("🔔 [Announcement Debug] Data.content:", data.content);
+      console.log("🔔 [Announcement Debug] Data.announcementData:", data.announcementData);
+      console.log("🔔 [Announcement Debug] Data.message:", data.message);
 
       // Show if it's a tournament-wide announcement or specific to this field
       if (!data.fieldId || data.fieldId === fieldId) {
         console.log(
-          "✅ [Unified WebSocket] Displaying announcement for field:",
+          "✅ [Unified WebSocket] Processing announcement for field:",
           fieldId,
-          data
+          "Tournament:", data.tournamentId
         );
-        setAnnouncement(data.message);
+        
+        let announcementData;
+        
+        // ENHANCED FORMAT DETECTION WITH PRIORITY ORDER
+        // Priority 1: Check for nested announcementData property
+        if (data.announcementData && typeof data.announcementData === 'object') {
+          console.log("📦 [Format Detection] Found nested announcementData property:", data.announcementData);
+          announcementData = data.announcementData;
+        }
+        // Priority 2: Check for root-level AnnouncementData format (type + content)
+        // This handles the case where announcement fields are mixed with routing fields
+        else if (data.type && data.content !== undefined) {
+          console.log("📄 [Format Detection] Found root-level AnnouncementData format (mixed with routing fields)");
+          // Extract only announcement-specific fields, ignore routing fields
+          announcementData = {
+            type: data.type,
+            content: data.content,
+            title: data.title,
+            duration: data.duration
+          };
+        }
+        // Priority 3: Check for legacy message format
+        else if (data.message !== undefined) {
+          console.log("📜 [Format Detection] Found legacy message format:", data.message);
+          announcementData = {
+            type: 'text' as const,
+            content: data.message,
+            title: undefined,
+            duration: Math.floor((data.duration || 10000) / 1000)
+          };
+        }
+        // Priority 4: Check if data itself IS the announcement (direct object) - exclude routing objects
+        else if (data && typeof data === 'object' && !data.fieldId && !data.tournamentId && Object.keys(data).length > 0) {
+          console.log("🎯 [Format Detection] Data appears to be direct AnnouncementData object:", data);
+          announcementData = data;
+        }
+        else {
+          console.error("❌ [Format Detection] Unknown announcement format, unable to process:", {
+            dataType: typeof data,
+            hasType: 'type' in data,
+            hasContent: 'content' in data,
+            hasMessage: 'message' in data,
+            hasAnnouncementData: 'announcementData' in data,
+            hasTournamentId: 'tournamentId' in data,
+            hasFieldId: 'fieldId' in data,
+            keys: Object.keys(data || {})
+          });
+          return;
+        }
+        
+        // VALIDATION AND SANITIZATION
+        if (!announcementData || typeof announcementData !== 'object') {
+          console.error("❌ [Validation] Invalid announcement data structure:", announcementData);
+          return;
+        }
+        
+        // Ensure type is valid
+        const validTypes = ['text', 'image', 'video', 'youtube'];
+        if (!announcementData.type || !validTypes.includes(announcementData.type)) {
+          console.warn("⚠️ [Validation] Invalid or missing type, defaulting to 'text':", announcementData.type);
+          announcementData.type = 'text';
+        }
+        
+        // Ensure content exists
+        if (!announcementData.content && announcementData.content !== '') {
+          console.error("❌ [Validation] Missing content field:", announcementData);
+          return;
+        }
+        
+        // Ensure duration is a number
+        if (announcementData.duration && typeof announcementData.duration !== 'number') {
+          console.warn("⚠️ [Validation] Converting duration to number:", announcementData.duration);
+          announcementData.duration = parseInt(announcementData.duration) || 10;
+        }
+        
+        console.log("✅ [Final Processing] Processed announcement data:", {
+          type: announcementData.type,
+          content: announcementData.content?.substring(0, 100) + (announcementData.content?.length > 100 ? '...' : ''),
+          title: announcementData.title,
+          duration: announcementData.duration,
+          contentLength: announcementData.content?.length
+        });
+        
+        // APPLY TO STATE
+        setAnnouncement(announcementData);
         setShowAnnouncement(true);
+        
+        // Set the countdown to match the actual duration
+        const actualDuration = announcementData.duration || 10;
+        setAnnouncementCountdown(actualDuration);
+        console.log("⏰ [Duration] Using announcement duration:", actualDuration, "seconds");
 
-        // Use the provided duration or default to 10 seconds
-        const displayDuration = data.duration || 10000;
+        // Calculate display duration in milliseconds
+        const displayDuration = actualDuration * 1000;
+        console.log("⏰ [Timer] Setting display duration:", displayDuration, "ms");
 
-        // Auto-hide announcement after duration
-        const timerId = setTimeout(
-          () => setShowAnnouncement(false),
-          displayDuration
-        );
+        // Auto-hide announcement after duration and switch to blank display
+        const timerId = setTimeout(() => {
+          console.log("⏰ [Timer] Auto-hiding announcement after", actualDuration, "seconds");
+          setShowAnnouncement(false);
+          
+          // Switch to blank display mode after announcement ends
+          console.log("📺 [Display] Switching to blank display after announcement");
+          setDisplaySettings(prev => ({
+            ...prev,
+            displayMode: "blank",
+            updatedAt: Date.now()
+          }));
+        }, displayDuration);
 
         // Clear timeout if component unmounts while announcement is showing
-        return () => clearTimeout(timerId);
+        return () => {
+          console.log("🧹 [Cleanup] Clearing announcement timer");
+          clearTimeout(timerId);
+        };
+      } else {
+        console.log("🚫 [Filter] Ignoring announcement - not for this field:", {
+          announcementFieldId: data.fieldId,
+          currentFieldId: fieldId,
+          match: data.fieldId === fieldId
+        });
       }
     });
 
@@ -828,32 +1074,36 @@ export default function LiveFieldDisplayPage() {
     }
   }, [timer, matchState.currentPeriod]); // Dependency array includes timer and currentPeriod
 
-  // Effect to handle announcement countdown
+  // Proper announcement countdown effect that respects user-specified duration
   useEffect(() => {
-    if (!showAnnouncement) {
-      setAnnouncementCountdown(null);
+    if (!showAnnouncement || !announcement) {
       return;
     }
 
-    // Start with 10 seconds by default if countdown is not already set
-    if (announcementCountdown === null) {
-      setAnnouncementCountdown(10);
+    // Only start countdown if we have a valid countdown value
+    if (announcementCountdown === null || announcementCountdown <= 0) {
+      return;
     }
 
-    // Update countdown every second
+    console.log('🔢 [Countdown] Starting countdown from', announcementCountdown, 'seconds');
+    
     const intervalId = setInterval(() => {
       setAnnouncementCountdown((prev) => {
         if (prev === null || prev <= 1) {
-          // Auto-hide announcement when countdown reaches 0
-          if (prev === 1) setTimeout(() => setShowAnnouncement(false), 100);
+          console.log('🔢 [Countdown] Countdown finished');
           return null;
         }
-        return prev - 1;
+        const newValue = prev - 1;
+        console.log('🔢 [Countdown] Countdown:', newValue, 'seconds remaining');
+        return newValue;
       });
     }, 1000);
 
-    return () => clearInterval(intervalId);
-  }, [showAnnouncement, announcementCountdown]);
+    return () => {
+      console.log('🧹 [Countdown] Cleaning up countdown interval');
+      clearInterval(intervalId);
+    };
+  }, [showAnnouncement, announcement, announcementCountdown]);
 
   // Debug component to show current display mode and other info
   const DebugInfo = () => {
@@ -1134,6 +1384,22 @@ export default function LiveFieldDisplayPage() {
         showAnnouncement={showAnnouncement}
         announcementCountdown={announcementCountdown}
       />
+      {/* DEBUG: Log announcement state for debugging */}
+      {showAnnouncement && (
+        <div className="fixed top-4 left-4 bg-black/80 text-white p-2 rounded text-xs z-[999] max-w-md">
+          <div className="font-bold">🔍 ANNOUNCEMENT DEBUG:</div>
+          <div>Type: {announcement?.type || 'undefined'}</div>
+          <div>Content: {announcement?.content?.substring(0, 50) || 'undefined'}...</div>
+          <div>Title: {announcement?.title || 'none'}</div>
+          <div>Duration Set: {announcement?.duration || 'undefined'} seconds</div>
+          <div>Show State: {showAnnouncement ? 'true' : 'false'}</div>
+          <div>Countdown: {announcementCountdown || 'null'} seconds</div>
+          <div>Display Mode: {displaySettings.displayMode}</div>
+          <div className="text-yellow-300 mt-1">
+            ⏰ Will switch to BLANK when countdown ends
+          </div>
+        </div>
+      )}
       {/* Header with tournament and field info */}
       <header className="mb-6 px-6 pt-8">
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">

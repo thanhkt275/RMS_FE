@@ -234,7 +234,7 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
   }, [tournamentId, fieldId]);
 
   // Announcements
-  const sendAnnouncement = useCallback((message: string, duration?: number) => {
+  const sendAnnouncement = useCallback((announcementData: any) => {
     const currentTournamentId = currentTournamentRef.current || tournamentId;
     const currentFieldId = currentFieldRef.current || fieldId;
     
@@ -243,12 +243,30 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
       return;
     }
 
-    unifiedWebSocketService.sendAnnouncement({
-      message,
-      duration,
-      tournamentId: currentTournamentId,
-      fieldId: currentFieldId || undefined,
-    });
+    // Support both old format (message, duration) and new format (AnnouncementData)
+    let fullAnnouncementData;
+    if (typeof announcementData === 'string') {
+      // Legacy support: sendAnnouncement(message, duration)
+      const message = announcementData;
+      const duration = arguments[1]; // second parameter
+      fullAnnouncementData = {
+        type: 'text',
+        content: message,
+        title: undefined,
+        duration: duration ? Math.floor(duration / 1000) : 10,
+        tournamentId: currentTournamentId,
+        fieldId: currentFieldId || undefined,
+      };
+    } else {
+      // New format: sendAnnouncement(AnnouncementData)
+      fullAnnouncementData = {
+        ...announcementData,
+        tournamentId: currentTournamentId,
+        fieldId: currentFieldId || undefined,
+      };
+    }
+
+    unifiedWebSocketService.sendAnnouncement(fullAnnouncementData);
   }, [tournamentId, fieldId]);
 
   // Collaborative session management

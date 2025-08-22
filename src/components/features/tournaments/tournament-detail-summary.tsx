@@ -69,13 +69,36 @@ export function TournamentDetailSummary({
   const statusInfo = getStatusInfo();
 
   const getDurationText = () => {
-    const duration = endDate.getTime() - startDate.getTime();
-    const days = Math.ceil(duration / (1000 * 60 * 60 * 24));
+    // Calculate duration in milliseconds
+    const durationMs = endDate.getTime() - startDate.getTime();
     
-    if (days === 1) return '1 day';
-    if (days < 7) return `${days} days`;
-    if (days < 30) return `${Math.ceil(days / 7)} week${Math.ceil(days / 7) > 1 ? 's' : ''}`;
-    return `${Math.ceil(days / 30)} month${Math.ceil(days / 30) > 1 ? 's' : ''}`;
+    // Convert to days and round appropriately
+    // Use Math.round instead of Math.ceil for more accurate day counting
+    const totalDays = Math.round(durationMs / (1000 * 60 * 60 * 24));
+    
+    // Handle edge cases
+    if (totalDays <= 0) return '0 days';
+    if (totalDays === 1) return '1 day';
+    
+    // Less than a week
+    if (totalDays < 7) return `${totalDays} days`;
+    
+    // Less than a month (4 weeks)
+    if (totalDays < 28) {
+      const weeks = Math.round(totalDays / 7);
+      return `${weeks} week${weeks > 1 ? 's' : ''}`;
+    }
+    
+    // Less than a year (12 months)
+    if (totalDays < 365) {
+      const months = Math.round(totalDays / 30.44); // More accurate monthly calculation
+      return `${months} month${months > 1 ? 's' : ''}`;
+    }
+    
+    // A year or more
+    const years = Math.round(totalDays / 365.25); // Account for leap years
+    if (years === 1) return '1 year';
+    return `${years} years`;
   };
 
   const { data: scoreConfig, isLoading: scoreConfigLoading } = useScoreConfigByTournamentId(tournament.id);

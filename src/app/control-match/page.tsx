@@ -31,6 +31,7 @@ import { apiClient } from "@/lib/api-client";
 import { useTimerControl } from "@/hooks/control-match/use-timer-control";
 import { useScoringControl } from "@/hooks/control-match/use-scoring-control";
 import { useDisplayControl } from "@/hooks/control-match/use-display-control";
+import { useAnnouncement } from "@/hooks/control-match/use-announcement";
 import { useRoleBasedAccess } from "@/hooks/control-match/use-role-based-access";
 import { useUnifiedMatchControl } from "@/hooks/control-match/use-unified-match-control";
 import { useUnifiedWebSocket } from "@/hooks/websocket/use-unified-websocket";
@@ -66,13 +67,23 @@ export default function ControlMatchPage() {
     setShowTimer,
     setShowScores,
     setShowTeams,
-    announcementMessage,
-    setAnnouncementMessage,
     selectedFieldId,
     setSelectedFieldId,
     selectedTournamentId,
     setSelectedTournamentId,
   } = useDisplayControl();
+
+  // Initialize multimedia announcement system
+  const {
+    announcement,
+    updateAnnouncement,
+    resetAnnouncement,
+    showAnnouncement,
+    setShowAnnouncement,
+    announcementCountdown,
+    setAnnouncementCountdown,
+    validateAnnouncement,
+  } = useAnnouncement();
 
   // State for selected match
   const [selectedMatchId, setSelectedMatchId] = useState<string>("");
@@ -433,19 +444,27 @@ export default function ControlMatchPage() {
 
   // Handle sending an announcement
   const handleSendAnnouncement = () => {
-    if (announcementMessage.trim()) {
-      sendAnnouncement(announcementMessage.trim());
-
-      // Switch display mode to announcement
-      changeDisplayMode({
-        displayMode: "announcement",
-        message: announcementMessage.trim(),
-        updatedAt: Date.now()
+    const validation = validateAnnouncement();
+    if (!validation.isValid) {
+      toast.error("Invalid Announcement", {
+        description: validation.error,
       });
-
-      // Clear input after sending
-      setAnnouncementMessage("");
+      return;
     }
+
+    // Send the multimedia announcement data
+    sendAnnouncement(announcement);
+
+    // DO NOT change display mode - let the announcement overlay handle display
+    // The audience display will show the announcement overlay and then switch to blank
+    // when the announcement ends
+
+    // Reset announcement after sending
+    resetAnnouncement();
+    
+    toast.success("Announcement Sent", {
+      description: `${announcement.type.charAt(0).toUpperCase() + announcement.type.slice(1)} announcement sent successfully`,
+    });
   };
 
   // Format date for display
@@ -794,8 +813,8 @@ export default function ControlMatchPage() {
           <div>
             {roleAccess.showDisplayControls ? (
               <AnnouncementPanel
-                announcementMessage={announcementMessage}
-                setAnnouncementMessage={setAnnouncementMessage}
+                announcement={announcement}
+                updateAnnouncement={updateAnnouncement}
                 displayMode={displayMode}
                 setDisplayMode={setDisplayMode}
                 showTimer={showTimer}
@@ -806,6 +825,7 @@ export default function ControlMatchPage() {
                 setShowTeams={setShowTeams}
                 onSendAnnouncement={handleSendAnnouncement}
                 onDisplayModeChange={handleDisplayModeChange}
+                validateAnnouncement={validateAnnouncement}
                 isConnected={isConnected}
               />
             ) : (
