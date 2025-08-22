@@ -16,25 +16,29 @@
 
 "use client";
 
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/common/use-auth";
 import { useTeamsPageData } from "@/hooks/teams/use-teams-page-data";
 import { useTeamsRoleAccess } from "@/hooks/teams/use-teams-role-access";
 import { useTeams } from "@/hooks/teams/use-teams";
+import { usePublicTeams, usePublicTournaments } from "@/hooks/teams/use-public-teams";
+import { usePublicTournamentPreferences } from "@/hooks/common/use-tournament-preferences";
 import { TeamDataFilterService } from "@/utils/teams/team-data-filter";
-import { TeamErrorHandler } from "@/utils/teams/team-error-handler";
 import { TeamLoadingState, TeamErrorState, TeamAccessDenied } from "./TeamAccessDenied";
 import { AdminTeamsView } from "./AdminTeamsView";
 import { RefTeamsView } from "./RefTeamsView";
 import { CommonTeamsView } from "./CommonTeamsView";
+import { PublicTeamsView } from "./PublicTeamsView";
+import { ResponsiveTeamsDisplay } from "./ResponsiveTeamsDisplay";
 import { UserRole } from "@/types/types";
 import type { OwnTeamDto, PublicTeamDto } from "@/types/team-dto.types";
 
 /**
  * Loading component for the teams page
  */
-function TeamsPageLoading() {
+const TeamsPageLoading = React.memo(function TeamsPageLoading() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex items-center justify-center min-h-[400px]">
@@ -45,12 +49,12 @@ function TeamsPageLoading() {
       </div>
     </div>
   );
-}
+});
 
 /**
  * Error component for the teams page
  */
-function TeamsPageError({ error }: { error: string }) {
+const TeamsPageError = React.memo(function TeamsPageError({ error }: { error: string }) {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex items-center justify-center min-h-[400px]">
@@ -76,12 +80,12 @@ function TeamsPageError({ error }: { error: string }) {
       </div>
     </div>
   );
-}
+});
 
 /**
  * Main Teams Page Container Component
  */
-export function TeamsPageContainer() {
+export const TeamsPageContainer = React.memo(function TeamsPageContainer({ initialTournamentId }: { initialTournamentId?: string } = {}) {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
   const {
@@ -92,7 +96,32 @@ export function TeamsPageContainer() {
     canViewPublicData,
   } = useTeamsRoleAccess();
 
-  // Teams page data hook - handles all the complex selection and data fetching logic
+  // State for public view tournament selection with auto-save
+  const {
+    data: publicTournaments = [],
+    isLoading: publicTournamentsLoading,
+  } = usePublicTournaments();
+
+  // Auto-save public tournament selection
+  const {
+    selectedTournamentId: publicSelectedTournamentId,
+    setSelectedTournamentId: setPublicSelectedTournamentId,
+    hasStoredPreference: hasPublicStoredPreference,
+  } = usePublicTournamentPreferences(publicTournaments);
+
+  const {
+    data: publicTeams = [],
+    isLoading: publicTeamsLoading,
+  } = usePublicTeams(publicSelectedTournamentId);
+
+  // Memoized callback for public tournament selection
+  const handlePublicTournamentChange = useCallback((tournamentId: string) => {
+    setPublicSelectedTournamentId(tournamentId);
+  }, [setPublicSelectedTournamentId]);
+
+  // Remove the old useEffect for setting initial tournament since it's now handled by preferences
+
+  // Teams page data hook - handles all the complex selection and data fetching logic (for authenticated users)
   const {
     selectedTournamentId,
     setSelectedTournamentId,
@@ -100,23 +129,31 @@ export function TeamsPageContainer() {
     setSelectedStageId,
     tournaments,
     filteredStages,
-    leaderboardRows,
     isLoading: dataLoading,
     tournamentsLoading,
     stagesLoading,
+    hasStoredPreference,
     ALL_TEAMS_OPTION,
   } = useTeamsPageData();
 
-  // All teams query for role-based filtering
+  // Memoized callback for tournament selection (authenticated users)
+  const handleTournamentChange = useCallback((tournamentId: string) => {
+    setSelectedTournamentId(tournamentId);
+  }, [setSelectedTournamentId]);
+
+  // All teams query for role-based filtering (for authenticated users)
   const {
     data: allTeams = [],
     error: teamsError,
     isLoading: teamsLoading,
-  } = useTeams(selectedTournamentId);
+  } = useTeams(user ? selectedTournamentId : undefined); // Only fetch if authenticated
 
-  // Process teams based on user role
+
+  // Process teams based on user role (only for authenticated users)
+  // Optimized with better dependency management to prevent unnecessary re-computations
   const processedTeamData = useMemo(() => {
-    if (!currentRole) {
+    // Early return for unauthenticated users or missing role
+    if (!user || !currentRole) {
       return {
         userTeam: null,
         otherTeams: [],
@@ -124,8 +161,8 @@ export function TeamsPageContainer() {
       };
     }
 
-    // Handle empty teams array
-    if (!allTeams || !allTeams.length) {
+    // Early return for empty teams array
+    if (!allTeams?.length) {
       return {
         userTeam: null,
         otherTeams: [],
@@ -133,7 +170,7 @@ export function TeamsPageContainer() {
       };
     }
 
-    // Filter teams based on role
+    // Filter teams based on role - this is the expensive computation
     const filteredTeams = TeamDataFilterService.filterTeamsForRole(
       allTeams,
       currentRole,
@@ -141,11 +178,13 @@ export function TeamsPageContainer() {
     );
 
     // For common users, separate own team from others
-    if (
+    const isCommonUser = (
       currentRole === UserRole.COMMON ||
       currentRole === UserRole.TEAM_MEMBER ||
       currentRole === UserRole.TEAM_LEADER
-    ) {
+    );
+
+    if (isCommonUser) {
       const userTeam = filteredTeams.find(
         (team) => "isUserTeam" in team && team.isUserTeam
       ) as OwnTeamDto | undefined;
@@ -166,24 +205,56 @@ export function TeamsPageContainer() {
       otherTeams: [],
       filteredTeams,
     };
-  }, [allTeams, currentRole, currentUser?.id]);
+  }, [
+    user,
+    currentRole,
+    currentUser?.id,
+    allTeams, // This is already memoized by React Query
+  ]);
 
   // Note: Removed auto-redirect logic to support multi-team membership
   // Users can now see all their teams across different tournaments
 
-  // Get columns based on role
+  // Get columns based on role (only for authenticated users)
+  // Memoized to prevent unnecessary recomputation when role doesn't change
   const columns = useMemo(() => {
+    if (!currentRole) return [];
     return TeamDataFilterService.getTeamColumnsForRole(currentRole);
   }, [currentRole]);
 
+  // Memoized tournament arrays for better performance
+  const memoizedPublicTournaments = useMemo(() => {
+    return Array.isArray(publicTournaments) ? publicTournaments : [];
+  }, [publicTournaments]);
+
+  const memoizedPublicTeams = useMemo(() => {
+    return Array.isArray(publicTeams) ? publicTeams : [];
+  }, [publicTeams]);
+
+  const memoizedTournaments = useMemo(() => {
+    return tournaments || [];
+  }, [tournaments]);
+
   // Show loading state
-  if (authLoading || (!user && !authLoading)) {
+  if (authLoading) {
     return <TeamLoadingState message="Loading authentication..." />;
   }
 
-  // Show error if user is not authenticated
+  // Show public view if user is not authenticated
   if (!user) {
-    return <TeamsPageError error="Please log in to view teams" />;
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <PublicTeamsView
+          tournaments={memoizedPublicTournaments}
+          selectedTournamentId={publicSelectedTournamentId}
+          onTournamentChange={handlePublicTournamentChange}
+          teams={memoizedPublicTeams}
+          isLoading={publicTeamsLoading}
+          tournamentsLoading={publicTournamentsLoading}
+          hasStoredPreference={hasPublicStoredPreference}
+        />
+      </div>
+    );
   }
 
   // Show error if role is not recognized
@@ -192,7 +263,7 @@ export function TeamsPageContainer() {
   }
 
   // Show loading state for data
-  if (dataLoading && !leaderboardRows.length) {
+  if (dataLoading) {
     return <TeamLoadingState message="Loading team data..." />;
   }
 
@@ -210,15 +281,15 @@ export function TeamsPageContainer() {
     case UserRole.ADMIN:
       return (
         <div className="container mx-auto py-8 px-4">
-          <AdminTeamsView
-            tournaments={tournaments || []}
-            selectedTournamentId={selectedTournamentId}
-            onTournamentChange={setSelectedTournamentId}
-            teams={allTeams}
-            leaderboardRows={leaderboardRows}
-            isLoading={dataLoading || teamsLoading}
-            tournamentsLoading={tournamentsLoading}
-          />
+        <AdminTeamsView
+          tournaments={memoizedTournaments}
+          selectedTournamentId={selectedTournamentId}
+          onTournamentChange={handleTournamentChange}
+          teams={allTeams}
+          isLoading={dataLoading || teamsLoading}
+          tournamentsLoading={tournamentsLoading}
+          hasStoredPreference={hasStoredPreference}
+        />
         </div>
       );
 
@@ -227,13 +298,13 @@ export function TeamsPageContainer() {
       return (
         <div className="container mx-auto py-8 px-4">
           <RefTeamsView
-            tournaments={tournaments || []}
+            tournaments={memoizedTournaments}
             selectedTournamentId={selectedTournamentId}
-            onTournamentChange={setSelectedTournamentId}
-            leaderboardRows={leaderboardRows}
+            onTournamentChange={handleTournamentChange}
+            teams={allTeams}
             isLoading={dataLoading || teamsLoading}
             tournamentsLoading={tournamentsLoading}
-            columns={columns}
+            hasStoredPreference={hasStoredPreference}
           />
         </div>
       );
@@ -244,15 +315,13 @@ export function TeamsPageContainer() {
       return (
         <div className="container mx-auto py-8 px-4">
           <CommonTeamsView
-            tournaments={tournaments || []}
+            tournaments={memoizedTournaments}
             selectedTournamentId={selectedTournamentId}
-            onTournamentChange={setSelectedTournamentId}
-            userTeam={processedTeamData.userTeam}
-            otherTeams={processedTeamData.otherTeams}
-            leaderboardRows={leaderboardRows}
+            onTournamentChange={handleTournamentChange}
+            teams={allTeams}
             isLoading={dataLoading || teamsLoading}
             tournamentsLoading={tournamentsLoading}
-            limitedColumns={columns}
+            hasStoredPreference={hasStoredPreference}
           />
         </div>
       );
@@ -264,4 +333,4 @@ export function TeamsPageContainer() {
         />
       );
   }
-}
+});

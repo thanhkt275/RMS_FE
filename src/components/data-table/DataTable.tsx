@@ -274,7 +274,7 @@ const DataTable = React.forwardRef(
         </div>
         {isLoading || table.getRowModel().rows?.length ? (
           <div
-            className={"bg-white border border-gray-200 shadow-lg rounded-xl"}
+            className={"bg-card border border-border shadow-lg rounded-xl"}
           >
             {isLoading ? (
               <DataTableSkeleton numberOfColumns={columns.length} />
@@ -284,14 +284,14 @@ const DataTable = React.forwardRef(
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow
                       key={headerGroup.id}
-                      className="bg-gray-50 border-b border-gray-200"
+                      className="bg-muted border-b border-border"
                     >
                       {headerGroup.headers.map((header) => {
                         return (
                           <TableHead
                             key={header.id}
                             data-column-id={header.column.id}
-                            className="text-gray-900 font-semibold text-sm"
+                            className="text-foreground font-semibold text-sm"
                           >
                             {header.isPlaceholder ? null : header.column.id ===
                               "select" ? (
@@ -315,11 +315,11 @@ const DataTable = React.forwardRef(
                   {table.getRowModel().rows?.length
                     ? table.getRowModel().rows.map((row) => (
                         <React.Fragment key={row.id}>
-                          <TableRow className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
+                          <TableRow className="hover:bg-muted/50 transition-colors duration-150 cursor-pointer">
                             {row.getVisibleCells().map((cell) => (
                               <TableCell
                                 key={cell.id}
-                                className="font-medium text-gray-900 whitespace-nowrap"
+                                className="font-medium text-foreground whitespace-nowrap"
                               >
                                 {flexRender(
                                   cell.column.columnDef.cell,

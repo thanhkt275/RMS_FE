@@ -193,7 +193,7 @@ export default function TeamForm({
           referralSource: data.referralSource,
           teamMembers: data.teamMembers || [],
         });
-        router.push("/tournaments");
+        router.push(`/teams?tournamentId=${params.id}`);
       }
     } catch (error) {
       console.error("Error submitting form:", error);

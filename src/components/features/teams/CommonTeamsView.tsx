@@ -16,7 +16,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -26,17 +26,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { LeaderboardTable } from "@/components/features/leaderboard/leaderboard-table";
-import { LeaderboardFilters } from "@/components/features/leaderboard/leaderboard-filters";
-import {
-  getTeamLeaderboardColumns,
-  TeamLeaderboardRow,
-} from "@/components/features/leaderboard/team-leaderboard-columns";
+import { TeamsTable } from "./TeamsTable";
+import { EditTeamDialog } from "@/components/dialogs/EditTeamDialog";
 import { useTeamsRoleAccess } from "@/hooks/teams/use-teams-role-access";
 import { useUserTeams } from "@/hooks/teams/use-teams";
+import { useTeamActions } from "@/hooks/teams/use-team-actions";
+import { useAuth } from "@/hooks/common/use-auth";
 import { RoleGuard } from "@/components/features/auth/RoleGuard";
+import { UserRole } from "@/types/types";
 import type { Tournament } from "@/types/types";
-import type { TeamColumn } from "@/utils/teams/team-data-filter";
 import type { OwnTeamDto, PublicTeamDto } from "@/types/team-dto.types";
 import type { Team } from "@/types/team.types";
 
@@ -44,104 +42,53 @@ interface CommonTeamsViewProps {
   tournaments: Tournament[];
   selectedTournamentId: string;
   onTournamentChange: (id: string) => void;
-  userTeam: OwnTeamDto | null;
-  otherTeams: PublicTeamDto[];
-  leaderboardRows: TeamLeaderboardRow[];
+  teams: Team[];
   isLoading: boolean;
   tournamentsLoading: boolean;
-  limitedColumns: TeamColumn[];
+  hasStoredPreference?: boolean;
 }
 
 export function CommonTeamsView({
   tournaments,
   selectedTournamentId,
   onTournamentChange,
-  userTeam,
-  otherTeams,
-  leaderboardRows,
+  teams,
   isLoading,
   tournamentsLoading,
-  limitedColumns,
+  hasStoredPreference,
 }: CommonTeamsViewProps) {
   const { currentRole, currentUser } = useTeamsRoleAccess();
+  const { user } = useAuth();
+
+  // Team actions hook for handling view and edit functionality
+  const {
+    selectedTeam,
+    showEditDialog,
+    handleViewTeamById,
+    handleEditTeam,
+    closeDialogs,
+    setShowEditDialog,
+  } = useTeamActions();
 
   // Fetch all teams where the user is a member/owner
   const { data: userTeams = [], isLoading: userTeamsLoading } = useUserTeams();
 
-  // State for leaderboard filters (only for public teams)
-  const [teamName, setTeamName] = useState("");
-  const [teamCode, setTeamCode] = useState("");
-  const [rankRange, setRankRange] = useState<[number, number]>([1, 100]);
-  const [totalScoreRange, setTotalScoreRange] = useState<[number, number]>([
-    0, 1000,
-  ]);
+  // Separate user's teams from other teams
+  const { ownTeams, otherTeams, allTeamsForLeader } = useMemo(() => {
+    const ownTeams = teams.filter(team => 
+      team.userId === user?.id || 
+      team.teamMembers?.some(member => member.email === user?.email)
+    );
+    const otherTeams = teams.filter(team => 
+      team.userId !== user?.id && 
+      !team.teamMembers?.some(member => member.email === user?.email)
+    );
 
-  // Filter leaderboard rows to show only public information
-  const filteredPublicRows: TeamLeaderboardRow[] = useMemo(
-    () =>
-      leaderboardRows
-        .filter((row) => !userTeam || row.id !== userTeam.id) // Exclude user's own team from public list
-        .filter(
-          (row) =>
-            (!teamName ||
-              row.teamName.toLowerCase().includes(teamName.toLowerCase())) &&
-            (!teamCode ||
-              row.teamCode.toLowerCase().includes(teamCode.toLowerCase())) &&
-            row.rank >= rankRange[0] &&
-            row.rank <= rankRange[1] &&
-            row.totalScore >= totalScoreRange[0] &&
-            row.totalScore <= totalScoreRange[1]
-        ),
-    [leaderboardRows, userTeam, teamName, teamCode, rankRange, totalScoreRange]
-  );
+    // For TEAM_LEADER, show all teams in one view but with different edit capabilities
+    const allTeamsForLeader = user?.role === UserRole.TEAM_LEADER ? teams : [];
 
-  // Convert user teams to leaderboard rows for display
-  const userTeamRows: TeamLeaderboardRow[] = useMemo(() => {
-    return userTeams.map((team: any, index: number) => ({
-      id: team.id,
-      rank: index + 1, // Simple ranking for user teams
-      teamName: team.name,
-      teamCode: team.teamNumber,
-      totalScore: 0, // TODO: Get actual scores from team stats
-      highestScore: 0, // Required field
-      wins: 0,
-      losses: 0,
-      ties: 0,
-      matchesPlayed: 0,
-      rankingPoints: 0,
-      opponentWinPercentage: 0,
-      pointDifferential: 0,
-      // Add tournament and ownership info for permission checking
-      tournament: team.tournament?.name || 'Unknown Tournament',
-      tournamentId: team.tournamentId,
-      userId: team.userId, // Include userId for ownership checks
-    }));
-  }, [userTeams]);
-
-  // Get columns for user teams (show more info since they own these teams)
-  const userTeamColumns = useMemo(() => {
-    return getTeamLeaderboardColumns(currentRole).filter((column) => {
-      // Show team info and actions for user's own teams
-      const allowedColumns = ["rank", "teamName", "teamCode", "tournament", "actions"];
-
-      // Check for accessorKey (for accessor columns) or id (for other column types)
-      const columnKey = (column as any).accessorKey || column.id;
-
-      return allowedColumns.includes(columnKey);
-    });
-  }, [currentRole]);
-
-  // Get columns based on common user role permissions for public teams
-  const publicColumns = useMemo(() => {
-    return getTeamLeaderboardColumns(currentRole).filter((column) => {
-      // Only show basic public columns for other teams
-      const allowedColumns = ["rank", "teamName", "teamCode"];
-
-      // Check for accessorKey (for accessor columns) or id (for other column types)
-      const columnKey = (column as any).accessorKey || column.id;
-      return allowedColumns.includes(columnKey || "");
-    });
-  }, [currentRole]);
+    return { ownTeams, otherTeams, allTeamsForLeader };
+  }, [teams, user?.id, user?.email, user?.role]);
 
   return (
     <RoleGuard
@@ -158,7 +105,9 @@ export function CommonTeamsView({
               Teams
             </h1>
             <p className="text-base text-gray-400">
-              View your team details and public team information
+              {user?.role === UserRole.TEAM_LEADER
+                ? "View all teams and manage your own teams"
+                : "View your team details and public team information"}
             </p>
           </div>
 
@@ -180,7 +129,12 @@ export function CommonTeamsView({
               <SelectContent>
                 {tournaments?.map((tournament) => (
                   <SelectItem key={tournament.id} value={tournament.id}>
-                    {tournament.name}
+                    <div className="flex items-center gap-2">
+                      <span>{tournament.name}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {tournament._count?.teams || 0} teams
+                      </Badge>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -195,16 +149,68 @@ export function CommonTeamsView({
           </div>
         </div>
 
-        {/* User's Teams Section */}
-        {userTeamsLoading ? (
-          <Card className="border-2 border-blue-700 bg-gradient-to-br from-blue-950 to-blue-900 shadow-xl">
-            <CardContent className="py-6">
-              <div className="flex items-center justify-center">
-                <div className="text-blue-200">Loading your teams...</div>
+        {/* Team Leader View - All Teams with Edit Capabilities for Own Teams */}
+        {user?.role === UserRole.TEAM_LEADER && (
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl text-gray-100">All Teams</CardTitle>
+                <Badge
+                  variant="outline"
+                  className="bg-blue-800 text-blue-200"
+                >
+                  Team Leader Access
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-blue-400 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-blue-200">
+                        Team Leader Capabilities
+                      </h3>
+                      <div className="mt-1 text-sm text-blue-300">
+                        <ul className="list-disc list-inside space-y-1">
+                          <li>View all teams in the tournament</li>
+                          <li>Edit teams you own (marked with edit button)</li>
+                          <li>View detailed information for all teams</li>
+                          <li>No deletion capabilities (admin only)</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <TeamsTable
+                  teams={allTeamsForLeader}
+                  isLoading={isLoading}
+                  selectedTournamentId={selectedTournamentId}
+                  userRole={currentRole}
+                  userId={user?.id}
+                  userEmail={user?.email}
+                  onViewTeam={handleViewTeamById}
+                  onEditTeam={(teamId) => {
+                    // Team leaders can edit their own teams
+                    const team = allTeamsForLeader.find(t => t.id === teamId);
+                    if (team && team.userId === user?.id) {
+                      handleEditTeam(team);
+                    }
+                  }}
+                />
               </div>
             </CardContent>
           </Card>
-        ) : userTeams.length > 0 ? (
+        )}
+
+        {/* User's Teams Section - For non-Team Leader roles */}
+        {user?.role !== UserRole.TEAM_LEADER && ownTeams.length > 0 && (
           <Card className="border-2 border-green-700 bg-gradient-to-br from-green-950 to-green-900 shadow-xl">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -220,7 +226,7 @@ export function CommonTeamsView({
                       clipRule="evenodd"
                     />
                   </svg>
-                  Your Teams ({userTeams.length})
+                  Your Teams ({ownTeams.length})
                 </CardTitle>
                 <Badge
                   variant="secondary"
@@ -233,129 +239,119 @@ export function CommonTeamsView({
             <CardContent>
               <div className="space-y-4">
                 <p className="text-green-200 text-sm">
-                  Teams you own or are a member of across all tournaments
+                  Teams you own or are a member of in this tournament
                 </p>
 
-                {/* Teams Table */}
-                <div className="bg-green-900/30 rounded-lg border border-green-700">
-                  <LeaderboardTable
-                    data={userTeamRows}
-                    columns={userTeamColumns}
-                    loading={userTeamsLoading}
-                    emptyMessage="No teams found"
+                {/* User's Teams Table */}
+                <div className="bg-green-900/30 rounded-lg border border-green-700 overflow-hidden">
+                  <TeamsTable
+                    teams={ownTeams}
+                    isLoading={isLoading}
+                    selectedTournamentId={selectedTournamentId}
+                    userRole={currentRole}
+                    userId={user?.id}
+                    userEmail={user?.email}
+                    onViewTeam={handleViewTeamById}
+                    onEditTeam={(teamId) => {
+                      // Team leaders can edit their own teams
+                      if (user?.role === UserRole.TEAM_LEADER) {
+                        const team = ownTeams.find(t => t.id === teamId);
+                        if (team) {
+                          handleEditTeam(team);
+                        }
+                      }
+                    }}
                   />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-2 border-yellow-700 bg-gradient-to-br from-yellow-950 to-yellow-900 shadow-xl">
-            <CardContent className="py-6">
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-8 w-8 text-yellow-400"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-yellow-200">
-                    No Teams Found
-                  </h3>
-                  <p className="text-yellow-300">
-                    You are not currently the owner of any teams across all tournaments.
-                    Create a new team or contact a tournament administrator if you believe this is an error.
-                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Access Information */}
-        <div className="bg-gray-900/40 border border-gray-700 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-gray-400 mt-0.5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-300">
-                Limited Access Information
-              </h3>
-              <div className="mt-1 text-sm text-gray-400">
-                <p>
-                  As a common user, you have limited access to team information:
-                </p>
-                <ul className="mt-2 list-disc list-inside space-y-1">
-                  <li>Full details for your own team (if registered)</li>
-                  <li>
-                    Basic public information for other teams (name,
-                    organization, rank)
-                  </li>
-                  <li>No editing or management capabilities</li>
-                  <li>
-                    Contact administrators for team registration or changes
-                  </li>
-                </ul>
+        {/* Access Information - Only for non-Team Leader roles */}
+        {user?.role !== UserRole.TEAM_LEADER && (
+          <div className="bg-gray-900/40 border border-gray-700 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-5 w-5 text-gray-400 mt-0.5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-300">
+                  Limited Access Information
+                </h3>
+                <div className="mt-1 text-sm text-gray-400">
+                  <p>
+                    As a common user, you have limited access to team information:
+                  </p>
+                  <ul className="mt-2 list-disc list-inside space-y-1">
+                    <li>Full details for your own team (if registered)</li>
+                    <li>
+                      Basic public information for other teams (name,
+                      organization, rank)
+                    </li>
+                    <li>No editing or management capabilities</li>
+                    <li>
+                      Contact administrators for team registration or changes
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Other Teams Section */}
-        <div>
-          <h2 className="text-xl font-semibold text-gray-200 mb-4">
-            Other Teams (Public Information)
-          </h2>
+        {/* Other Teams Section - Only for non-Team Leader roles */}
+        {user?.role !== UserRole.TEAM_LEADER && (
+          <div>
+            <h2 className="text-xl font-semibold text-gray-200 mb-4">
+              Other Teams (Public Information)
+            </h2>
 
-          <LeaderboardTable
-            data={filteredPublicRows}
-            columns={publicColumns}
-            loading={isLoading}
-            filterUI={
-              <LeaderboardFilters
-                teamName={teamName}
-                setTeamName={setTeamName}
-                teamCode={teamCode}
-                setTeamCode={setTeamCode}
-                rankRange={rankRange}
-                setRankRange={setRankRange}
-                totalScoreRange={totalScoreRange}
-                setTotalScoreRange={setTotalScoreRange}
-              />
-            }
-            initialSorting={[{ id: "rank", desc: false }]}
-            emptyMessage="No other teams found in this tournament."
-            tableMeta={{
-              userRole: currentRole,
-              userId: currentUser?.id,
-              userEmail: currentUser?.email
-            }}
-          />
-        </div>
+            <TeamsTable
+              teams={otherTeams}
+              isLoading={isLoading}
+              selectedTournamentId={selectedTournamentId}
+              userRole={currentRole}
+              userId={user?.id}
+              userEmail={user?.email}
+              onViewTeam={handleViewTeamById}
+              // Common users can't edit other teams
+            />
+          </div>
+        )}
+
+        {/* Edit Team Dialog for owned teams */}
+        <EditTeamDialog
+          open={showEditDialog}
+          onOpenChange={(open) => {
+            setShowEditDialog(open);
+            if (!open) closeDialogs();
+          }}
+          team={selectedTeam}
+          tournamentId={selectedTournamentId}
+        />
 
         {/* Footer Information */}
         <div className="text-center text-sm text-gray-400 border-t border-gray-700 pt-4">
           <p>
-            Showing {userTeam ? "your team and " : ""}
-            {filteredPublicRows.length} other teams
+            {user?.role === UserRole.TEAM_LEADER ? (
+              <>Showing {allTeamsForLeader.length} teams</>
+            ) : (
+              <>
+                Showing {ownTeams.length > 0 ? `${ownTeams.length} your teams and ` : ""}
+                {otherTeams.length} other teams
+              </>
+            )}
             {selectedTournamentId &&
               tournaments?.find((t) => t.id === selectedTournamentId) && (
                 <span>
@@ -366,8 +362,11 @@ export function CommonTeamsView({
               )}
           </p>
           <p className="mt-1">
-            Contact tournament administrators for team registration or to
-            request additional access
+            {user?.role === UserRole.TEAM_LEADER ? (
+              "Team Leader access: View all teams, edit your own teams"
+            ) : (
+              "Contact tournament administrators for team registration or to request additional access"
+            )}
           </p>
         </div>
       </div>

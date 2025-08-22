@@ -9,6 +9,7 @@
  * - Full team information display (non-sensitive)
  * - Filtering and sorting capabilities
  * - No CRUD operations or import/export
+ * - Auto-save tournament selection
  * 
  * @author Robotics Tournament Management System
  * @version 1.0.0
@@ -16,62 +17,42 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LeaderboardTable } from "@/components/features/leaderboard/leaderboard-table";
-import { LeaderboardFilters } from "@/components/features/leaderboard/leaderboard-filters";
-import { getTeamLeaderboardColumns, TeamLeaderboardRow } from "@/components/features/leaderboard/team-leaderboard-columns";
+import { Badge } from "@/components/ui/badge";
+import { Check } from "lucide-react";
+import { TeamsTable } from "./TeamsTable";
 import { useTeamsRoleAccess } from "@/hooks/teams/use-teams-role-access";
+import { useTeamActions } from "@/hooks/teams/use-team-actions";
+import { useAuth } from "@/hooks/common/use-auth";
 import { RoleGuard } from "@/components/features/auth/RoleGuard";
 import type { Tournament } from "@/types/types";
-import type { TeamColumn } from "@/utils/teams/team-data-filter";
+import type { Team } from "@/types/team.types";
 
 interface RefTeamsViewProps {
   tournaments: Tournament[];
   selectedTournamentId: string;
   onTournamentChange: (id: string) => void;
-  leaderboardRows: TeamLeaderboardRow[];
+  teams: Team[];
   isLoading: boolean;
   tournamentsLoading: boolean;
-  columns: TeamColumn[];
+  hasStoredPreference?: boolean;
 }
 
 export function RefTeamsView({
   tournaments,
   selectedTournamentId,
   onTournamentChange,
-  leaderboardRows,
+  teams,
   isLoading,
   tournamentsLoading,
-  columns,
+  hasStoredPreference,
 }: RefTeamsViewProps) {
   const { currentRole, isReferee } = useTeamsRoleAccess();
-
-  // State for leaderboard filters
-  const [teamName, setTeamName] = useState("");
-  const [teamCode, setTeamCode] = useState("");
-  const [rankRange, setRankRange] = useState<[number, number]>([1, 100]);
-  const [totalScoreRange, setTotalScoreRange] = useState<[number, number]>([0, 1000]);
-
-  // Filtering logic for leaderboard
-  const filteredRows: TeamLeaderboardRow[] = useMemo(
-    () =>
-      leaderboardRows.filter(
-        (row) =>
-          (!teamName || row.teamName.toLowerCase().includes(teamName.toLowerCase())) &&
-          (!teamCode || row.teamCode.toLowerCase().includes(teamCode.toLowerCase())) &&
-          row.rank >= rankRange[0] &&
-          row.rank <= rankRange[1] &&
-          row.totalScore >= totalScoreRange[0] &&
-          row.totalScore <= totalScoreRange[1]
-      ),
-    [leaderboardRows, teamName, teamCode, rankRange, totalScoreRange]
-  );
-
-  // Get columns based on referee role permissions
-  const visibleColumns = useMemo(() => {
-    return getTeamLeaderboardColumns(currentRole);
-  }, [currentRole]);
+  const { user } = useAuth();
+  
+  // Team actions hook for handling view functionality
+  const { handleViewTeamById } = useTeamActions();
 
   return (
     <RoleGuard
@@ -93,19 +74,34 @@ export function RefTeamsView({
           </div>
           
           <div className="flex flex-col md:flex-row gap-2 md:items-center">
-            {/* Tournament Selection */}
-            <Select value={selectedTournamentId} onValueChange={onTournamentChange}>
-              <SelectTrigger className="w-full md:w-56 bg-blue-950 border-blue-700 text-blue-100">
-                <SelectValue placeholder={tournamentsLoading ? "Loading tournaments..." : "Select a tournament"} />
-              </SelectTrigger>
-              <SelectContent>
-                {tournaments?.map((tournament) => (
-                  <SelectItem key={tournament.id} value={tournament.id}>
-                    {tournament.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Tournament Selection with Auto-save Indicator */}
+            <div className="flex flex-col gap-1">
+              <Select value={selectedTournamentId} onValueChange={onTournamentChange}>
+                <SelectTrigger className="w-full md:w-56 bg-blue-950 border-blue-700 text-blue-100">
+                  <SelectValue placeholder={tournamentsLoading ? "Loading tournaments..." : "Select a tournament"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {tournaments?.map((tournament) => (
+                    <SelectItem key={tournament.id} value={tournament.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{tournament.name}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {tournament._count?.teams || 0} teams
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {/* Auto-save Status Indicator */}
+              {hasStoredPreference && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Check className="h-3 w-3 text-green-400" />
+                  <span>Tournament auto-saved</span>
+                </div>
+              )}
+            </div>
 
             {/* Role indicator */}
             <div className="px-3 py-2 bg-blue-800/50 rounded-md border border-blue-600">
@@ -142,35 +138,21 @@ export function RefTeamsView({
         </div>
 
         {/* Teams Table */}
-        <LeaderboardTable
-          data={filteredRows}
-          columns={visibleColumns}
-          loading={isLoading}
-          filterUI={
-            <LeaderboardFilters
-              teamName={teamName}
-              setTeamName={setTeamName}
-              teamCode={teamCode}
-              setTeamCode={setTeamCode}
-              rankRange={rankRange}
-              setRankRange={setRankRange}
-              totalScoreRange={totalScoreRange}
-              setTotalScoreRange={setTotalScoreRange}
-            />
-          }
-          initialSorting={[{ id: "rank", desc: false }]}
-          emptyMessage="No teams found for the selected tournament."
-          tableMeta={{
-            userRole: currentRole,
-            userId: null, // Referees have read-only access
-            userEmail: null
-          }}
+        <TeamsTable
+          teams={teams}
+          isLoading={isLoading}
+          selectedTournamentId={selectedTournamentId}
+          userRole={currentRole}
+          userId={user?.id}
+          userEmail={user?.email}
+          onViewTeam={handleViewTeamById}
+          // Referees have read-only access, no edit/delete
         />
 
         {/* Footer Information */}
         <div className="text-center text-sm text-gray-400 border-t border-gray-700 pt-4">
           <p>
-            Displaying {filteredRows.length} of {leaderboardRows.length} teams
+            Displaying {teams.length} teams
             {selectedTournamentId && tournaments?.find(t => t.id === selectedTournamentId) && (
               <span> in {tournaments.find(t => t.id === selectedTournamentId)?.name}</span>
             )}

@@ -194,7 +194,7 @@ export const PERMISSIONS: IPermissionSystem = {
       { description: 'Manage own team membership and settings', requiresOwnership: true }
     ),
     VIEW_ALL: PermissionHelper.createPermission(
-      [UserRole.ADMIN, UserRole.HEAD_REFEREE],
+      [UserRole.ADMIN, UserRole.HEAD_REFEREE, UserRole.TEAM_LEADER],
       { description: 'View all teams and their information' }
     ),
     VIEW_OWN: PermissionHelper.createPermission(

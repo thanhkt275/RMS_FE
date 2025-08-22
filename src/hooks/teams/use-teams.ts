@@ -40,11 +40,7 @@ export function useTeamById(teamId: string | undefined) {
           return team;
 
         case UserRole.TEAM_LEADER:
-          // TEAM_LEADER: Can view and edit teams they own only
-          const isTeamOwner = team.userId === userId;
-          if (!isTeamOwner) {
-            throw new Error('Team leaders can only access teams they own');
-          }
+          // TEAM_LEADER: Can view all teams, but can only edit teams they own
           return team;
 
         case UserRole.TEAM_MEMBER:
@@ -70,6 +66,21 @@ export function useTeamById(teamId: string | undefined) {
       }
     },
     enabled: !!teamId,
+    // Enhanced caching: Individual team details can be cached longer
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 20 * 60 * 1000, // 20 minutes garbage collection
+    
+    // Optimized retry logic
+    retry: (failureCount, error: any) => {
+      // Don't retry on permission or not found errors
+      if (error?.status === 403 || error?.status === 404 || 
+          error?.message?.includes('permissions') || 
+          error?.message?.includes('can only view teams')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    retryDelay: 1500, // Fixed delay for individual team fetches
   });
 }
 
@@ -113,7 +124,7 @@ export function canUserViewTeam(
   team: Team | null,
   userRole: UserRole | null,
   userId: string | undefined,
-  userEmail: string | undefined
+  userEmail: string | undefined | null
 ): boolean {
   if (!team || !userRole) return false;
 
@@ -125,8 +136,8 @@ export function canUserViewTeam(
       return true;
 
     case UserRole.TEAM_LEADER:
-      // TEAM_LEADER: Can view teams they own only
-      return team.userId === userId;
+      // TEAM_LEADER: Can view all teams (for viewing purposes)
+      return true;
 
     case UserRole.TEAM_MEMBER:
       // TEAM_MEMBER: Can view teams they own or are a member of
@@ -171,6 +182,7 @@ export function useTeams(tournamentId: string | undefined) {
   const { user } = useAuth();
   const userRole = user?.role as UserRole | null;
   const userId = user?.id;
+  const queryClient = useQueryClient();
 
   return useQuery({
     queryKey: QueryKeys.teams.byTournament(tournamentId ?? ""),
@@ -193,6 +205,38 @@ export function useTeams(tournamentId: string | undefined) {
       );
     },
     enabled: !!tournamentId,
+    // Enhanced caching: Teams don't change frequently, so increase stale time to 10 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes garbage collection
+    
+    // Background refetch optimization
+    refetchOnWindowFocus: false, // Don't refetch teams on window focus
+    refetchOnMount: 'always', // Always fetch on component mount
+    
+    // Optimistic retry logic for teams
+    retry: (failureCount, error: any) => {
+      // Don't retry on permission errors
+      if (error?.status === 403 || error?.message?.includes('permissions')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 15000),
+    
+    // Prefetch next page data if pagination is used
+    select: (data) => {
+      // Prefetch individual team details for better performance
+      if (data?.length > 0) {
+        data.forEach(team => {
+          queryClient.prefetchQuery({
+            queryKey: QueryKeys.teams.byId(team.id),
+            queryFn: () => getTeamById(team.id),
+            staleTime: 10 * 60 * 1000, // Same stale time as teams list
+          });
+        });
+      }
+      return data;
+    },
   });
 }
 
@@ -342,8 +386,34 @@ export function useTeamsMutations() {
     },
   });
 
+  const deleteTeam = useMutation({
+    mutationFn: async (teamId: string) => {
+      // Check permission before attempting to delete
+      const canDeleteAny = PermissionService.hasPermission(userRole, 'TEAM_MANAGEMENT', 'DELETE_ANY');
+      
+      if (!canDeleteAny) {
+        throw new Error('Insufficient permissions to delete teams');
+      }
+      
+      return await TeamService.deleteTeam(teamId);
+    },
+    onSuccess: () => {
+      toast.success("Team deleted successfully");
+      queryClient.invalidateQueries({
+        queryKey: QueryKeys.teams.all(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: QueryKeys.tournaments.all(),
+      });
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete team: ${error.message}`);
+    },
+  });
+
   return {
     createTeam,
     updateTeam,
+    deleteTeam,
   };
 }

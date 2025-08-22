@@ -16,8 +16,10 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
@@ -26,16 +28,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { UploadIcon, DownloadIcon, PlusIcon } from "lucide-react";
-import { LeaderboardTable } from "@/components/features/leaderboard/leaderboard-table";
-import { LeaderboardFilters } from "@/components/features/leaderboard/leaderboard-filters";
-import {
-  getTeamLeaderboardColumns,
-  TeamLeaderboardRow,
-} from "@/components/features/leaderboard/team-leaderboard-columns";
-import { TeamStatsRecalculateButton } from "@/components/features/admin/team-stats-recalculate-button";
+import { UploadIcon, DownloadIcon, PlusIcon, Check, Clock } from "lucide-react";
+import { TeamsTable } from "./TeamsTable";
+import { ResponsiveTeamsDisplay } from "./ResponsiveTeamsDisplay";
+import { DeleteTeamDialog } from "@/components/dialogs/DeleteTeamDialog";
+import { EditTeamDialog } from "@/components/dialogs/EditTeamDialog";
+
 import { useTeamManagement } from "@/hooks/teams/use-team-management";
 import { useTeamsRoleAccess } from "@/hooks/teams/use-teams-role-access";
+import { useTeamActions } from "@/hooks/teams/use-team-actions";
+import { useAuth } from "@/hooks/common/use-auth";
 import { TeamErrorHandler } from "@/utils/teams/team-error-handler";
 import { RoleGuard } from "@/components/features/auth/RoleGuard";
 import type { Tournament } from "@/types/types";
@@ -47,22 +49,24 @@ interface AdminTeamsViewProps {
   selectedTournamentId: string;
   onTournamentChange: (id: string) => void;
   teams: Team[];
-  leaderboardRows: TeamLeaderboardRow[];
   isLoading: boolean;
   tournamentsLoading: boolean;
+  hasStoredPreference?: boolean;
+  lastSavedAt?: number | null;
   onCreateTeam?: (team: CreateTeamDto) => void;
   onUpdateTeam?: (team: UpdateTeamDto) => void;
   onDeleteTeam?: (id: string) => void;
 }
 
-export function AdminTeamsView({
+export const AdminTeamsView = React.memo(function AdminTeamsView({
   tournaments,
   selectedTournamentId,
   onTournamentChange,
   teams,
-  leaderboardRows,
   isLoading,
   tournamentsLoading,
+  hasStoredPreference,
+  lastSavedAt,
   onCreateTeam,
   onUpdateTeam,
   onDeleteTeam,
@@ -77,11 +81,22 @@ export function AdminTeamsView({
   } = useTeamManagement();
 
   const { getAccessDeniedMessage, currentRole } = useTeamsRoleAccess();
-
-  // Get columns based on admin role permissions
-  const visibleColumns = useMemo(() => {
-    return getTeamLeaderboardColumns(currentRole);
-  }, [currentRole]);
+  const { user } = useAuth();
+  
+  // Team actions hook for handling view, edit, delete
+  const {
+    selectedTeam,
+    showEditDialog,
+    showDeleteDialog,
+    handleViewTeamById,
+    handleEditTeam,
+    handleDeleteTeam,
+    confirmDeleteTeam,
+    closeDialogs,
+    isDeleting,
+    setShowEditDialog,
+    setShowDeleteDialog,
+  } = useTeamActions();
 
   // Local UI state for import functionality
   const [showImportCard, setShowImportCard] = useState(false);
@@ -89,32 +104,8 @@ export function AdminTeamsView({
   const [importError, setImportError] = useState<string | null>(null);
   const [delimiter, setDelimiter] = useState<string>(",");
 
-  // State for leaderboard filters
-  const [teamName, setTeamName] = useState("");
-  const [teamCode, setTeamCode] = useState("");
-  const [rankRange, setRankRange] = useState<[number, number]>([1, 100]);
-  const [totalScoreRange, setTotalScoreRange] = useState<[number, number]>([
-    0, 1000,
-  ]);
-
-  // Filtering logic for leaderboard
-  const filteredRows: TeamLeaderboardRow[] = useMemo(
-    () =>
-      leaderboardRows.filter(
-        (row) =>
-          (!teamName ||
-            row.teamName.toLowerCase().includes(teamName.toLowerCase())) &&
-          (!teamCode ||
-            row.teamCode.toLowerCase().includes(teamCode.toLowerCase())) &&
-          row.rank >= rankRange[0] &&
-          row.rank <= rankRange[1] &&
-          row.totalScore >= totalScoreRange[0] &&
-          row.totalScore <= totalScoreRange[1]
-      ),
-    [leaderboardRows, teamName, teamCode, rankRange, totalScoreRange]
-  );
-
-  const handleImport = async () => {
+  // Optimized event handlers with useCallback
+  const handleImport = useCallback(async () => {
     const result = await importTeams(
       importContent,
       selectedTournamentId,
@@ -123,16 +114,57 @@ export function AdminTeamsView({
     if (result.success) {
       // Success is handled by the hook
     }
-  };
+  }, [importTeams, importContent, selectedTournamentId, delimiter]);
 
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     exportTeams(teams);
-  };
+  }, [exportTeams, teams]);
 
-  const handleCreateTeam = () => {
+  const handleCreateTeam = useCallback(() => {
     // TODO: Implement create team dialog
     console.log("Create team functionality to be implemented");
-  };
+  }, []);
+
+  const handleImportContentChange = useCallback((content: string) => {
+    setImportContent(content);
+  }, []);
+
+  const handleDelimiterChange = useCallback((newDelimiter: string) => {
+    setDelimiter(newDelimiter);
+  }, []);
+
+  const handleToggleImportCard = useCallback(() => {
+    setShowImportCard(prev => !prev);
+  }, []);
+
+  const handleClearImportResult = useCallback(() => {
+    setImportResult(null);
+  }, [setImportResult]);
+
+  // Memoized callbacks for TeamsTable
+  const handleEditTeamById = useCallback((teamId: string) => {
+    const team = teams.find(t => t.id === teamId);
+    if (team) {
+      handleEditTeam(team);
+    }
+  }, [teams, handleEditTeam]);
+
+  const handleDeleteTeamById = useCallback((teamId: string) => {
+    const team = teams.find(t => t.id === teamId);
+    if (team) {
+      handleDeleteTeam(team);
+    }
+  }, [teams, handleDeleteTeam]);
+
+  const handleEditDialogChange = useCallback((open: boolean) => {
+    setShowEditDialog(open);
+    if (!open) closeDialogs();
+  }, [closeDialogs]);
+
+  const handleDeleteDialogChange = useCallback((open: boolean) => {
+    setShowDeleteDialog(open);
+    if (!open) closeDialogs();
+  }, [closeDialogs]);
 
   return (
     <div className="space-y-6">
@@ -149,28 +181,43 @@ export function AdminTeamsView({
         </div>
 
         <div className="flex flex-col md:flex-row gap-2 md:items-center">
-          {/* Tournament Selection */}
-          <Select
-            value={selectedTournamentId}
-            onValueChange={onTournamentChange}
-          >
-            <SelectTrigger className="w-full md:w-56 bg-blue-950 border-blue-700 text-blue-100">
-              <SelectValue
-                placeholder={
-                  tournamentsLoading
-                    ? "Loading tournaments..."
-                    : "Select a tournament"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {tournaments?.map((tournament) => (
-                <SelectItem key={tournament.id} value={tournament.id}>
-                  {tournament.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Tournament Selection with Auto-save Indicator */}
+          <div className="flex flex-col gap-1">
+            <Select
+              value={selectedTournamentId}
+              onValueChange={onTournamentChange}
+            >
+              <SelectTrigger className="w-full md:w-56 bg-blue-950 border-blue-700 text-blue-100">
+                <SelectValue
+                  placeholder={
+                    tournamentsLoading
+                      ? "Loading tournaments..."
+                      : "Select a tournament"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {tournaments?.map((tournament) => (
+                  <SelectItem key={tournament.id} value={tournament.id}>
+                    <div className="flex items-center gap-2">
+                      <span>{tournament.name}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {tournament._count?.teams || 0} teams
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {/* Auto-save Status Indicator */}
+            {hasStoredPreference && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Check className="h-3 w-3 text-green-400" />
+                <span>Tournament auto-saved</span>
+              </div>
+            )}
+          </div>
 
           {/* Admin Actions */}
           <RoleGuard
@@ -247,13 +294,7 @@ export function AdminTeamsView({
             </Button>
           </RoleGuard>
 
-          <TeamStatsRecalculateButton
-            tournamentId={selectedTournamentId}
-            stageId="" // Admin can recalculate for entire tournament
-            disabled={!selectedTournamentId}
-            variant="outline"
-            size="default"
-          />
+
         </div>
       </div>
 
@@ -289,7 +330,12 @@ export function AdminTeamsView({
                 <SelectContent>
                   {tournaments?.map((tournament) => (
                     <SelectItem key={tournament.id} value={tournament.id}>
-                      {tournament.name}
+                      <div className="flex items-center gap-2">
+                        <span>{tournament.name}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {tournament._count?.teams || 0} teams
+                        </Badge>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -391,7 +437,7 @@ export function AdminTeamsView({
                 const file = e.target.files?.[0];
                 if (!file) return;
                 const text = await file.text();
-                setImportContent(text);
+                handleImportContentChange(text);
                 setImportError(null);
               }}
             />
@@ -404,7 +450,7 @@ export function AdminTeamsView({
               className="w-full h-32 p-2 rounded border border-blue-700 bg-blue-950 text-blue-100 mb-2 focus:ring-2 focus:ring-blue-400"
               placeholder="Paste CSV content here. Columns: Name, Organization, Description."
               value={importContent}
-              onChange={(e) => setImportContent(e.target.value)}
+              onChange={(e) => handleImportContentChange(e.target.value)}
             />
 
             {/* Error Display */}
@@ -454,10 +500,7 @@ export function AdminTeamsView({
 
               <Button
                 variant="outline"
-                onClick={() => {
-                  setImportResult(null);
-                  setImportError(null);
-                }}
+                onClick={handleClearImportResult}
                 className="border-blue-700 text-blue-200 hover:bg-blue-800/30"
               >
                 Reset
@@ -480,31 +523,35 @@ export function AdminTeamsView({
         </Card>
       )}
 
-      {/* Teams Table */}
-      <LeaderboardTable
-        data={filteredRows}
-        columns={visibleColumns}
-        loading={isLoading}
-        filterUI={
-          <LeaderboardFilters
-            teamName={teamName}
-            setTeamName={setTeamName}
-            teamCode={teamCode}
-            setTeamCode={setTeamCode}
-            rankRange={rankRange}
-            setRankRange={setRankRange}
-            totalScoreRange={totalScoreRange}
-            setTotalScoreRange={setTotalScoreRange}
-          />
-        }
-        initialSorting={[{ id: "rank", desc: false }]}
-        emptyMessage="No teams found."
-        tableMeta={{
-          userRole: currentRole,
-          userId: null, // Admin can edit any team
-          userEmail: null
-        }}
+      {/* Teams Display - Responsive */}
+      <ResponsiveTeamsDisplay
+        teams={teams}
+        isLoading={isLoading}
+        selectedTournamentId={selectedTournamentId}
+        userRole={currentRole}
+        userId={user?.id}
+        userEmail={user?.email}
+        onViewTeam={handleViewTeamById}
+        onEditTeam={handleEditTeamById}
+        onDeleteTeam={handleDeleteTeamById}
+      />
+
+      {/* Edit Team Dialog */}
+      <EditTeamDialog
+        open={showEditDialog}
+        onOpenChange={handleEditDialogChange}
+        team={selectedTeam}
+        tournamentId={selectedTournamentId}
+      />
+
+      {/* Delete Team Dialog */}
+      <DeleteTeamDialog
+        open={showDeleteDialog}
+        onOpenChange={handleDeleteDialogChange}
+        team={selectedTeam}
+        onConfirm={confirmDeleteTeam}
+        isDeleting={isDeleting}
       />
     </div>
   );
-}
+});

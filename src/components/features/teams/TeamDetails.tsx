@@ -52,7 +52,7 @@ export const TeamDetails: React.FC<TeamDetailsProps> = ({ team }) => {
     team.teamMembers?.some((member) => member.email === user?.email);
 
   const members = hasMembers(team) ? team.teamMembers : undefined;
-  const memberCount = members?.length ?? 0;
+  const memberCount = team.teamMemberCount ?? team._count?.teamMembers ?? members?.length ?? 0;
 
   const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString("en-US", {

@@ -126,3 +126,100 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Mobile & Touch Optimizations */
+@layer utilities {
+  /* Touch-friendly target size - minimum 44px for accessibility */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px] relative;
+  }
+  
+  /* Larger touch targets on mobile */
+  @media (max-width: 768px) {
+    .touch-target {
+      @apply min-h-[48px] min-w-[48px];
+    }
+  }
+  
+  /* Smooth scrolling for mobile */
+  @media (max-width: 768px) {
+    html {
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+  
+  /* Prevent zoom on input focus for iOS */
+  @media (max-width: 768px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="search"],
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+  }
+  
+  /* Enhanced tap highlighting */
+  .tap-highlight {
+    -webkit-tap-highlight-color: rgb(59 130 246 / 0.3);
+    tap-highlight-color: rgb(59 130 246 / 0.3);
+  }
+  
+  /* Remove default tap highlighting */
+  .no-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+    tap-highlight-color: transparent;
+  }
+  
+  /* Card hover states optimized for touch */
+  .card-touch {
+    @apply transition-all duration-200 ease-in-out;
+    @apply active:scale-[0.98] active:brightness-90;
+  }
+  
+  /* Skeleton loading animations */
+  .skeleton {
+    @apply animate-pulse bg-gray-700 rounded;
+  }
+  
+  /* Responsive text scaling */
+  @media (max-width: 480px) {
+    .text-responsive-sm {
+      @apply text-sm;
+    }
+    .text-responsive-base {
+      @apply text-sm;
+    }
+    .text-responsive-lg {
+      @apply text-base;
+    }
+  }
+  
+  /* Mobile-specific utility classes */
+  .mobile-only {
+    @apply block md:hidden;
+  }
+  
+  .desktop-only {
+    @apply hidden md:block;
+  }
+  
+  .tablet-up {
+    @apply hidden sm:block;
+  }
+  
+  /* Improved focus states for keyboard navigation */
+  .focus-enhanced {
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900;
+  }
+  
+  /* Scroll area optimizations */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+  
+  .scroll-touch {
+    -webkit-overflow-scrolling: touch;
+  }
+}

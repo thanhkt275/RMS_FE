@@ -12,6 +12,9 @@ export interface Team {
   user?: User;
   teamMembers?: TeamMember[];
   teamMemberCount?: number; // Calculated field for team member count
+  _count?: {
+    teamMembers: number;
+  };
 }
 
 export interface TeamMember {

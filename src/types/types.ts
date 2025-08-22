@@ -471,6 +471,9 @@ export interface Tournament {
     username: string;
   };
   userTeam?: Team;
+  _count?: {
+    teams: number;
+  };
 }
 
 export interface CreateTournamentInput {
