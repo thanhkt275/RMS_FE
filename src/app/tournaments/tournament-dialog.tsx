@@ -5,25 +5,25 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
-import { 
-  Dialog, 
-  DialogClose, 
-  DialogContent, 
-  DialogFooter, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
   DialogDescription
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
 } from "@/components/ui/form";
 import { useCreateTournament, useUpdateTournament } from "@/hooks/tournaments/use-tournaments";
 import { Tournament } from "@/types/types";
@@ -34,23 +34,51 @@ import { useAuth } from "@/hooks/common/use-auth"; // Assuming you have a useAut
 const tournamentFormSchema = z.object({
   name: z.string()
     .min(2, { message: "Tournament name must be at least 2 characters" })
-    .max(100, { message: "Tournament name cannot exceed 100 characters" }),
+    .max(100, { message: "Tournament name cannot exceed 100 characters" })
+    .refine((name) => name.trim().length >= 2, {
+      message: "Tournament name cannot be only whitespace"
+    }),
   description: z.string()
     .min(10, { message: "Description must be at least 10 characters" })
-    .max(1000, { message: "Description cannot exceed 1000 characters" }),
-  startDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
-    message: "Start date must be a valid date"
-  }),
-  endDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
-    message: "End date must be a valid date"
-  }),
-  numberOfFields: z.coerce.number().int().min(1, { message: "There must be at least 1 field" }).max(20, { message: "Too many fields (max 20)" })
+    .max(1000, { message: "Description cannot exceed 1000 characters" })
+    .refine((desc) => desc.trim().length >= 10, {
+      message: "Description cannot be only whitespace"
+    }),
+  startDate: z.string()
+    .refine((date) => !isNaN(Date.parse(date)), {
+      message: "Start date must be a valid date"
+    })
+    .refine((date) => {
+      const startDate = new Date(date);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+      return startDate >= now;
+    }, {
+      message: "Start date cannot be in the past"
+    }),
+  endDate: z.string()
+    .refine((date) => !isNaN(Date.parse(date)), {
+      message: "End date must be a valid date"
+    }),
+  numberOfFields: z.coerce.number()
+    .int({ message: "Number of fields must be a whole number" })
+    .min(1, { message: "Tournament must have at least 1 field" })
+    .max(50, { message: "Tournament cannot have more than 50 fields" })
 }).refine((data) => {
   const startDate = new Date(data.startDate);
   const endDate = new Date(data.endDate);
   return startDate <= endDate;
 }, {
-  message: "End date must be after start date",
+  message: "End date must be after or equal to start date",
+  path: ["endDate"],
+}).refine((data) => {
+  const startDate = new Date(data.startDate);
+  const endDate = new Date(data.endDate);
+  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays <= 365; // Maximum 1 year duration
+}, {
+  message: "Tournament duration cannot exceed 365 days",
   path: ["endDate"],
 });
 
@@ -62,11 +90,11 @@ interface TournamentDialogProps {
   tournament?: Tournament;
 }
 
-export default function TournamentDialog({ 
-  isOpen, 
-  onClose, 
-  mode, 
-  tournament 
+export default function TournamentDialog({
+  isOpen,
+  onClose,
+  mode,
+  tournament
 }: TournamentDialogProps) {
   const { user } = useAuth(); // Assuming you have a useAuth hook to get the current user
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,10 +107,10 @@ export default function TournamentDialog({
     defaultValues: {
       name: tournament?.name || '',
       description: tournament?.description || '',
-      startDate: tournament?.startDate 
+      startDate: tournament?.startDate
         ? format(new Date(tournament.startDate), 'yyyy-MM-dd')
         : format(new Date(), 'yyyy-MM-dd'),
-      endDate: tournament?.endDate 
+      endDate: tournament?.endDate
         ? format(new Date(tournament.endDate), 'yyyy-MM-dd')
         : format(new Date(new Date().setDate(new Date().getDate() + 7)), 'yyyy-MM-dd'),
       numberOfFields: tournament && (tournament as any).numberOfFields ? (tournament as any).numberOfFields : 1,
@@ -95,10 +123,10 @@ export default function TournamentDialog({
       form.reset({
         name: tournament?.name || '',
         description: tournament?.description || '',
-        startDate: tournament?.startDate 
+        startDate: tournament?.startDate
           ? format(new Date(tournament.startDate), 'yyyy-MM-dd')
           : format(new Date(), 'yyyy-MM-dd'),
-        endDate: tournament?.endDate 
+        endDate: tournament?.endDate
           ? format(new Date(tournament.endDate), 'yyyy-MM-dd')
           : format(new Date(new Date().setDate(new Date().getDate() + 7)), 'yyyy-MM-dd'),
         numberOfFields: tournament && (tournament as any).numberOfFields ? (tournament as any).numberOfFields : 1,
@@ -109,7 +137,7 @@ export default function TournamentDialog({
   // Handle form submission
   const onSubmit = async (values: z.infer<typeof tournamentFormSchema>) => {
     setIsSubmitting(true);
-    
+
     try {
       // Format dates properly as ISO strings with time component
       const formattedValues = {
@@ -124,7 +152,7 @@ export default function TournamentDialog({
       } else {
         await updateMutation.mutateAsync(formattedValues);
       }
-      
+
       // Reset form before closing
       if (mode === 'create') {
         form.reset({
@@ -135,7 +163,7 @@ export default function TournamentDialog({
           numberOfFields: 1,
         });
       }
-      
+
       onClose(); // Close dialog on success
     } catch (error) {
       console.error(`Error saving tournament:`, error);
@@ -164,8 +192,8 @@ export default function TournamentDialog({
             )}
           </DialogTitle>
           <DialogDescription className="text-gray-600">
-            {mode === 'create' 
-              ? 'Add a new tournament to the system.' 
+            {mode === 'create'
+              ? 'Add a new tournament to the system.'
               : 'Edit the details of this tournament.'}
           </DialogDescription>
         </DialogHeader>
@@ -192,10 +220,10 @@ export default function TournamentDialog({
                 <FormItem>
                   <FormLabel className="font-semibold text-gray-900">Description</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Tournament description" 
+                    <Textarea
+                      placeholder="Tournament description"
                       {...field}
-                      className="min-h-[100px] bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg" 
+                      className="min-h-[100px] bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg"
                     />
                   </FormControl>
                   <FormMessage />
@@ -247,8 +275,8 @@ export default function TournamentDialog({
               <DialogClose asChild>
                 <Button type="button" variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg shadow-sm">Cancel</Button>
               </DialogClose>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isSubmitting}
                 className="bg-blue-500 text-white font-semibold rounded-lg px-6 py-2 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200 flex items-center gap-2"
               >
@@ -270,4 +298,3 @@ export default function TournamentDialog({
     </Dialog>
   );
 }
-

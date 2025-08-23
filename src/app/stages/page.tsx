@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/table";
 import { UserRole } from "@/types/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -49,7 +49,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { PlusIcon, PencilIcon, TrashIcon, InfoIcon, CalendarIcon, ArrowLeftIcon, ListIcon, ClipboardIcon, BarChart3Icon, AlarmClock, Medal, Crown, SaveIcon, CheckCircleIcon } from "lucide-react";
+import { PlusIcon, PencilIcon, TrashIcon, InfoIcon, CalendarIcon, ArrowLeftIcon, ListIcon, ClipboardIcon, BarChart3Icon, AlarmClock, Medal, Crown, SaveIcon, CheckCircleIcon, Clock } from "lucide-react";
+import { InlineAuditTrail } from '@/components/ui/audit-trail';
 import StageDialog from "./stage-dialog";
 import MatchSchedulerDialog from "./match-scheduler-dialog";
 import EndStageDialog from "@/components/features/stages/end-stage-dialog";
@@ -60,10 +61,10 @@ export default function StagesPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
   const { data: tournamentData, isLoading: tournamentsLoading } = useTournaments();
-  
+
   // Tournament selection with auto-save preferences
   const tournaments = useMemo(() => tournamentData || [], [tournamentData]);
-  
+
   // Use different preference hooks based on authentication status
   const {
     selectedTournamentId,
@@ -71,13 +72,13 @@ export default function StagesPage() {
     isLoading: preferencesLoading,
     hasStoredPreference,
     lastSavedAt
-  } = user 
+  } = user
     ? useUserTournamentPreferences(user.id, tournaments, true)
     : usePublicTournamentPreferences(tournaments, true);
-  const { 
-    data: stagesData, 
-    isLoading: stagesLoading, 
-    error: stagesError 
+  const {
+    data: stagesData,
+    isLoading: stagesLoading,
+    error: stagesError
   } = useStagesByTournament(selectedTournamentId);
   // Use useMemo to filter stages by selectedTournamentId for extra safety
   const stages = useMemo(
@@ -87,14 +88,14 @@ export default function StagesPage() {
         : [],
     [selectedTournamentId, stagesData]
   );
-  
+
   // State for selected stage
   const [selectedStageId, setSelectedStageId] = useState<string>("");
-  const { 
+  const {
     data: stageDetails,
     isLoading: stageDetailsLoading,
   } = useStage(selectedStageId);
-  
+
   // Fetch matches for the selected stage
   const {
     data: stageMatches,
@@ -110,16 +111,16 @@ export default function StagesPage() {
         : [],
     [stageMatches, selectedStageId]
   );
-  
+
   // Check if stage is ready for advancement using backend API
   const {
     data: stageReadiness,
     isLoading: readinessLoading,
     error: readinessError
   } = useStageReadiness(selectedStageId, !!selectedStageId);
-  
+
   const deleteMutation = useDeleteStage(selectedTournamentId);
-  
+
   // State for dialogs
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -163,7 +164,7 @@ export default function StagesPage() {
       router.push("/");
     }
   }, [user, authLoading, router]);
-  
+
   // Fetch match scores for all matches in the current stage
   useEffect(() => {
     async function fetchScores() {
@@ -224,7 +225,7 @@ export default function StagesPage() {
   // Handler for confirming delete
   const handleConfirmDelete = async () => {
     if (!selectedStage) return;
-    
+
     try {
       await deleteMutation.mutateAsync(selectedStage.id);
       setIsDeleteDialogOpen(false);
@@ -253,7 +254,7 @@ export default function StagesPage() {
     const diff = now - timestamp;
     const minutes = Math.floor(diff / 60000);
     const seconds = Math.floor((diff % 60000) / 1000);
-    
+
     if (minutes > 0) {
       return `${minutes}m ago`;
     } else if (seconds > 10) {
@@ -279,7 +280,7 @@ export default function StagesPage() {
         return <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">{type}</span>;
     }
   };
-  
+
   // Get match status badge
   const getMatchStatusBadge = (status: string) => {
     switch (status) {
@@ -327,11 +328,11 @@ export default function StagesPage() {
     const matchesInLatestRound = filteredStageMatches.filter(m => (m.roundNumber || 0) === latestRoundNumber);
     allMatchesCompleted = matchesInLatestRound.length > 0 && matchesInLatestRound.every(m => m.status === 'COMPLETED');
   }
-  
+
   // Use backend readiness check for all stage types
   const isStageReadyForAdvancement = stageReadiness?.ready === true;
   const stageReadinessReason = stageReadiness?.reason;
-  
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
 
@@ -352,7 +353,7 @@ export default function StagesPage() {
                   <CardTitle className="text-gray-900">Select Tournament</CardTitle>
                   <CardDescription className="text-gray-600">Choose a tournament to manage its stages</CardDescription>
                 </div>
-                
+
                 {/* Auto-save preferences indicator */}
                 {hasStoredPreference && (
                   <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
@@ -405,7 +406,7 @@ export default function StagesPage() {
                       {formatDate(selectedTournament.startDate)} - {formatDate(selectedTournament.endDate)}
                     </div>
                   </div>
-                  
+
                   {/* Auto-save status indicator */}
                   {hasStoredPreference && (
                     <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200">
@@ -419,9 +420,9 @@ export default function StagesPage() {
                     </div>
                   )}
                 </div>
-                
+
                 {selectedTournamentId && (
-                  <Button 
+                  <Button
                     onClick={() => setIsCreateDialogOpen(true)}
                     className="flex items-center gap-2 bg-blue-500 text-white font-semibold rounded-lg px-5 py-2.5 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200"
                   >
@@ -448,10 +449,10 @@ export default function StagesPage() {
         {selectedStageId && stageDetails ? (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleBackClick} 
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleBackClick}
                 className="flex items-center gap-1 mb-4 text-gray-700 hover:bg-gray-100 rounded-lg"
             >
               <ArrowLeftIcon size={16} />
@@ -536,6 +537,21 @@ export default function StagesPage() {
                   {stageDetails.type === "FINAL" && "Final matches to determine the tournament champions."}
                 </p>
               </div>
+              <Separator className="bg-gray-200" />
+              <div className="space-y-1">
+                <div className="text-sm text-gray-600 flex items-center gap-1">
+                  <Clock size={14} />
+                  Audit Trail
+                </div>
+                <InlineAuditTrail
+                  data={{
+                    createdAt: stageDetails.createdAt,
+                    updatedAt: stageDetails.updatedAt,
+                  }}
+                  showRelativeTime={true}
+                  className="text-gray-700"
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -573,8 +589,8 @@ export default function StagesPage() {
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  <Button 
-                    onClick={() => setIsMatchSchedulerDialogOpen(true)} 
+                  <Button
+                    onClick={() => setIsMatchSchedulerDialogOpen(true)}
                     className="flex items-center gap-2 bg-blue-500 text-white font-semibold rounded-lg px-5 py-2.5 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200"
                   >
                     <PlusIcon size={16} />
@@ -746,12 +762,13 @@ export default function StagesPage() {
                         <TableHead className="text-gray-700">Type</TableHead>
                         <TableHead className="text-gray-700">Start Date</TableHead>
                         <TableHead className="text-gray-700">End Date</TableHead>
+                        <TableHead className="text-gray-700">Created</TableHead>
                         <TableHead className="text-gray-700 text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {stages.map((stage) => (
-                        <TableRow 
+                        <TableRow
                           key={stage.id}
                           className="cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100"
                           onClick={() => setSelectedStageId(stage.id)}
@@ -760,6 +777,16 @@ export default function StagesPage() {
                           <TableCell>{getStageTypeBadge(stage.type)}</TableCell>
                           <TableCell className="text-gray-700">{formatDate(stage.startDate)}</TableCell>
                           <TableCell className="text-gray-700">{formatDate(stage.endDate)}</TableCell>
+                          <TableCell className="text-gray-700">
+                            <InlineAuditTrail
+                              data={{
+                                createdAt: stage.createdAt,
+                                updatedAt: stage.updatedAt,
+                              }}
+                              showRelativeTime={true}
+                              className="text-xs text-gray-600"
+                            />
+                          </TableCell>
                           <TableCell className="text-right space-x-2">
                             <Button
                               variant="outline"
@@ -799,7 +826,7 @@ export default function StagesPage() {
                     <h3 className="text-xl font-semibold text-gray-900 mb-1">No stages found</h3>
                     <p className="text-gray-600">Create your first stage for this tournament</p>
                   </div>
-                  <Button 
+                  <Button
                     onClick={() => setIsCreateDialogOpen(true)}
                     className="bg-blue-500 text-white font-semibold rounded-lg px-5 py-2.5 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200"
                   >
@@ -824,8 +851,8 @@ export default function StagesPage() {
 
       {/* Create Stage Dialog */}
       {selectedTournament && (
-        <StageDialog 
-          isOpen={isCreateDialogOpen} 
+        <StageDialog
+          isOpen={isCreateDialogOpen}
           onClose={() => setIsCreateDialogOpen(false)}
           mode="create"
           tournament={selectedTournament}

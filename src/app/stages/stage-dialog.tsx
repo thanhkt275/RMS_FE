@@ -5,24 +5,24 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, isAfter, isBefore } from "date-fns";
-import { 
-  Dialog, 
-  DialogClose, 
-  DialogContent, 
-  DialogFooter, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
   DialogDescription
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
 } from "@/components/ui/form";
 import {
   Select,
@@ -34,6 +34,11 @@ import {
 import { useCreateStage, useUpdateStage } from "@/hooks/stages/use-stages";
 import { Tournament, Stage } from "@/types/types";
 import { toast } from "sonner";
+import {
+  useAutoStageNotifications,
+  useTournamentTeamsForNotification,
+  useEmailServiceStatus
+} from '@/hooks/notifications/use-tournament-notifications';
 
 // Define props for the dialog component
 interface StageDialogProps {
@@ -44,65 +49,115 @@ interface StageDialogProps {
   stage?: Stage;
 }
 
-export default function StageDialog({ 
-  isOpen, 
-  onClose, 
-  mode, 
+export default function StageDialog({
+  isOpen,
+  onClose,
+  mode,
   tournament,
-  stage 
+  stage
 }: StageDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [forceRender, setForceRender] = useState(0);
-  
+
   const createMutation = useCreateStage();
   const updateMutation = useUpdateStage(stage?.id || "", tournament.id);
+
+  // Email notification hooks
+  const { sendNotificationOnCreate, sendNotificationOnUpdate } = useAutoStageNotifications();
+  const { data: tournamentTeams } = useTournamentTeamsForNotification(tournament.id);
+  const { data: emailServiceStatus } = useEmailServiceStatus();
 
   // Define tournament date boundaries for validation
   const tournamentStartDate = new Date(tournament.startDate);
   const tournamentEndDate = new Date(tournament.endDate);
-  
+
   // Convert to date strings for form default values
   const tournamentStartDateString = format(tournamentStartDate, 'yyyy-MM-dd\'T\'HH:mm');
   const tournamentEndDateString = format(tournamentEndDate, 'yyyy-MM-dd\'T\'HH:mm');
-  
+
   // Dynamic schema validation to ensure stage dates are within tournament dates
   const stageFormSchema = z.object({
     name: z.string()
       .min(2, { message: "Stage name must be at least 2 characters" })
-      .max(100, { message: "Stage name cannot exceed 100 characters" }),
+      .max(100, { message: "Stage name cannot exceed 100 characters" })
+      .refine((name) => name.trim().length >= 2, {
+        message: "Stage name cannot be only whitespace"
+      }),
     type: z.enum(["SWISS", "PLAYOFF", "FINAL"], {
       required_error: "You must select a stage type",
+      invalid_type_error: "Invalid stage type selected",
     }),
-    startDate: z.string().refine((date) => {
-      try {
-        const parsedDate = new Date(date);
-        return !isNaN(parsedDate.getTime()) && 
-               !isBefore(parsedDate, tournamentStartDate) && 
-               !isAfter(parsedDate, tournamentEndDate);
-      } catch {
-        return false;
-      }
-    }, { 
-      message: `Start date must be within tournament dates (${format(tournamentStartDate, 'PPP')} - ${format(tournamentEndDate, 'PPP')})` 
-    }),
-    endDate: z.string().refine((date) => {
-      try {
-        const parsedDate = new Date(date);
-        return !isNaN(parsedDate.getTime()) && 
-               !isBefore(parsedDate, tournamentStartDate) && 
-               !isAfter(parsedDate, tournamentEndDate);
-      } catch {
-        return false;
-      }
-    }, { 
-      message: `End date must be within tournament dates (${format(tournamentStartDate, 'PPP')} - ${format(tournamentEndDate, 'PPP')})` 
-    }),
+    startDate: z.string()
+      .refine((date) => {
+        try {
+          const parsedDate = new Date(date);
+          return !isNaN(parsedDate.getTime());
+        } catch {
+          return false;
+        }
+      }, {
+        message: "Start date must be a valid date"
+      })
+      .refine((date) => {
+        try {
+          const parsedDate = new Date(date);
+          return !isBefore(parsedDate, tournamentStartDate) &&
+                 !isAfter(parsedDate, tournamentEndDate);
+        } catch {
+          return false;
+        }
+      }, {
+        message: `Start date must be within tournament dates (${format(tournamentStartDate, 'PPP')} - ${format(tournamentEndDate, 'PPP')})`
+      })
+      .refine((date) => {
+        try {
+          const parsedDate = new Date(date);
+          const now = new Date();
+          now.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+          return parsedDate >= now;
+        } catch {
+          return false;
+        }
+      }, {
+        message: "Start date cannot be in the past"
+      }),
+    endDate: z.string()
+      .refine((date) => {
+        try {
+          const parsedDate = new Date(date);
+          return !isNaN(parsedDate.getTime());
+        } catch {
+          return false;
+        }
+      }, {
+        message: "End date must be a valid date"
+      })
+      .refine((date) => {
+        try {
+          const parsedDate = new Date(date);
+          return !isBefore(parsedDate, tournamentStartDate) &&
+                 !isAfter(parsedDate, tournamentEndDate);
+        } catch {
+          return false;
+        }
+      }, {
+        message: `End date must be within tournament dates (${format(tournamentStartDate, 'PPP')} - ${format(tournamentEndDate, 'PPP')})`
+      }),
   }).refine((data) => {
     const startDate = new Date(data.startDate);
     const endDate = new Date(data.endDate);
     return !isAfter(startDate, endDate);
   }, {
     message: "End date must be after or equal to start date",
+    path: ["endDate"],
+  }).refine((data) => {
+    const startDate = new Date(data.startDate);
+    const endDate = new Date(data.endDate);
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 30; // Maximum 30 days duration for a stage
+  }, {
+    message: "Stage duration cannot exceed 30 days",
     path: ["endDate"],
   });
 
@@ -127,7 +182,7 @@ export default function StageDialog({
   // Handle form submission
   const onSubmit = async (values: z.infer<typeof stageFormSchema>) => {
     setIsSubmitting(true);
-    
+
     try {
       // Format dates properly as ISO strings
       const formattedValues = {
@@ -136,15 +191,50 @@ export default function StageDialog({
         endDate: new Date(values.endDate).toISOString(),
       };
 
+      let createdOrUpdatedStage: Stage | undefined;
+
       if (mode === 'create') {
-        await createMutation.mutateAsync({
+        createdOrUpdatedStage = await createMutation.mutateAsync({
           ...formattedValues,
           tournamentId: tournament.id
         });
+
+        // Send email notification for new stage
+        if (createdOrUpdatedStage && tournamentTeams && tournamentTeams.length > 0) {
+          try {
+            await sendNotificationOnCreate(createdOrUpdatedStage, tournament, tournamentTeams);
+          } catch (emailError) {
+            console.warn('Failed to send stage creation notification:', emailError);
+            // Don't fail the entire operation if email fails
+          }
+        }
       } else if (stage) {
-        await updateMutation.mutateAsync(formattedValues);
+        createdOrUpdatedStage = await updateMutation.mutateAsync(formattedValues);
+
+        // Send email notification for stage update
+        if (createdOrUpdatedStage && tournamentTeams && tournamentTeams.length > 0) {
+          try {
+            // Determine what changed
+            const changes: string[] = [];
+            if (stage.name !== values.name) changes.push(`Name changed from "${stage.name}" to "${values.name}"`);
+            if (stage.type !== values.type) changes.push(`Type changed from "${stage.type}" to "${values.type}"`);
+            if (new Date(stage.startDate).toISOString() !== formattedValues.startDate) {
+              changes.push(`Start date changed to ${new Date(formattedValues.startDate).toLocaleDateString()}`);
+            }
+            if (new Date(stage.endDate).toISOString() !== formattedValues.endDate) {
+              changes.push(`End date changed to ${new Date(formattedValues.endDate).toLocaleDateString()}`);
+            }
+
+            if (changes.length > 0) {
+              await sendNotificationOnUpdate(createdOrUpdatedStage, tournament, tournamentTeams, changes);
+            }
+          } catch (emailError) {
+            console.warn('Failed to send stage update notification:', emailError);
+            // Don't fail the entire operation if email fails
+          }
+        }
       }
-      
+
       // Reset to default values before closing
       form.reset({
         name: '',
@@ -152,7 +242,7 @@ export default function StageDialog({
         startDate: tournamentStartDateString,
         endDate: tournamentEndDateString,
       });
-      
+
       setForceRender(prev => prev + 1);
       onClose(); // Close dialog on success
     } catch (error) {
@@ -164,9 +254,9 @@ export default function StageDialog({
   };
 
   return (
-    <Dialog 
-      key={`stage-dialog-${forceRender}`} 
-      open={isOpen} 
+    <Dialog
+      key={`stage-dialog-${forceRender}`}
+      open={isOpen}
       onOpenChange={(open) => {
         if (!open) {
           // Reset form when dialog closes
@@ -192,8 +282,8 @@ export default function StageDialog({
             )}
           </DialogTitle>
           <DialogDescription className="text-gray-600">
-            {mode === 'create' 
-              ? `Add a new stage to "${tournament.name}"` 
+            {mode === 'create'
+              ? `Add a new stage to "${tournament.name}"`
               : `Edit stage for "${tournament.name}"`}
           </DialogDescription>
         </DialogHeader>
@@ -219,8 +309,8 @@ export default function StageDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="font-semibold text-gray-900">Type</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
+                  <Select
+                    onValueChange={field.onChange}
                     defaultValue={field.value}
                     value={field.value}
                   >
@@ -274,8 +364,8 @@ export default function StageDialog({
               <DialogClose asChild>
                 <Button type="button" variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg shadow-sm">Cancel</Button>
               </DialogClose>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isSubmitting}
                 className="bg-blue-500 text-white font-semibold rounded-lg px-6 py-2 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200 flex items-center gap-2"
               >
