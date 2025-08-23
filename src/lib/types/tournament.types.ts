@@ -47,6 +47,8 @@ export interface Stage {
   isElimination?: boolean;
   advancementRules?: string;
   tournamentId: string;
+  createdAt: Date;
+  updatedAt: Date;
   matches?: Match[];
   _count?: {
     matches: number;

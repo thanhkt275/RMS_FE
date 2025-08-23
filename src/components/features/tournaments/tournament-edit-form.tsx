@@ -16,24 +16,53 @@ import { Tournament } from '@/types/tournament.types';
 import { useUpdateTournament } from '@/hooks/tournaments/use-tournament-mutations';
 
 const tournamentSchema = z.object({
-  name: z.string().min(1, 'Tournament name is required').max(100, 'Name must be less than 100 characters'),
-  description: z.string().max(500, 'Description must be less than 500 characters').optional(),
-  location: z.string().max(200, 'Location must be less than 200 characters').optional(),
+  name: z.string()
+    .min(2, 'Tournament name must be at least 2 characters')
+    .max(100, 'Name must be less than 100 characters')
+    .refine((name) => name.trim().length >= 2, {
+      message: "Tournament name cannot be only whitespace"
+    }),
+  description: z.string()
+    .max(1000, 'Description must be less than 1000 characters')
+    .optional()
+    .refine((desc) => !desc || desc.trim().length > 0, {
+      message: "Description cannot be only whitespace"
+    }),
+  location: z.string()
+    .max(200, 'Location must be less than 200 characters')
+    .optional()
+    .refine((loc) => !loc || loc.trim().length > 0, {
+      message: "Location cannot be only whitespace"
+    }),
   startDate: z.string().refine((date) => {
     const parsed = new Date(date);
-    return !isNaN(parsed.getTime()) && parsed > new Date();
-  }, 'Start date must be in the future'),
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+    return !isNaN(parsed.getTime()) && parsed >= now;
+  }, 'Start date must be valid and cannot be in the past'),
   endDate: z.string().refine((date) => {
     const parsed = new Date(date);
     return !isNaN(parsed.getTime());
   }, 'End date must be valid'),
-  numberOfFields: z.number().min(1, 'Must have at least 1 field').max(50, 'Cannot exceed 50 fields'),
+  numberOfFields: z.number()
+    .int('Number of fields must be a whole number')
+    .min(1, 'Must have at least 1 field')
+    .max(50, 'Cannot exceed 50 fields'),
 }).refine((data) => {
   const start = new Date(data.startDate);
   const end = new Date(data.endDate);
-  return end > start;
+  return end >= start;
 }, {
-  message: 'End date must be after start date',
+  message: 'End date must be after or equal to start date',
+  path: ['endDate'],
+}).refine((data) => {
+  const start = new Date(data.startDate);
+  const end = new Date(data.endDate);
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays <= 365; // Maximum 1 year duration
+}, {
+  message: 'Tournament duration cannot exceed 365 days',
   path: ['endDate'],
 });
 
