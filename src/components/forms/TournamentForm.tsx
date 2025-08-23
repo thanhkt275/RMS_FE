@@ -26,21 +26,38 @@ const formSchema = z
     name: z
       .string()
       .min(2, { message: "Tournament name must be at least 2 characters" })
-      .max(100, { message: "Tournament name cannot exceed 100 characters" }),
+      .max(100, { message: "Tournament name cannot exceed 100 characters" })
+      .refine((name) => name.trim().length >= 2, {
+        message: "Tournament name cannot be only whitespace"
+      }),
     description: z
       .string()
       .min(10, { message: "Description must be at least 10 characters" })
-      .max(1000, { message: "Description cannot exceed 1000 characters" }),
-    startDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
-      message: "Start date must be a valid date",
-    }),
-    endDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
-      message: "End date must be a valid date",
-    }),
+      .max(1000, { message: "Description cannot exceed 1000 characters" })
+      .refine((desc) => desc.trim().length >= 10, {
+        message: "Description cannot be only whitespace"
+      }),
+    startDate: z.string()
+      .refine((date) => !isNaN(Date.parse(date)), {
+        message: "Start date must be a valid date",
+      })
+      .refine((date) => {
+        const startDate = new Date(date);
+        const now = new Date();
+        now.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+        return startDate >= now;
+      }, {
+        message: "Start date cannot be in the past"
+      }),
+    endDate: z.string()
+      .refine((date) => !isNaN(Date.parse(date)), {
+        message: "End date must be a valid date",
+      }),
     numberOfFields: z
       .number()
-      .min(1, { message: "There must be at least 1 field" })
-      .max(20, { message: "Too many fields (max 20)" }),
+      .int({ message: "Number of fields must be a whole number" })
+      .min(1, { message: "Tournament must have at least 1 field" })
+      .max(50, { message: "Tournament cannot have more than 50 fields" }),
     maxTeams: z.number().nullable().optional(),
     maxTeamMembers: z.number().nullable().optional(),
   })
@@ -51,7 +68,20 @@ const formSchema = z
       return startDate <= endDate;
     },
     {
-      message: "End date must be after start date",
+      message: "End date must be after or equal to start date",
+      path: ["endDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      const startDate = new Date(data.startDate);
+      const endDate = new Date(data.endDate);
+      const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= 365; // Maximum 1 year duration
+    },
+    {
+      message: "Tournament duration cannot exceed 365 days",
       path: ["endDate"],
     }
   );

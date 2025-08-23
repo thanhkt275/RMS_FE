@@ -5,11 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Calendar, 
-  MapPin, 
-  User, 
-  Trophy, 
+import {
+  Calendar,
+  MapPin,
+  User,
+  Trophy,
   Clock,
   Target,
   CheckCircle,
@@ -19,6 +19,7 @@ import {
 import { format, formatDistanceToNow, isAfter, isBefore } from 'date-fns';
 import { Tournament } from '@/types/tournament.types';
 import { useScoreConfigByTournamentId } from '@/hooks/score-config/useScoreConfigs';
+import { AuditTrail } from '@/components/ui/audit-trail';
 
 interface TournamentDetailSummaryProps {
   tournament: Tournament;
@@ -26,15 +27,15 @@ interface TournamentDetailSummaryProps {
   isEditing?: boolean;
 }
 
-export function TournamentDetailSummary({ 
-  tournament, 
-  onEdit, 
-  isEditing = false 
+export function TournamentDetailSummary({
+  tournament,
+  onEdit,
+  isEditing = false
 }: TournamentDetailSummaryProps) {
   const now = new Date();
   const startDate = new Date(tournament.startDate);
   const endDate = new Date(tournament.endDate);
-  
+
   const getStatusInfo = () => {
     if (isBefore(now, startDate)) {
       return {
@@ -71,30 +72,30 @@ export function TournamentDetailSummary({
   const getDurationText = () => {
     // Calculate duration in milliseconds
     const durationMs = endDate.getTime() - startDate.getTime();
-    
+
     // Convert to days and round appropriately
     // Use Math.round instead of Math.ceil for more accurate day counting
     const totalDays = Math.round(durationMs / (1000 * 60 * 60 * 24));
-    
+
     // Handle edge cases
     if (totalDays <= 0) return '0 days';
     if (totalDays === 1) return '1 day';
-    
+
     // Less than a week
     if (totalDays < 7) return `${totalDays} days`;
-    
+
     // Less than a month (4 weeks)
     if (totalDays < 28) {
       const weeks = Math.round(totalDays / 7);
       return `${weeks} week${weeks > 1 ? 's' : ''}`;
     }
-    
+
     // Less than a year (12 months)
     if (totalDays < 365) {
       const months = Math.round(totalDays / 30.44); // More accurate monthly calculation
       return `${months} month${months > 1 ? 's' : ''}`;
     }
-    
+
     // A year or more
     const years = Math.round(totalDays / 365.25); // Account for leap years
     if (years === 1) return '1 year';
@@ -119,10 +120,10 @@ export function TournamentDetailSummary({
               {statusInfo.description}
             </p>
           </div>
-          
+
           {onEdit && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={onEdit}
               disabled={isEditing}
@@ -132,7 +133,7 @@ export function TournamentDetailSummary({
           )}
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-6">
         {/* Description */}
         {tournament.description && (
@@ -190,7 +191,7 @@ export function TournamentDetailSummary({
               </div>
             </div>
           </div>
-          
+
           {/* Tournament Details */}
           <div className="space-y-4 bg-gray-900 rounded-lg p-4">
             <h3 className="font-semibold flex items-center gap-2 text-slate-100">
@@ -228,9 +229,31 @@ export function TournamentDetailSummary({
             </div>
           </div>
         </div>
-        
+
         <Separator />
-        
+
+        {/* Audit Trail */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-slate-300 flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Audit Trail
+          </h4>
+          <AuditTrail
+            data={{
+              createdAt: tournament.createdAt,
+              updatedAt: tournament.updatedAt,
+              createdBy: tournament.admin,
+              updatedBy: tournament.admin, // In a real app, you'd track who made the last update
+            }}
+            variant="default"
+            showRelativeTime={true}
+            showUserInfo={true}
+            className="text-slate-300"
+          />
+        </div>
+
+        <Separator />
+
         {/* Tournament Statistics Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center">
@@ -253,13 +276,13 @@ export function TournamentDetailSummary({
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-orange-600">
-              {tournament.fields?.reduce((sum, field) => 
+              {tournament.fields?.reduce((sum, field) =>
                 sum + (field.fieldReferees?.length || 0), 0) || 0}
             </div>
             <div className="text-xs text-gray-500">Referees</div>
           </div>
         </div>
-        
+
         {/* Status Indicators */}
         <div className="flex flex-wrap gap-2">
           {tournament._count?.stages === 0 && (
@@ -268,14 +291,14 @@ export function TournamentDetailSummary({
               No stages created
             </Badge>
           )}
-          
+
           {tournament._count?.fields === 0 && (
             <Badge variant="outline" className="text-red-700 border-red-300">
               <AlertCircle className="h-3 w-3 mr-1" />
               No fields configured
             </Badge>
           )}
-          
+
           {tournament._count?.teams === 0 && (
             <Badge variant="outline" className="text-blue-700 border-blue-300">
               <Trophy className="h-3 w-3 mr-1" />
