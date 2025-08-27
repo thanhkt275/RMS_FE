@@ -150,10 +150,10 @@ export function PublicTeamsView({
           <div className="flex flex-col gap-1">
             <Select value={selectedTournamentId} onValueChange={onTournamentChange}>
               <SelectTrigger className="w-full md:w-56 bg-blue-950 border-blue-700 text-blue-100">
-                <SelectValue placeholder={tournamentsLoading ? "Loading tournaments..." : "Select a tournament"} />
+                <SelectValue placeholder={tournamentsLoading ? "Loading tournaments..." : tournaments.length === 0 ? "No tournaments available" : "Select a tournament"} />
               </SelectTrigger>
               <SelectContent>
-                {Array.isArray(tournaments) ? tournaments.map((tournament) => (
+                {Array.isArray(tournaments) && tournaments.length > 0 ? tournaments.map((tournament) => (
                   <SelectItem key={tournament.id} value={tournament.id}>
                     <div className="flex items-center gap-2">
                       <span>{tournament.name}</span>
@@ -162,10 +162,14 @@ export function PublicTeamsView({
                       </Badge>
                     </div>
                   </SelectItem>
-                )) : null}
+                )) : (
+                  <SelectItem value="no-tournaments" disabled>
+                    No tournaments available
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
-            
+
             {/* Auto-save Status Indicator */}
             {hasStoredPreference && (
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -185,34 +189,63 @@ export function PublicTeamsView({
       </div>
 
       {/* Information Banner */}
-      <div className="bg-blue-900/40 border border-blue-700 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-blue-400 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-blue-200">
-              Public Tournament Information
-            </h3>
-            <div className="mt-1 text-sm text-blue-300">
-              <p>This is a public view of tournament participants. You can browse team information without logging in.</p>
-              <ul className="mt-2 list-disc list-inside space-y-1 text-blue-400">
-                <li>View basic team information and participation details</li>
-                <li>See team names, member counts, and organizations</li>
-                <li>No login required for viewing</li>
-                <li>
-                  <a href="/login" className="text-blue-300 hover:text-blue-200 underline">
+      {tournaments.length === 0 && !tournamentsLoading && (
+        <div className="bg-yellow-900/40 border border-yellow-700 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-400 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-yellow-200">
+                No Tournaments Available
+              </h3>
+              <div className="mt-1 text-sm text-yellow-300">
+                <p>Currently, there are no tournaments available for public viewing. Tournaments will appear here once they are created by administrators.</p>
+                <p className="mt-2">
+                  <a href="/login" className="text-yellow-200 hover:text-yellow-100 underline">
                     Log in
                   </a>{" "}
-                  to access team management features
-                </li>
-              </ul>
+                  if you're an administrator to create tournaments.
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Information Banner */}
+      {tournaments.length > 0 && (
+        <div className="bg-blue-900/40 border border-blue-700 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-blue-400 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-blue-200">
+                Public Tournament Information
+              </h3>
+              <div className="mt-1 text-sm text-blue-300">
+                <p>This is a public view of tournament participants. You can browse team information without logging in.</p>
+                <ul className="mt-2 list-disc list-inside space-y-1 text-blue-400">
+                  <li>View basic team information and participation details</li>
+                  <li>See team names, member counts, and organizations</li>
+                  <li>No login required for viewing</li>
+                  <li>
+                    <a href="/login" className="text-blue-300 hover:text-blue-200 underline">
+                      Log in
+                    </a>{" "}
+                    to access team management features
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Teams Table */}
       <PublicTeamsTable teams={teams} isLoading={isLoading} />

@@ -100,6 +100,7 @@ export const TeamsPageContainer = React.memo(function TeamsPageContainer({ initi
   const {
     data: publicTournaments = [],
     isLoading: publicTournamentsLoading,
+    error: publicTournamentsError,
   } = usePublicTournaments();
 
   // Auto-save public tournament selection
@@ -112,6 +113,7 @@ export const TeamsPageContainer = React.memo(function TeamsPageContainer({ initi
   const {
     data: publicTeams = [],
     isLoading: publicTeamsLoading,
+    error: publicTeamsError,
   } = usePublicTeams(publicSelectedTournamentId);
 
   // Memoized callback for public tournament selection
@@ -242,6 +244,17 @@ export const TeamsPageContainer = React.memo(function TeamsPageContainer({ initi
 
   // Show public view if user is not authenticated
   if (!user) {
+    // Show error if tournaments failed to load
+    if (publicTournamentsError) {
+      return (
+        <div className="container mx-auto py-8 px-4">
+          <TeamsPageError
+            error={`Failed to load tournaments: ${publicTournamentsError.message || "Unable to connect to server"}`}
+          />
+        </div>
+      );
+    }
+
     return (
       <div className="container mx-auto py-8 px-4">
         <PublicTeamsView
