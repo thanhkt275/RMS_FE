@@ -202,7 +202,7 @@ export default function StageDialog({
         // Send email notification for new stage
         if (createdOrUpdatedStage && tournamentTeams && tournamentTeams.length > 0) {
           try {
-            await sendNotificationOnCreate(createdOrUpdatedStage, tournament, tournamentTeams);
+            await sendNotificationOnCreate(createdOrUpdatedStage, tournament as any, tournamentTeams);
           } catch (emailError) {
             console.warn('Failed to send stage creation notification:', emailError);
             // Don't fail the entire operation if email fails
@@ -226,7 +226,7 @@ export default function StageDialog({
             }
 
             if (changes.length > 0) {
-              await sendNotificationOnUpdate(createdOrUpdatedStage, tournament, tournamentTeams, changes);
+              await sendNotificationOnUpdate(createdOrUpdatedStage, tournament as any, tournamentTeams, changes);
             }
           } catch (emailError) {
             console.warn('Failed to send stage update notification:', emailError);

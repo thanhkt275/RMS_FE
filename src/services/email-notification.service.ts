@@ -66,7 +66,7 @@ export interface EmailNotificationResult {
  * Email Notification Service Class
  */
 export class EmailNotificationService {
-  private config: EmailConfig;
+  private config!: EmailConfig;
   private isConfigured: boolean = false;
 
   constructor(config?: EmailConfig) {
@@ -303,7 +303,6 @@ Tournament Management Team
           <p><strong>Stage Type:</strong> ${stage.type}</p>
           <p><strong>Start Date:</strong> ${startDate}</p>
           <p><strong>End Date:</strong> ${endDate}</p>
-          ${stage.description ? `<p><strong>Description:</strong> ${stage.description}</p>` : ''}
         </div>
 
         <p>Dear Team,</p>
@@ -327,7 +326,6 @@ Tournament: ${tournament.name}
 Stage Type: ${stage.type}
 Start Date: ${startDate}
 End Date: ${endDate}
-${stage.description ? `Description: ${stage.description}\n` : ''}
 
 Dear Team,
 
@@ -438,7 +436,6 @@ Tournament Management Team
           <p><strong>Stage Type:</strong> ${stage.type}</p>
           <p><strong>Start Date:</strong> ${startDate}</p>
           <p><strong>End Date:</strong> ${endDate}</p>
-          ${stage.description ? `<p><strong>Description:</strong> ${stage.description}</p>` : ''}
         </div>
 
         ${changesHtml}
@@ -464,7 +461,7 @@ Tournament: ${tournament.name}
 Stage Type: ${stage.type}
 Start Date: ${startDate}
 End Date: ${endDate}
-${stage.description ? `Description: ${stage.description}\n` : ''}${changesText}
+${changesText}
 Dear Team,
 
 There have been updates to the "${stage.name}" stage in the ${tournament.name} tournament. Please review the updated information above.
