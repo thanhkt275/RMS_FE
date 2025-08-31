@@ -63,7 +63,17 @@ const tournamentFormSchema = z.object({
   numberOfFields: z.coerce.number()
     .int({ message: "Number of fields must be a whole number" })
     .min(1, { message: "Tournament must have at least 1 field" })
-    .max(50, { message: "Tournament cannot have more than 50 fields" })
+    .max(50, { message: "Tournament cannot have more than 50 fields" }),
+  maxTeams: z.coerce.number()
+    .int({ message: "Maximum teams must be a whole number" })
+    .min(1, { message: "Maximum teams must be at least 1" })
+    .max(1000, { message: "Maximum teams cannot exceed 1000" })
+    .optional(),
+  maxTeamMembers: z.coerce.number()
+    .int({ message: "Maximum team members must be a whole number" })
+    .min(1, { message: "Maximum team members must be at least 1" })
+    .max(50, { message: "Maximum team members cannot exceed 50" })
+    .optional()
 }).refine((data) => {
   const startDate = new Date(data.startDate);
   const endDate = new Date(data.endDate);
@@ -114,6 +124,8 @@ export default function TournamentDialog({
         ? format(new Date(tournament.endDate), 'yyyy-MM-dd')
         : format(new Date(new Date().setDate(new Date().getDate() + 7)), 'yyyy-MM-dd'),
       numberOfFields: tournament && (tournament as any).numberOfFields ? (tournament as any).numberOfFields : 1,
+      maxTeams: tournament?.maxTeams || undefined,
+      maxTeamMembers: tournament?.maxTeamMembers || undefined,
     },
   });
 
@@ -130,6 +142,8 @@ export default function TournamentDialog({
           ? format(new Date(tournament.endDate), 'yyyy-MM-dd')
           : format(new Date(new Date().setDate(new Date().getDate() + 7)), 'yyyy-MM-dd'),
         numberOfFields: tournament && (tournament as any).numberOfFields ? (tournament as any).numberOfFields : 1,
+        maxTeams: tournament?.maxTeams || undefined,
+        maxTeamMembers: tournament?.maxTeamMembers || undefined,
       });
     }
   }, [isOpen, tournament, form]);
@@ -161,6 +175,8 @@ export default function TournamentDialog({
           startDate: format(new Date(), 'yyyy-MM-dd'),
           endDate: format(new Date(new Date().setDate(new Date().getDate() + 7)), 'yyyy-MM-dd'),
           numberOfFields: 1,
+          maxTeams: undefined,
+          maxTeamMembers: undefined,
         });
       }
 
@@ -271,7 +287,59 @@ export default function TournamentDialog({
                   <FormMessage />
                 </FormItem>
               )}
-            />            <DialogFooter className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="maxTeams"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-semibold text-gray-900">Maximum Teams</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min={1} 
+                        max={1000} 
+                        step={1} 
+                        placeholder="Optional"
+                        {...field} 
+                        value={field.value || ''}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                        className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="maxTeamMembers"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-semibold text-gray-900">Max Team Members</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min={1} 
+                        max={50} 
+                        step={1} 
+                        placeholder="Optional"
+                        {...field} 
+                        value={field.value || ''}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                        className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <DialogFooter className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
               <DialogClose asChild>
                 <Button type="button" variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg shadow-sm">Cancel</Button>
               </DialogClose>

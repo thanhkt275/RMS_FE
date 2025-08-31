@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useMatch, useMatchScores } from "@/hooks/matches/use-matches";
+import { useAuth } from "@/hooks/common/use-auth";
+import { useUserTeams } from "@/hooks/teams/use-teams";
 import { cn } from "@/lib/utils";
-import { MatchStatus } from "@/types/types";
+import { MatchStatus, UserRole } from "@/types/types";
 import { format, parseISO } from "date-fns";
 import type { Alliance, TeamAlliance } from "@/types/types";
 
@@ -27,8 +29,12 @@ import {
 
 export default function MatchDetailsPage() {
   const { id } = useParams();
+  const { user } = useAuth();
+  const isAdmin = user?.role === UserRole.ADMIN;
+  
   const { data: match, isLoading, error } = useMatch(id as string);
   const { data: matchScores, isLoading: scoresLoading } = useMatchScores(id as string);
+  const { data: userTeams = [] } = useUserTeams();
   const [activeTab, setActiveTab] = useState("overview");
 
   if (isLoading || scoresLoading) {
@@ -63,6 +69,23 @@ export default function MatchDetailsPage() {
   // Find red and blue alliances
   const redAlliance = match.alliances?.find((a: Alliance) => a.color === "RED");
   const blueAlliance = match.alliances?.find((a: Alliance) => a.color === "BLUE");
+
+  // Check if user has any teams participating in this match
+  const isUserParticipating = () => {
+    if (!userTeams || userTeams.length === 0 || !match) return false;
+    
+    // Extract all team IDs from the user's teams
+    const userTeamIds = userTeams.map(team => team.id);
+    
+    // Check if any team in the match belongs to the user
+    return match.alliances?.some((alliance: any) => 
+      alliance.teamAlliances?.some((ta: any) => 
+        userTeamIds.includes(ta.team?.id)
+      )
+    ) || false;
+  };
+
+  const userIsParticipating = isUserParticipating();
 
   // Prefer scores from matchScores (scores table), fallback to alliance.score
   const redScore = typeof matchScores?.redTotalScore === "number"
@@ -123,6 +146,23 @@ export default function MatchDetailsPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
+      {/* User Participation Banner */}
+      {userIsParticipating && (
+        <div className="mb-6 rounded-lg bg-gradient-to-r from-green-900/80 to-green-800/60 border border-green-600 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0">
+              <svg className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-green-100">You're participating in this match!</h3>
+              <p className="text-sm text-green-200">Your team is scheduled to compete in this match.</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <Button variant="outline" size="icon" asChild>
@@ -146,7 +186,7 @@ export default function MatchDetailsPage() {
               View Tournament
             </Link>
           </Button>
-          {match.status === MatchStatus.PENDING && (
+          {isAdmin && match.status === MatchStatus.PENDING && (
             <Button>
               Start Match
             </Button>
@@ -543,7 +583,7 @@ export default function MatchDetailsPage() {
                   </div>
                 )}
                 
-                {match.status !== MatchStatus.COMPLETED && (
+                {isAdmin && match.status !== MatchStatus.COMPLETED && (
                   <div className="mt-4">
                     <Button className="w-full">
                       {match.status === MatchStatus.PENDING

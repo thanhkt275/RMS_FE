@@ -7,10 +7,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import TeamForm from "@/components/forms/TeamForm";
+import { UnifiedTeamForm } from "@/components/forms/UnifiedTeamForm";
 import { Team } from "@/types/team.types";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
+import { useTournament } from "@/hooks/tournaments/use-tournaments";
 
 interface EditTeamDialogProps {
   open: boolean;
@@ -19,13 +19,11 @@ interface EditTeamDialogProps {
   tournamentId: string;
 }
 
-// Convert Team to FormValues format
+// Convert Team to UnifiedTeamForm format
 const convertTeamToFormValues = (team: Team) => {
   return {
-    id: team.id,
     name: team.name,
     teamMembers: team.teamMembers?.map(member => ({
-      id: member.id,
       name: member.name,
       gender: member.gender,
       phoneNumber: member.phoneNumber || "",
@@ -34,20 +32,9 @@ const convertTeamToFormValues = (team: Team) => {
       ward: member.ward || "",
       organization: member.organization || "",
       organizationAddress: member.organizationAddress || "",
-      dateOfBirth: member.dateOfBirth ? format(new Date(member.dateOfBirth), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-    })) || [{
-      name: "",
-      gender: null,
-      phoneNumber: "",
-      email: "",
-      province: "",
-      ward: "",
-      organization: "",
-      organizationAddress: "",
-      dateOfBirth: format(new Date(), 'yyyy-MM-dd'),
-    }],
+      dateOfBirth: member.dateOfBirth || undefined,
+    })) || [],
     referralSource: team.referralSource || "other",
-    termsAccepted: true, // Assume already accepted for existing teams
   };
 };
 
@@ -58,19 +45,24 @@ export function EditTeamDialog({
   tournamentId,
 }: EditTeamDialogProps) {
   const router = useRouter();
+  
+  // Fetch tournament data for form constraints
+  const { data: tournament } = useTournament(tournamentId);
 
   // Convert team data to form format
   const formValues = useMemo(() => {
     return team ? convertTeamToFormValues(team) : undefined;
   }, [team]);
 
-  // Close dialog when team is updated successfully
-  useEffect(() => {
-    if (!open && team) {
-      // Team was updated, refresh the page or invalidate queries
-      router.refresh();
-    }
-  }, [open, team, router]);
+  // Handle successful team update
+  const handleSuccess = () => {
+    onOpenChange(false);
+    router.refresh();
+  };
+
+  const handleCancel = () => {
+    onOpenChange(false);
+  };
 
   if (!team) return null;
 
@@ -84,9 +76,14 @@ export function EditTeamDialog({
         </DialogHeader>
 
         <div className="mt-4">
-          <TeamForm 
+          <UnifiedTeamForm
+            profile="detailed"
+            mode="edit"
+            tournament={tournament}
             defaultValues={formValues}
-            maxTeamMembers={5}
+            onSuccess={handleSuccess}
+            onCancel={handleCancel}
+            showModeToggle={false}
           />
         </div>
       </DialogContent>

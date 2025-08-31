@@ -1,10 +1,10 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import TeamForm from "@/components/forms/TeamForm";
+import { UnifiedTeamForm } from "@/components/forms/UnifiedTeamForm";
 import { useTournament } from "@/hooks/tournaments/use-tournaments";
-import { Skeleton } from "@/components/ui/skeleton"; // optional if you want loading UI
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"; // optional error display
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export default function TeamCard() {
   const params = useParams();
@@ -33,14 +33,32 @@ export default function TeamCard() {
 
   const userTeam = tournament.userTeam;
 
+  // Convert userTeam to UnifiedTeamForm format
   const defaultValues = userTeam
     ? {
-        ...userTeam,
-        referralSource: userTeam.referralSource ?? "",
-        termsAccepted: false,
-        teamMembers: userTeam.teamMembers || [],
+        name: userTeam.name,
+        teamMembers: userTeam.teamMembers?.map(member => ({
+          name: member.name,
+          gender: member.gender,
+          phoneNumber: member.phoneNumber || "",
+          email: member.email || "",
+          province: member.province || "",
+          ward: member.ward || "",
+          organization: member.organization || "",
+          organizationAddress: member.organizationAddress || "",
+          dateOfBirth: member.dateOfBirth || undefined,
+        })) || [],
+        referralSource: userTeam.referralSource || "other",
       }
     : undefined;
 
-  return <TeamForm defaultValues={defaultValues} maxTeamMembers={tournament.maxTeamMembers} />;
+  return (
+    <UnifiedTeamForm
+      profile="detailed"
+      mode={userTeam ? "edit" : "create"}
+      tournament={tournament}
+      defaultValues={defaultValues}
+      showModeToggle={false}
+    />
+  );
 }

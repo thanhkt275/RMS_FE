@@ -30,6 +30,7 @@ export const QueryKeys = {
     byId: (id: string) => ['matches', id],
     byStage: (stageId: string) => ['matches', 'stage', stageId],
     byTournament: (tournamentId: string) => ['matches', 'tournament', tournamentId],
+    stageSchedule: (stageId: string) => ['matches', 'stage', stageId, 'schedule'],
   },
   
   // Team related queries

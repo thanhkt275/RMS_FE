@@ -43,14 +43,22 @@ export default function MatchSchedulerDialog({
   
   // Basic state
   const [activeView, setActiveView] = useState<"config" | "teams" | "results">("config");
-  const [schedulerType, setSchedulerType] = useState<string>(stageType === "SWISS" ? "swiss" : "playoff");
+  const [schedulerType, setSchedulerType] = useState<string>(stageType === "SWISS" ? "swiss" : stageType === "QUALIFICATION" ? "frc" : "playoff");
   const [currentRoundNumber, setCurrentRoundNumber] = useState<number>(0);
   const [numberOfRounds, setNumberOfRounds] = useState<number>(3);
+  const [teamsPerAlliance, setTeamsPerAlliance] = useState<number>(2);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [scheduledMatches, setScheduledMatches] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+  
+  // FRC-specific state
+  const [frcRounds, setFrcRounds] = useState<number>(6);
+  const [frcQualityLevel, setFrcQualityLevel] = useState<"low" | "medium" | "high">("medium");
+  const [frcMinMatchSeparation, setFrcMinMatchSeparation] = useState<number>(1);
+  const [frcPreset, setFrcPreset] = useState<string>("");
+  const [showAdvancedFrcConfig, setShowAdvancedFrcConfig] = useState<boolean>(false);
   
   // Pagination state for results view
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -65,17 +73,24 @@ export default function MatchSchedulerDialog({
   useEffect(() => {
     if (isOpen) {
       setActiveView("config");
-      setSchedulerType(stageType === "SWISS" ? "swiss" : "playoff");
+      setSchedulerType(stageType === "SWISS" ? "swiss" : stageType === "QUALIFICATION" ? "frc" : "playoff");
       setCurrentRoundNumber(0);
       setNumberOfRounds(3);
+      setTeamsPerAlliance(2);
       setSelectedTeams([]);
       setSearchQuery("");
       setScheduledMatches([]);
       setCurrentPage(1);
       setError(null);
+      // Reset FRC-specific state
+      setFrcRounds(6);
+      setFrcQualityLevel("medium");
+      setFrcMinMatchSeparation(1);
+      setFrcPreset("");
+      setShowAdvancedFrcConfig(false);
     }
   }, [isOpen, stageType]);
-  // Fetch teams by stage ID - only when teams view is active AND not Swiss
+  // Fetch teams by stage ID - only when teams view is active AND not Swiss or FRC
   const { 
     data: teams = [], 
     isLoading: isLoadingTeams, 
@@ -102,7 +117,7 @@ export default function MatchSchedulerDialog({
         return [];
       }
     },
-    enabled: !!stageId && isOpen && activeView === "teams" && schedulerType !== "swiss",
+    enabled: !!stageId && isOpen && activeView === "teams" && !["swiss", "frc"].includes(schedulerType),
     staleTime: 1000 * 60,
   });
 
@@ -149,8 +164,8 @@ export default function MatchSchedulerDialog({
   };
   // Function to schedule matches
   const handleSchedule = async () => {
-    // For Swiss tournaments, no team selection is required
-    if (schedulerType !== "swiss" && selectedTeams.length === 0) {
+    // For Swiss and FRC tournaments, no team selection is required
+    if (!["swiss", "frc"].includes(schedulerType) && selectedTeams.length === 0) {
       toast.error("Please select at least one team");
       return;
     }
@@ -167,11 +182,42 @@ export default function MatchSchedulerDialog({
       if (schedulerType === "swiss") {
         endpoint = "/match-scheduler/generate-swiss-round";
         requestBody.currentRoundNumber = currentRoundNumber;
+        requestBody.teamsPerAlliance = teamsPerAlliance;
         // Swiss tournaments don't require team selection - backend uses all teams
+      } else if (schedulerType === "frc") {
+        endpoint = "/match-scheduler/generate-frc-schedule";
+        requestBody.rounds = frcRounds;
+        requestBody.teamsPerAlliance = teamsPerAlliance;
+        requestBody.minMatchSeparation = frcMinMatchSeparation;
+        requestBody.qualityLevel = frcQualityLevel;
+        
+        // Add preset if selected
+        if (frcPreset) {
+          requestBody.preset = frcPreset;
+        }
+        
+        // Add advanced config if enabled
+        if (showAdvancedFrcConfig) {
+          requestBody.config = {
+            penalties: {
+              partnerRepeat: teamsPerAlliance === 1 ? 0.0 : teamsPerAlliance === 2 ? 4.0 : 3.0, // No partners in 1v1
+              opponentRepeat: teamsPerAlliance === 1 ? 3.0 : 2.0, // Higher penalty for 1v1 since only 1 opponent
+              matchSeparationViolation: 15.0
+            },
+            stationBalancing: {
+              enabled: true,
+              strategy: "position",
+              perfectBalancing: true
+            }
+          };
+        }
+        
+        // FRC tournaments don't require team selection - backend uses all teams
       } else if (schedulerType === "playoff") {
         endpoint = "/match-scheduler/generate-playoff";
         requestBody.numberOfRounds = numberOfRounds;
-        requestBody.teamIds = selectedTeams; // Only add teamIds for non-Swiss tournaments
+        requestBody.teamsPerAlliance = teamsPerAlliance;
+        requestBody.teamIds = selectedTeams; // Only add teamIds for non-Swiss/FRC tournaments
       }
 
       const response = await apiClient.post(endpoint, requestBody);
@@ -217,7 +263,7 @@ export default function MatchSchedulerDialog({
           >
             1. Configuration
           </div>
-          {schedulerType !== "swiss" && (
+          {!["swiss", "frc"].includes(schedulerType) && (
             <div
               className={`px-4 py-2 cursor-pointer rounded-t-lg transition-colors ${
                 activeView === "teams" 
@@ -238,7 +284,7 @@ export default function MatchSchedulerDialog({
               }`}
               onClick={() => setActiveView("results")}
             >
-              {schedulerType === "swiss" ? "2. Results" : "3. Results"}
+              {["swiss", "frc"].includes(schedulerType) ? "2. Results" : "3. Results"}
             </div>
           )}
         </div>{/* Content based on active view */}
@@ -246,7 +292,7 @@ export default function MatchSchedulerDialog({
           <div className="py-2 space-y-4">
             <div className="space-y-2">
               <Label className="text-gray-700 font-medium">Scheduler Type</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <div
                   className={`border rounded-lg p-3 cursor-pointer transition-colors ${
                     schedulerType === "swiss" 
@@ -258,9 +304,27 @@ export default function MatchSchedulerDialog({
                   onClick={() => {
                     if (stageType === "SWISS") setSchedulerType("swiss");
                   }}
-                >                  <div className="font-medium">Swiss Tournament</div>
+                >
+                  <div className="font-medium">Swiss Tournament</div>
                   <div className="text-xs text-gray-600">
-                    Automatic pairing based on team performance - no team selection needed
+                    Automatic pairing based on team performance
+                  </div>
+                </div>
+                <div
+                  className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                    schedulerType === "frc" 
+                      ? "bg-blue-50 border-blue-200 text-blue-900" 
+                      : stageType !== "QUALIFICATION"
+                        ? "opacity-50 cursor-not-allowed bg-gray-50 border-gray-200 text-gray-400"
+                        : "hover:bg-gray-50 border-gray-300 text-gray-900"
+                  }`}
+                  onClick={() => {
+                    if (stageType === "QUALIFICATION") setSchedulerType("frc");
+                  }}
+                >
+                  <div className="font-medium">FRC Qualification</div>
+                  <div className="text-xs text-gray-600">
+                    MatchMaker algorithm for balanced qualification rounds
                   </div>
                 </div>
                 <div
@@ -281,6 +345,27 @@ export default function MatchSchedulerDialog({
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Teams per Alliance Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="teamsPerAlliance" className="text-gray-700 font-medium">Teams per Alliance</Label>
+              <Select
+                value={teamsPerAlliance.toString()}
+                onValueChange={(value) => setTeamsPerAlliance(Number(value))}
+              >
+                <SelectTrigger id="teamsPerAlliance" className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg">
+                  <SelectValue placeholder="Select teams per alliance" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
+                  <SelectItem value="1">1 team per alliance (1v1)</SelectItem>
+                  <SelectItem value="2">2 teams per alliance (2v2)</SelectItem>
+                  <SelectItem value="3">3 teams per alliance (3v3)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-600">
+                Number of teams in each alliance. Each match has Red Alliance vs Blue Alliance.
+              </p>
             </div>
               {schedulerType === "swiss" && (
               <div className="space-y-2">
@@ -303,6 +388,134 @@ export default function MatchSchedulerDialog({
                       <li>• Teams are automatically paired based on their performance</li>
                       <li>• No team selection is required - all teams participate</li>
                       <li>• Update rankings after each round before generating the next</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {schedulerType === "frc" && (
+              <div className="space-y-4">
+                {/* Preset Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="frcPreset" className="text-gray-700 font-medium">Preset Configuration (Optional)</Label>
+                  <Select
+                    value={frcPreset}
+                    onValueChange={(value) => setFrcPreset(value)}
+                  >
+                    <SelectTrigger id="frcPreset" className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg">
+                      <SelectValue placeholder="Select a preset or configure manually" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
+                      <SelectItem value="">Custom Configuration</SelectItem>
+                      <SelectItem value="frcRegional">FRC Regional (3v3, 6 rounds)</SelectItem>
+                      <SelectItem value="frcSmall">FRC Small Event (3v3, 8 rounds)</SelectItem>
+                      <SelectItem value="current2v2">Current Format (2v2)</SelectItem>
+                      <SelectItem value="current1v1">Single Robot (1v1)</SelectItem>
+                      <SelectItem value="fast">Fast/Testing (Quick generation)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-600">
+                    Presets provide optimized configurations for common tournament formats.
+                  </p>
+                </div>
+
+                {/* Manual Configuration (when no preset selected) */}
+                {!frcPreset && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="frcRounds" className="text-gray-700 font-medium">Number of Rounds</Label>
+                      <Input
+                        id="frcRounds"
+                        type="number"
+                        min={1}
+                        max={20}
+                        value={frcRounds}
+                        onChange={(e) => setFrcRounds(Number(e.target.value))}
+                        placeholder="Enter number of qualification rounds"
+                        className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg"
+                      />
+                      <p className="text-xs text-gray-600">
+                        Each team will play approximately this many matches (may vary for odd team counts).
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="frcQualityLevel" className="text-gray-700 font-medium">Algorithm Quality</Label>
+                      <Select
+                        value={frcQualityLevel}
+                        onValueChange={(value: "low" | "medium" | "high") => setFrcQualityLevel(value)}
+                      >
+                        <SelectTrigger id="frcQualityLevel" className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg">
+                          <SelectValue placeholder="Select algorithm quality" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
+                          <SelectItem value="low">Low (Fast, ~30 seconds)</SelectItem>
+                          <SelectItem value="medium">Medium (Balanced, ~3-5 minutes)</SelectItem>
+                          <SelectItem value="high">High (Best quality, ~15-30 minutes)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-600">
+                        Higher quality takes longer but produces better balanced schedules.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="frcMinMatchSeparation" className="text-gray-700 font-medium">Minimum Match Separation</Label>
+                      <Input
+                        id="frcMinMatchSeparation"
+                        type="number"
+                        min={1}
+                        max={10}
+                        value={frcMinMatchSeparation}
+                        onChange={(e) => setFrcMinMatchSeparation(Number(e.target.value))}
+                        placeholder="Minimum matches between team appearances"
+                        className="bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg"
+                      />
+                      <p className="text-xs text-gray-600">
+                        Minimum number of matches between a team's appearances (for recovery time).
+                      </p>
+                    </div>
+
+                    {/* Advanced Configuration Toggle */}
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="showAdvancedFrcConfig"
+                          checked={showAdvancedFrcConfig}
+                          onCheckedChange={(checked) => setShowAdvancedFrcConfig(checked as boolean)}
+                        />
+                        <Label htmlFor="showAdvancedFrcConfig" className="text-gray-700 font-medium">
+                          Enable Advanced MatchMaker Features
+                        </Label>
+                      </div>
+                      {showAdvancedFrcConfig && (
+                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                          <div className="text-sm text-blue-800">
+                            <div className="font-medium mb-1">Advanced Features Enabled:</div>
+                            <ul className="text-xs space-y-1 text-blue-700">
+                              <li>• Perfect station balancing (Caleb Sykes algorithm)</li>
+                              <li>• Enhanced penalty weights for {teamsPerAlliance}v{teamsPerAlliance} format</li>
+                              <li>• Strict match separation enforcement</li>
+                              <li>• Optimized {teamsPerAlliance === 1 ? 'opponent' : 'partner/opponent'} distribution</li>
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* FRC Algorithm Information */}
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <div className="text-sm text-gray-800">
+                    <div className="font-medium mb-1">FRC MatchMaker Algorithm:</div>
+                    <ul className="text-xs space-y-1 text-gray-700">
+                      <li>• Uses simulated annealing for optimal team pairing</li>
+                      <li>• Automatically handles odd team counts with surrogate system</li>
+                      <li>• Balances red/blue alliances and station positions</li>
+                      <li>• Minimizes repeated {teamsPerAlliance === 1 ? 'opponents' : 'partnerships and opponents'}</li>
+                      <li>• Ensures fair match separation for all teams</li>
                     </ul>
                   </div>
                 </div>
@@ -490,7 +703,7 @@ export default function MatchSchedulerDialog({
               <Button variant="outline" onClick={onClose} className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 rounded-lg">
                 Cancel
               </Button>
-              {schedulerType === "swiss" ? (
+              {["swiss", "frc"].includes(schedulerType) ? (
                 <Button
                   onClick={handleSchedule}
                   disabled={isLoading}
@@ -502,7 +715,7 @@ export default function MatchSchedulerDialog({
                       Creating...
                     </>
                   ) : (
-                    "Generate Swiss Round"
+                    schedulerType === "swiss" ? "Generate Swiss Round" : "Generate FRC Schedule"
                   )}
                 </Button>
               ) : (

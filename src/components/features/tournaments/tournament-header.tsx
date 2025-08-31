@@ -1,19 +1,53 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, MapPin, User, Trophy, Edit, Save, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Calendar, MapPin, User, Trophy, Edit, Save, X, Download, Settings, Play, MoreVertical, Copy, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Tournament } from '@/types/tournament.types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { TournamentEditForm } from './tournament-edit-form';
+import { 
+  useExportTournamentData, 
+  useDeleteTournament, 
+  useDuplicateTournament,
+  useStartMatch 
+} from '@/hooks/tournaments/use-tournament-mutations';
+import { toast } from 'sonner';
 
 interface TournamentHeaderProps {
   tournament: Tournament;
 }
 
 export function TournamentHeader({ tournament }: TournamentHeaderProps) {
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  
+  // Mutations
+  const exportData = useExportTournamentData(tournament.id);
+  const deleteTournament = useDeleteTournament();
+  const duplicateTournament = useDuplicateTournament();
+  const startMatch = useStartMatch(tournament.id);
   
   const isActive = new Date() >= new Date(tournament.startDate) && new Date() <= new Date(tournament.endDate);
   const isPast = new Date() > new Date(tournament.endDate);
@@ -27,6 +61,47 @@ export function TournamentHeader({ tournament }: TournamentHeaderProps) {
 
   const handleEditSuccess = () => {
     setIsEditing(false);
+  };
+
+  const handleExportData = async (format: 'csv' | 'excel' | 'json') => {
+    try {
+      await exportData.mutateAsync(format);
+    } catch (error) {
+      console.error('Export failed:', error);
+    }
+  };
+
+  const handleStartMatch = () => {
+    // Navigate to match control page for this tournament
+    router.push(`/control-match?tournament=${tournament.id}`);
+  };
+
+  const handleTournamentSettings = () => {
+    // Navigate to tournament settings page
+    router.push(`/tournaments/${tournament.id}/settings`);
+  };
+
+  const handleDeleteTournament = async () => {
+    try {
+      await deleteTournament.mutateAsync(tournament.id);
+      router.push('/tournaments');
+    } catch (error) {
+      console.error('Delete failed:', error);
+    }
+    setShowDeleteDialog(false);
+  };
+
+  const handleDuplicateTournament = async () => {
+    try {
+      const newName = `${tournament.name} (Copy)`;
+      await duplicateTournament.mutateAsync({ 
+        tournamentId: tournament.id, 
+        name: newName 
+      });
+    } catch (error) {
+      console.error('Duplicate failed:', error);
+    }
+    setShowDuplicateDialog(false);
   };
 
   if (isEditing) {
@@ -96,17 +171,110 @@ export function TournamentHeader({ tournament }: TournamentHeaderProps) {
               <Edit className="h-4 w-4 mr-2" />
               Edit
             </Button>
-            <Button variant="outline" size="sm">
-              Export Data
-            </Button>
-            <Button variant="outline" size="sm">
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Data
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => handleExportData('csv')}>
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportData('excel')}>
+                  Export as Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportData('json')}>
+                  Export as JSON
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleTournamentSettings}
+            >
+              <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
-            <Button size="sm">
-              Start Match
+            
+            <Button 
+              size="sm"
+              onClick={handleStartMatch}
+              disabled={isPast}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              {isActive ? 'Control Matches' : 'Start Match'}
             </Button>
+
+            {/* More Actions Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowDuplicateDialog(true)}>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Duplicate Tournament
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Tournament
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Tournament</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "{tournament.name}"? This action cannot be undone.
+                All associated matches, scores, and data will be permanently removed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteTournament}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Delete Tournament
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Duplicate Confirmation Dialog */}
+        <AlertDialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Duplicate Tournament</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will create a copy of "{tournament.name}" with all settings but no matches or scores.
+                The new tournament will be named "{tournament.name} (Copy)".
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDuplicateTournament}>
+                Duplicate Tournament
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

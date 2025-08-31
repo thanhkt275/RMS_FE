@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import {
   useMatch,
   useUpdateMatchStatus,
@@ -47,8 +48,9 @@ import {
   AccessDeniedOverlay,
 } from "@/components/features/control-match/access-denied";
 
-export default function ControlMatchPage() {
+function ControlMatchContent() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
 
   // Initialize role-based access control
   const roleAccess = useRoleBasedAccess();
@@ -94,13 +96,24 @@ export default function ControlMatchPage() {
     fieldId: selectedFieldId ?? undefined,
     selectedMatchId: selectedMatchId || undefined,
   });
-  // Set default tournamentId on load (All Tournaments)
+  // Set default tournamentId on load (All Tournaments or from URL)
   useEffect(() => {
-    if (
-      !tournamentsLoading &&
-      tournaments.length > 0 &&
-      !selectedTournamentId
-    ) {
+    if (tournamentsLoading) return;
+    
+    // Check if tournament ID is provided in URL
+    const tournamentFromUrl = searchParams.get('tournament');
+    
+    if (tournamentFromUrl && tournaments.length > 0) {
+      // Verify the tournament ID exists in the tournaments list
+      const tournamentExists = tournaments.some((t: any) => t.id === tournamentFromUrl);
+      if (tournamentExists) {
+        setSelectedTournamentId(tournamentFromUrl);
+        return;
+      }
+    }
+    
+    // Fallback to "all" if no valid tournament in URL or not found
+    if (!selectedTournamentId && tournaments.length > 0) {
       setSelectedTournamentId("all");
     }
   }, [
@@ -108,7 +121,18 @@ export default function ControlMatchPage() {
     tournamentsLoading,
     selectedTournamentId,
     setSelectedTournamentId,
-  ]); // Use selectedTournamentId for all tournament-specific logic
+    searchParams,
+  ]);
+
+  // Check for field parameter in URL
+  useEffect(() => {
+    const fieldFromUrl = searchParams.get('field');
+    if (fieldFromUrl && !selectedFieldId) {
+      setSelectedFieldId(fieldFromUrl);
+    }
+  }, [searchParams, selectedFieldId, setSelectedFieldId]);
+
+  // Use selectedTournamentId for all tournament-specific logic
   const tournamentId = selectedTournamentId || "all";
 
   // Fetch matches based on tournament selection
@@ -840,5 +864,34 @@ export default function ControlMatchPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ControlMatchPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="container mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight mb-1">Match Control</h1>
+            <p className="text-base text-gray-600">Loading...</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold mb-2">Loading...</h2>
+            <p className="text-gray-500">Please wait while we load the match control</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ControlMatchPage() {
+  return (
+    <Suspense fallback={<ControlMatchPageSkeleton />}>
+      <ControlMatchContent />
+    </Suspense>
   );
 }

@@ -191,12 +191,13 @@ export function AnnouncementPanel({
           Apply Display Settings
         </Button>
 
-        {/* Multimedia Announcement Input */}
-        <div>
-          <label className="block text-sm font-semibold mb-3 text-gray-800">
-            Create Multimedia Announcement
-          </label>
-          <div className="space-y-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
+        {/* Announcement Configuration - Only show when Announcement mode is selected */}
+        {displayMode === "announcement" && (
+          <div>
+            <label className="block text-sm font-semibold mb-3 text-gray-800">
+              Configure Announcement
+            </label>
+            <div className="space-y-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
             
             {/* Announcement Type Selection */}
             <div>
@@ -212,10 +213,7 @@ export function AnnouncementPanel({
                 disabled={isDisabled}
               >
                 <SelectTrigger className="bg-white border border-orange-300 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    {getTypeIcon(announcement.type)}
-                    <SelectValue />
-                  </div>
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="text">
@@ -296,8 +294,22 @@ export function AnnouncementPanel({
                   type="number"
                   min="1"
                   max="300"
-                  value={announcement.duration || 10}
-                  onChange={(e) => updateAnnouncement({ duration: parseInt(e.target.value) || 10 })}
+                  value={announcement.duration?.toString() || "10"}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      updateAnnouncement({ duration: 10 });
+                    } else {
+                      const parsedValue = parseInt(value);
+                      if (!isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 300) {
+                        updateAnnouncement({ duration: parsedValue });
+                      } else if (!isNaN(parsedValue)) {
+                        // Clamp value to valid range
+                        const clampedValue = Math.max(1, Math.min(300, parsedValue));
+                        updateAnnouncement({ duration: clampedValue });
+                      }
+                    }
+                  }}
                   disabled={isDisabled}
                   className="bg-white border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-300 w-24"
                 />
@@ -343,8 +355,9 @@ export function AnnouncementPanel({
               <Send className="w-5 h-5 mr-2" />
               Send {announcement.type === 'text' ? 'Announcement' : `${announcement.type.charAt(0).toUpperCase() + announcement.type.slice(1)} Announcement`}
             </Button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Connection Status */}
         <div className="pt-4 border-t border-gray-200">

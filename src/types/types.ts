@@ -482,6 +482,10 @@ export interface CreateTournamentInput {
   startDate: string;
   endDate: string;
   adminId: string;
+  numberOfFields?: number;
+  registrationDeadline?: string;
+  maxTeams?: number | null;
+  maxTeamMembers?: number | null;
 }
 
 export interface UpdateTournamentInput {
@@ -489,6 +493,10 @@ export interface UpdateTournamentInput {
   description?: string;
   startDate?: string;
   endDate?: string;
+  numberOfFields?: number;
+  registrationDeadline?: string;
+  maxTeams?: number | null;
+  maxTeamMembers?: number | null;
 }
 
 // --- Match Scheduler Types ---

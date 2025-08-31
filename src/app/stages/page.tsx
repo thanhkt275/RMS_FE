@@ -55,6 +55,7 @@ import StageDialog from "./stage-dialog";
 import MatchSchedulerDialog from "./match-scheduler-dialog";
 import EndStageDialog from "@/components/features/stages/end-stage-dialog";
 import DeleteMatchDialog from "@/components/features/stages/delete-match-dialog";
+import { TimeManagementDialog } from "@/components/dialogs/time-management-dialog";
 import { MatchService } from "@/services/match-service";
 
 export default function StagesPage() {
@@ -140,6 +141,15 @@ export default function StagesPage() {
     matchNumber: number;
     roundNumber?: number;
     status: string;
+  } | null>(null);
+
+  // State for time management dialog
+  const [isTimeManagementDialogOpen, setIsTimeManagementDialogOpen] = useState(false);
+  const [timeManagementMode, setTimeManagementMode] = useState<'single' | 'bulk'>('single');
+  const [selectedMatchForTime, setSelectedMatchForTime] = useState<{
+    id: string;
+    matchNumber: number;
+    currentTime?: Date;
   } | null>(null);
 
   // Add state for match scores map
@@ -317,6 +327,24 @@ export default function StagesPage() {
   const handleViewMatchClick = (matchId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent row click
     router.push(`/matches/${matchId}`);
+  };
+
+  // Handle time management for single match
+  const handleTimeManagementClick = (match: any, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click
+    setSelectedMatchForTime({
+      id: match.id,
+      matchNumber: match.matchNumber ?? 0,
+      currentTime: match.scheduledTime ? new Date(match.scheduledTime) : undefined
+    });
+    setTimeManagementMode('single');
+    setIsTimeManagementDialogOpen(true);
+  };
+
+  // Handle bulk time management for stage
+  const handleBulkTimeManagement = () => {
+    setTimeManagementMode('bulk');
+    setIsTimeManagementDialogOpen(true);
   };
 
   // Find the latest round number and check if all matches in that round are completed
@@ -609,6 +637,17 @@ export default function StagesPage() {
                       Generate Next Swiss Round
                     </Button>
                   )}
+                  {/* Bulk Time Management Button */}
+                  {filteredStageMatches.length > 0 && (
+                    <Button
+                      onClick={handleBulkTimeManagement}
+                      variant="outline"
+                      className="flex items-center gap-2 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700 font-semibold rounded-lg px-5 py-2.5 shadow-md focus:ring-2 focus:ring-orange-400 focus:outline-none transition-colors duration-200"
+                    >
+                      <Clock size={16} />
+                      Manage Times
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -699,6 +738,20 @@ export default function StagesPage() {
                               onClick={(e) => handleViewMatchClick(match.id, e)}
                             >
                               View
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={match.status !== "PENDING"}
+                              className={`${
+                                match.status === "PENDING"
+                                  ? "border-blue-600 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                                  : "border-gray-300 text-gray-400 cursor-not-allowed opacity-50"
+                              }`}
+                              onClick={(e) => handleTimeManagementClick(match, e)}
+                              title="Update match time"
+                            >
+                              <Clock size={16} />
                             </Button>
                             <Button
                               variant="outline"
@@ -934,6 +987,21 @@ export default function StagesPage() {
           setSelectedMatch(null);
         }}
         match={selectedMatch}
+      />
+
+      {/* Time Management Dialog */}
+      <TimeManagementDialog
+        isOpen={isTimeManagementDialogOpen}
+        onClose={() => {
+          setIsTimeManagementDialogOpen(false);
+          setSelectedMatchForTime(null);
+        }}
+        mode={timeManagementMode}
+        matchId={selectedMatchForTime?.id}
+        stageId={selectedStageId}
+        stageName={stageDetails?.name}
+        currentTime={selectedMatchForTime?.currentTime}
+        matchNumber={selectedMatchForTime?.matchNumber}
       />
     </div>
   );

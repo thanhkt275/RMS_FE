@@ -66,35 +66,106 @@ export function useUnifiedAudienceDisplay({
     return unsubscribe;
   }, []);
 
+  // Handle room joining when connection becomes ready (for external connections)
+  useEffect(() => {
+    if (autoConnect) return; // Skip if we're managing connection ourselves
+
+    const handleConnectionStatus = (status: any) => {
+      // When connection becomes ready and we're not auto-connecting, join rooms
+      if (status.ready && status.connected && status.state === 'CONNECTED') {
+        console.log('[useUnifiedAudienceDisplay] External connection ready, joining rooms');
+        
+        // Small delay to ensure connection is fully established
+        setTimeout(() => {
+          if (tournamentId) {
+            console.log('[useUnifiedAudienceDisplay] Joining tournament:', tournamentId);
+            unifiedWebSocketService.joinTournament(tournamentId);
+          }
+
+          if (fieldId) {
+            console.log('[useUnifiedAudienceDisplay] Joining field room:', fieldId);
+            unifiedWebSocketService.joinFieldRoom(fieldId);
+          }
+        }, 150); // Slightly longer delay than useUnifiedWebSocket
+      }
+    };
+
+    const unsubscribe = unifiedWebSocketService.onConnectionStatus(handleConnectionStatus);
+    
+    // Check if already connected
+    const currentStatus = unifiedWebSocketService.getConnectionStatus();
+    if (currentStatus.ready && currentStatus.connected && currentStatus.state === 'CONNECTED') {
+      handleConnectionStatus(currentStatus);
+    }
+
+    return unsubscribe;
+  }, [autoConnect, tournamentId, fieldId]);
+
   // Connect to unified WebSocket service
   useEffect(() => {
-    if (!autoConnect) return;
+    if (!autoConnect) {
+      console.log('[useUnifiedAudienceDisplay] Auto-connect disabled, relying on external connection');
+      return;
+    }
 
     console.log('[useUnifiedAudienceDisplay] Connecting to unified WebSocket service');
     
     // Set user role for audience display (read-only)
     unifiedWebSocketService.setUserRole(UserRole.COMMON);
     
-    // Connect to WebSocket
-    unifiedWebSocketService.connect().catch(error => {
-      console.error('[useUnifiedAudienceDisplay] Connection failed:', error);
-      setDisplayState(prev => ({
-        ...prev,
-        error: 'Failed to connect to WebSocket service'
-      }));
-    });
+    // Connect to WebSocket and wait for it to be ready before joining rooms
+    const connectAndJoinRooms = async () => {
+      try {
+        await unifiedWebSocketService.connect();
+        
+        // Wait for connection to be ready
+        const maxWaitTime = 5000; // 5 seconds max wait
+        const checkInterval = 100; // Check every 100ms
+        let waitTime = 0;
+        
+        while (waitTime < maxWaitTime) {
+          const status = unifiedWebSocketService.getConnectionStatus();
+          if (status.ready && status.connected && status.state === 'CONNECTED') {
+            console.log('[useUnifiedAudienceDisplay] Connection ready, joining rooms');
+            
+            // Join tournament room
+            if (tournamentId) {
+              console.log('[useUnifiedAudienceDisplay] Joining tournament:', tournamentId);
+              unifiedWebSocketService.joinTournament(tournamentId);
+            }
 
-    // Join tournament room
-    if (tournamentId) {
-      console.log('[useUnifiedAudienceDisplay] Joining tournament:', tournamentId);
-      unifiedWebSocketService.joinTournament(tournamentId);
-    }
+            // Join field room if specified
+            if (fieldId) {
+              console.log('[useUnifiedAudienceDisplay] Joining field room:', fieldId);
+              unifiedWebSocketService.joinFieldRoom(fieldId);
+            }
+            
+            return;
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, checkInterval));
+          waitTime += checkInterval;
+        }
+        
+        console.warn('[useUnifiedAudienceDisplay] Connection ready timeout, proceeding anyway');
+        // Proceed with joining rooms even if ready state is not confirmed
+        if (tournamentId) {
+          unifiedWebSocketService.joinTournament(tournamentId);
+        }
+        if (fieldId) {
+          unifiedWebSocketService.joinFieldRoom(fieldId);
+        }
+        
+      } catch (error) {
+        console.error('[useUnifiedAudienceDisplay] Connection failed:', error);
+        setDisplayState(prev => ({
+          ...prev,
+          error: 'Failed to connect to WebSocket service'
+        }));
+      }
+    };
 
-    // Join field room if specified
-    if (fieldId) {
-      console.log('[useUnifiedAudienceDisplay] Joining field room:', fieldId);
-      unifiedWebSocketService.joinFieldRoom(fieldId);
-    }
+    connectAndJoinRooms();
 
     return () => {
       console.log('[useUnifiedAudienceDisplay] Disconnecting from unified WebSocket service');

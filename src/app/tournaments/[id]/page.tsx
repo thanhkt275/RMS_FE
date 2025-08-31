@@ -13,9 +13,28 @@ export default function TournamentPage() {
     return <AuthSkeleton />;
   }
 
-  if (!user || user.role !== UserRole.ADMIN) {
+  // Admin users get the dashboard
+  if (user?.role === UserRole.ADMIN) {
+    return <TournamentDashboard />;
+  }
+
+  // COMMON and TEAM_LEADER users get the team registration form
+  if (user?.role === UserRole.COMMON || user?.role === UserRole.TEAM_LEADER) {
     return <TeamCard />;
   }
 
-  return <TournamentDashboard />;
+  // Other roles or unauthenticated users get access denied
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="text-center p-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
+        <p className="text-gray-600 mb-4">
+          You need to be logged in as a registered user to access team registration.
+        </p>
+        <p className="text-sm text-gray-500">
+          Contact an administrator if you believe this is an error.
+        </p>
+      </div>
+    </div>
+  );
 }

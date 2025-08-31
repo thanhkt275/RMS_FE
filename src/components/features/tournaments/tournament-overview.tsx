@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Trophy, MapPin, Users, Shield, Edit2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Trophy, MapPin, Users, Shield, Edit2, UserPlus, Calendar, FileText, Settings, Play, Users2 } from 'lucide-react';
 import type { Tournament, TournamentStats } from '@/types/tournament.types';
 import { useUpdateTournament } from '@/hooks/tournaments/use-tournament-mutations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,8 +67,36 @@ interface TournamentOverviewProps {
 }
 
 export function TournamentOverview({ tournament, stats }: TournamentOverviewProps) {
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const updateTournament = useUpdateTournament(tournament.id);
+
+  const quickActions = [
+    {
+      label: 'Manage Teams',
+      icon: UserPlus,
+      action: () => router.push(`/tournaments/${tournament.id}/teams`),
+      variant: 'default' as const,
+    },
+    {
+      label: 'Generate Schedule',
+      icon: Calendar,
+      action: () => window.open('/stages', '_blank'),
+      variant: 'outline' as const,
+    },
+    {
+      label: 'Match Control',
+      icon: Play,
+      action: () => window.open(`/control-match?tournament=${tournament.id}`, '_blank'),
+      variant: 'outline' as const,
+    },
+    {
+      label: 'Reports',
+      icon: FileText,
+      action: () => router.push(`/tournaments/${tournament.id}/reports`),
+      variant: 'outline' as const,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -97,14 +126,118 @@ export function TournamentOverview({ tournament, stats }: TournamentOverviewProp
         />
         
         <StatCard 
-          title="Registered Teams" 
-          value={tournament._count?.teams || 0}
-          subtitle="Teams participating"
+          title="Team Registration" 
+          value={tournament.maxTeams 
+            ? `${tournament._count?.teams || 0}/${tournament.maxTeams}` 
+            : (tournament._count?.teams || 0).toString()
+          }
+          subtitle={tournament.maxTeams 
+            ? `${tournament.maxTeams - (tournament._count?.teams || 0)} spots remaining`
+            : "No limit set"
+          }
           icon={<Shield className="h-5 w-5" />}
-          variant="default"
+          variant={tournament.maxTeams && (tournament._count?.teams || 0) >= tournament.maxTeams 
+            ? 'warning' 
+            : 'default'
+          }
         />
       </div>
       
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {quickActions.map((action, index) => (
+              <Button
+                key={index}
+                variant={action.variant}
+                onClick={action.action}
+                className="h-auto p-4 flex flex-col items-center gap-2"
+              >
+                <action.icon className="h-5 w-5" />
+                <span className="text-sm">{action.label}</span>
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Team Management Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users2 className="h-5 w-5" />
+            Team Management
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-gray-700">Team Registration</div>
+              <div className="text-2xl font-bold flex items-center gap-2">
+                {tournament.maxTeams 
+                  ? `${tournament._count?.teams || 0}/${tournament.maxTeams}` 
+                  : (tournament._count?.teams || 0).toString()
+                }
+                {tournament.maxTeams && (
+                  <Badge 
+                    variant={(tournament._count?.teams || 0) >= tournament.maxTeams ? 'destructive' : 'default'}
+                    className="text-xs"
+                  >
+                    {(tournament._count?.teams || 0) >= tournament.maxTeams ? 'Full' : 'Open'}
+                  </Badge>
+                )}
+              </div>
+              <div className="text-sm text-gray-600">
+                {tournament.maxTeams 
+                  ? `${tournament.maxTeams - (tournament._count?.teams || 0)} spots remaining`
+                  : "No team limit set"
+                }
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-gray-700">Team Size Limit</div>
+              <div className="text-2xl font-bold">
+                {tournament.maxTeamMembers || 'No limit'}
+              </div>
+              <div className="text-sm text-gray-600">
+                {tournament.maxTeamMembers 
+                  ? `Max ${tournament.maxTeamMembers} members per team`
+                  : "Unlimited team size"
+                }
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-gray-700">Quick Actions</div>
+              <div className="flex flex-col gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => router.push(`/tournaments/${tournament.id}/teams`)}
+                  className="w-full"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Manage Teams
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => router.push(`/tournaments/${tournament.id}/teams/register`)}
+                  className="w-full"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Register New Team
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Tournament Details Summary */}
       <TournamentDetailSummary 
         tournament={tournament}

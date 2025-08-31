@@ -19,6 +19,30 @@ export class TournamentService {
     return apiClient.post<void>(`tournaments/${tournamentId}/stages`, data);
   }
 
+  static async exportData(tournamentId: string, format: 'csv' | 'excel' | 'json' = 'csv'): Promise<Blob> {
+    return apiClient.getBlob(`tournaments/${tournamentId}/export?format=${format}`);
+  }
+
+  static async getSettings(tournamentId: string): Promise<any> {
+    return apiClient.get(`tournaments/${tournamentId}/settings`);
+  }
+
+  static async updateSettings(tournamentId: string, settings: any): Promise<any> {
+    return apiClient.patch(`tournaments/${tournamentId}/settings`, settings);
+  }
+
+  static async getNextMatch(tournamentId: string): Promise<any> {
+    return apiClient.get(`tournaments/${tournamentId}/next-match`);
+  }
+
+  static async startMatch(tournamentId: string, matchId: string): Promise<any> {
+    return apiClient.post(`tournaments/${tournamentId}/matches/${matchId}/start`);
+  }
+
+  static async duplicate(tournamentId: string, name: string): Promise<Tournament> {
+    return apiClient.post<Tournament>(`tournaments/${tournamentId}/duplicate`, { name });
+  }
+
   // Throttle example
   private static apiThrottleManager = new DebounceManager();
 

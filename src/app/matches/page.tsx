@@ -8,10 +8,13 @@ import {
   useAllMatchScores,
   useDeleteMatch,
 } from "@/hooks/matches/use-matches";
-import { MatchStatus, Alliance } from "@/types/types";
+import { useAuth } from "@/hooks/common/use-auth";
+import { useUserTeams } from "@/hooks/teams/use-teams";
+import { MatchStatus, Alliance, UserRole } from "@/types/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import DeleteMatchDialog from "@/components/features/stages/delete-match-dialog";
+import { TimeManagementDialog } from "@/components/dialogs/time-management-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -30,15 +33,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Clock } from "lucide-react";
 
 export default function MatchesPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.role === UserRole.ADMIN;
+  
   const {
     data: matches,
     isLoading: matchesLoading,
     error: matchesError,
   } = useMatches();
+
+  // Fetch user's teams to check participation in matches
+  const { data: userTeams = [] } = useUserTeams();
 
   // Fetch all match scores using the custom hook
   const {
@@ -86,6 +95,14 @@ export default function MatchesPage() {
     status: string;
   } | null>(null);
 
+  // State for time management dialog
+  const [isTimeManagementDialogOpen, setIsTimeManagementDialogOpen] = useState(false);
+  const [selectedMatchForTime, setSelectedMatchForTime] = useState<{
+    id: string;
+    matchNumber: number;
+    currentTime?: Date;
+  } | null>(null);
+
   // Handle sort click
   const handleSortClick = (field: string) => {
     if (sortField === field) {
@@ -94,6 +111,21 @@ export default function MatchesPage() {
       setSortField(field);
       setSortDirection("asc");
     }
+  };
+
+  // Check if user has any teams participating in a match
+  const isUserParticipating = (match: any) => {
+    if (!userTeams || userTeams.length === 0) return false;
+    
+    // Extract all team IDs from the user's teams
+    const userTeamIds = userTeams.map(team => team.id);
+    
+    // Check if any team in the match belongs to the user
+    return match.alliances?.some((alliance: Alliance) => 
+      alliance.teamAlliances?.some((ta: any) => 
+        userTeamIds.includes(ta.team?.id)
+      )
+    ) || false;
   };
 
   // Sort and filter matches
@@ -222,6 +254,17 @@ export default function MatchesPage() {
   const handleViewClick = (matchId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent row click
     router.push(`/matches/${matchId}`);
+  };
+
+  // Handle time management click
+  const handleTimeManagementClick = (match: any, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click
+    setSelectedMatchForTime({
+      id: match.id,
+      matchNumber: match.matchNumber ?? 0,
+      currentTime: match.scheduledTime ? new Date(match.scheduledTime) : undefined
+    });
+    setIsTimeManagementDialogOpen(true);
   };
 
   // Loading state
@@ -419,20 +462,38 @@ export default function MatchesPage() {
                   <TableHead className="text-gray-300 font-semibold text-sm">
                     Scores
                   </TableHead>
-                  <TableHead className="text-gray-300 font-semibold text-sm">
-                    Actions
-                  </TableHead>
+                  {isAdmin && (
+                    <TableHead className="text-gray-300 font-semibold text-sm">
+                      Actions
+                    </TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedMatches.map((match) => (
-                  <TableRow
-                    key={match.id}
-                    className="hover:bg-gray-800/70 cursor-pointer transition"
-                    onClick={() => handleMatchClick(match.id)}
-                  >
-                    <TableCell className="font-medium text-gray-100">
-                      {match.stage?.tournament?.name ?? "N/A"}
+                {sortedMatches.map((match) => {
+                  const isParticipating = isUserParticipating(match);
+                  return (
+                    <TableRow
+                      key={match.id}
+                      className={`hover:bg-gray-800/70 cursor-pointer transition ${
+                        isParticipating 
+                          ? "bg-gradient-to-r from-green-900/40 to-green-800/20 hover:from-green-900/60 hover:to-green-800/40" 
+                          : ""
+                      }`}
+                      onClick={() => handleMatchClick(match.id)}
+                    >
+                    <TableCell className={`font-medium text-gray-100 ${isParticipating ? 'border-l-4 border-l-green-500' : ''}`}>
+                      <div className="flex items-center gap-2">
+                        <span>{match.stage?.tournament?.name ?? "N/A"}</span>
+                        {isParticipating && (
+                          <Badge 
+                            variant="outline" 
+                            className="bg-green-900/50 text-green-300 border-green-600 text-xs px-2 py-0.5"
+                          >
+                            Your Team
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-gray-300">
                       {match.stage?.name ?? "N/A"}
@@ -511,33 +572,50 @@ export default function MatchesPage() {
                           0}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
-                          onClick={(e) => handleViewClick(match.id, e)}
-                        >
-                          View
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={match.status !== "PENDING"}
-                          className={`${
-                            match.status === "PENDING"
-                              ? "border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
-                              : "border-gray-600 text-gray-500 cursor-not-allowed opacity-50"
-                          }`}
-                          onClick={(e) => handleDeleteClick(match, e)}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
+                            onClick={(e) => handleViewClick(match.id, e)}
+                          >
+                            View
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={match.status !== "PENDING"}
+                            className={`${
+                              match.status === "PENDING"
+                                ? "border-orange-600 text-orange-400 hover:bg-orange-600 hover:text-white"
+                                : "border-gray-600 text-gray-500 cursor-not-allowed opacity-50"
+                            }`}
+                            onClick={(e) => handleTimeManagementClick(match, e)}
+                            title="Update match time"
+                          >
+                            <Clock size={16} />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={match.status !== "PENDING"}
+                            className={`${
+                              match.status === "PENDING"
+                                ? "border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                                : "border-gray-600 text-gray-500 cursor-not-allowed opacity-50"
+                            }`}
+                            onClick={(e) => handleDeleteClick(match, e)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -559,15 +637,32 @@ export default function MatchesPage() {
         </Card>
       )}
 
-      {/* Delete Match Dialog */}
-      <DeleteMatchDialog
-        isOpen={isDeleteDialogOpen}
-        onClose={() => {
-          setIsDeleteDialogOpen(false);
-          setSelectedMatch(null);
-        }}
-        match={selectedMatch}
-      />
+      {/* Delete Match Dialog - Only for Admins */}
+      {isAdmin && (
+        <DeleteMatchDialog
+          isOpen={isDeleteDialogOpen}
+          onClose={() => {
+            setIsDeleteDialogOpen(false);
+            setSelectedMatch(null);
+          }}
+          match={selectedMatch}
+        />
+      )}
+
+      {/* Time Management Dialog - Only for Admins */}
+      {isAdmin && (
+        <TimeManagementDialog
+          isOpen={isTimeManagementDialogOpen}
+          onClose={() => {
+            setIsTimeManagementDialogOpen(false);
+            setSelectedMatchForTime(null);
+          }}
+          mode="single"
+          matchId={selectedMatchForTime?.id}
+          currentTime={selectedMatchForTime?.currentTime}
+          matchNumber={selectedMatchForTime?.matchNumber}
+        />
+      )}
     </div>
   );
 }

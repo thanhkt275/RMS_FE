@@ -167,7 +167,7 @@ export default function LiveFieldDisplayPage() {
   } = useUnifiedAudienceDisplay({
     tournamentId,
     fieldId,
-    autoConnect: true,
+    autoConnect: false, // Disable auto-connect to avoid race condition with useUnifiedWebSocket
   });
 
   // Expose WebSocket testing interface on window for manual testing and debugging
@@ -398,6 +398,22 @@ export default function LiveFieldDisplayPage() {
     fieldId,
     tournamentId,
   ]);
+
+  // ESC key functionality to manually close announcements
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showAnnouncement) {
+        console.log('🔑 [ESC] Manually closing announcement');
+        setShowAnnouncement(false);
+        setAnnouncementCountdown(null);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showAnnouncement, setShowAnnouncement, setAnnouncementCountdown]);
   // Log the rooms being joined for debugging
   useEffect(() => {
     if (tournamentId && fieldId) {
@@ -1370,131 +1386,127 @@ export default function LiveFieldDisplayPage() {
   // --- UI Layout ---
   return (
     <div className="audience-display-container min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Enhanced Connection Status with Fallback Support (Steps 10-12) */}
-      <ConnectionStatus
-        isConnected={unifiedConnected}
-        wsConnected={unifiedConnected} // Use unified WebSocket connection status
-        lastUpdateTime={lastUpdateTime}
-        connectionError={connectionError}
-        fallbackMode={fallbackMode}
-        source={source}
-      />
-      <AnnouncementOverlay
-        announcement={announcement}
-        showAnnouncement={showAnnouncement}
-        announcementCountdown={announcementCountdown}
-      />
-      {/* DEBUG: Log announcement state for debugging */}
+      {/* Full-screen Announcement Overlay - Hides everything when active */}
       {showAnnouncement && (
-        <div className="fixed top-4 left-4 bg-black/80 text-white p-2 rounded text-xs z-[999] max-w-md">
-          <div className="font-bold">🔍 ANNOUNCEMENT DEBUG:</div>
-          <div>Type: {announcement?.type || 'undefined'}</div>
-          <div>Content: {announcement?.content?.substring(0, 50) || 'undefined'}...</div>
-          <div>Title: {announcement?.title || 'none'}</div>
-          <div>Duration Set: {announcement?.duration || 'undefined'} seconds</div>
-          <div>Show State: {showAnnouncement ? 'true' : 'false'}</div>
-          <div>Countdown: {announcementCountdown || 'null'} seconds</div>
-          <div>Display Mode: {displaySettings.displayMode}</div>
-          <div className="text-yellow-300 mt-1">
-            ⏰ Will switch to BLANK when countdown ends
-          </div>
-        </div>
+        <AnnouncementOverlay
+          announcement={announcement}
+          showAnnouncement={showAnnouncement}
+          announcementCountdown={announcementCountdown}
+        />
       )}
-      {/* Header with tournament and field info */}
-      <header className="mb-6 px-6 pt-8">
-        <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-blue-900 drop-shadow-lg mb-1">
-              {tournament?.name || "Tournament"}
-            </h1>
-            <div className="text-lg text-gray-700 font-semibold">
-              Field:{" "}
-              <span className="text-blue-700 font-bold">
-                {field?.name || fieldId}
-              </span>
-            </div>
-            <div className="text-sm text-gray-500 font-medium mt-1">
-              Dates:{" "}
-              <span className="text-gray-900 font-semibold">
-                {tournament
-                  ? formatDateRange(tournament.startDate, tournament.endDate)
-                  : ""}
-              </span>
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            {matchState?.matchNumber && (
-              <div className="text-2xl font-bold text-green-700 bg-green-100 px-6 py-2 rounded-xl shadow-md border-2 border-green-300">
-                Match #{matchState.matchNumber}
-              </div>
-            )}
-            {matchState?.status && (
-              <div
-                className={`text-sm font-bold px-4 py-1 rounded-full border-2 shadow-sm mt-1
-                ${
-                  matchState.status === "IN_PROGRESS"
-                    ? "bg-blue-100 text-blue-800 border-blue-300"
-                    : ""
-                }
-                ${
-                  matchState.status === "COMPLETED"
-                    ? "bg-green-100 text-green-800 border-green-300"
-                    : ""
-                }
-                ${
-                  matchState.status === "PENDING"
-                    ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                    : ""
-                }
-                ${
-                  !["IN_PROGRESS", "COMPLETED", "PENDING"].includes(
-                    matchState.status
-                  )
-                    ? "bg-gray-100 text-gray-800 border-gray-300"
-                    : ""
-                }
-              `}
-              >
-                {matchState.status
-                  .replace("_", " ")
-                  .toLowerCase()
-                  .replace(/\b\w/g, (c: string) => c.toUpperCase())}
-              </div>
-            )}
-            {timer && (
-              <div className="text-4xl font-mono font-extrabold text-blue-700 bg-white px-8 py-2 rounded-xl shadow-lg border-2 border-blue-200 mt-2">
-                {timer.remaining !== undefined
-                  ? formatTimeMsPad(timer.remaining)
-                  : "--:--"}
-              </div>
-            )}
-            {matchState?.currentPeriod && (
-              <div className="text-lg font-bold uppercase text-indigo-800 bg-indigo-100 px-4 py-1 rounded-full border border-indigo-200 mt-2 tracking-widest">
-                {matchState.currentPeriod}
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
-      {/* Main content area */}
-      <main className="container mx-auto bg-white border-2 border-gray-200 rounded-2xl shadow-2xl p-10 mt-2 mb-8">
-        {connectionError ? (
-          <div className="text-center text-red-800 bg-red-50 border border-red-200 rounded-xl p-8 font-semibold text-lg">
-            {connectionError}
-          </div>
-        ) : fieldError ? (
-          <FieldNotFound
-            fieldError={fieldError}
-            onBack={() => router.push(`/audience-display/${tournamentId}`)}
+      
+      {/* Main Layout - Hidden when announcement is showing for true full-screen experience */}
+      {!showAnnouncement && (
+        <>
+          {/* Enhanced Connection Status with Fallback Support (Steps 10-12) */}
+          <ConnectionStatus
+            isConnected={unifiedConnected}
+            wsConnected={unifiedConnected} // Use unified WebSocket connection status
+            lastUpdateTime={lastUpdateTime}
+            connectionError={connectionError}
+            fallbackMode={fallbackMode}
+            source={source}
           />
-        ) : (
-          renderContent()
-        )}
-      </main>
-      {/* Footer */}{" "}
-      <footer className="container mx-auto mt-8 text-center text-sm text-gray-600 pb-6">
-        <p>© Robotics Tournament Management System</p>
-      </footer>
+          
+          {/* Header with tournament and field info */}
+          <header className="mb-6 px-6 pt-8">
+            <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-extrabold text-blue-900 drop-shadow-lg mb-1">
+                  {tournament?.name || "Tournament"}
+                </h1>
+                <div className="text-lg text-gray-700 font-semibold">
+                  Field:{" "}
+                  <span className="text-blue-700 font-bold">
+                    {field?.name || fieldId}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-500 font-medium mt-1">
+                  Dates:{" "}
+                  <span className="text-gray-900 font-semibold">
+                    {tournament
+                      ? formatDateRange(tournament.startDate, tournament.endDate)
+                      : ""}
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                {matchState?.matchNumber && (
+                  <div className="text-2xl font-bold text-green-700 bg-green-100 px-6 py-2 rounded-xl shadow-md border-2 border-green-300">
+                    Match #{matchState.matchNumber}
+                  </div>
+                )}
+                {matchState?.status && (
+                  <div
+                    className={`text-sm font-bold px-4 py-1 rounded-full border-2 shadow-sm mt-1
+                    ${
+                      matchState.status === "IN_PROGRESS"
+                        ? "bg-blue-100 text-blue-800 border-blue-300"
+                        : ""
+                    }
+                    ${
+                      matchState.status === "COMPLETED"
+                        ? "bg-green-100 text-green-800 border-green-300"
+                        : ""
+                    }
+                    ${
+                      matchState.status === "PENDING"
+                        ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                        : ""
+                    }
+                    ${
+                      !["IN_PROGRESS", "COMPLETED", "PENDING"].includes(
+                        matchState.status
+                      )
+                        ? "bg-gray-100 text-gray-800 border-gray-300"
+                        : ""
+                    }
+                  `}
+                  >
+                    {matchState.status
+                      .replace("_", " ")
+                      .toLowerCase()
+                      .replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                  </div>
+                )}
+                {timer && (
+                  <div className="text-4xl font-mono font-extrabold text-blue-700 bg-white px-8 py-2 rounded-xl shadow-lg border-2 border-blue-200 mt-2">
+                    {timer.remaining !== undefined
+                      ? formatTimeMsPad(timer.remaining)
+                      : "--:--"}
+                  </div>
+                )}
+                {matchState?.currentPeriod && (
+                  <div className="text-lg font-bold uppercase text-indigo-800 bg-indigo-100 px-4 py-1 rounded-full border border-indigo-200 mt-2 tracking-widest">
+                    {matchState.currentPeriod}
+                  </div>
+                )}
+              </div>
+            </div>
+          </header>
+          
+          {/* Main content area */}
+          <main className="container mx-auto bg-white border-2 border-gray-200 rounded-2xl shadow-2xl p-10 mt-2 mb-8">
+            {connectionError ? (
+              <div className="text-center text-red-800 bg-red-50 border border-red-200 rounded-xl p-8 font-semibold text-lg">
+                {connectionError}
+              </div>
+            ) : fieldError ? (
+              <FieldNotFound
+                fieldError={fieldError}
+                onBack={() => router.push(`/audience-display/${tournamentId}`)}
+              />
+            ) : (
+              renderContent()
+            )}
+          </main>
+          
+          {/* Footer */}
+          <footer className="container mx-auto mt-8 text-center text-sm text-gray-600 pb-6">
+            <p>© Robotics Tournament Management System</p>
+          </footer>
+        </>
+      )}
     </div>
   );
 }
