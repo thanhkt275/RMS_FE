@@ -12,6 +12,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/common/use-auth";
+import { Mail } from "lucide-react";
+import { EmailVerificationModal } from "@/components/ui/email-verification-modal";
 
 // Login form schema validation - Updated to match backend validation  
 const formSchema = z.object({
@@ -23,11 +25,12 @@ const formSchema = z.object({
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, user, isLoading: authLoading } = useAuth();
+  const { login, user, isLoading: authLoading, resendVerificationEmail } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [rateLimitWarning, setRateLimitWarning] = useState<string | null>(null);
   const [emailVerificationNotice, setEmailVerificationNotice] = useState<string | null>(null);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
 
   // Redirect if user is already logged in - use useEffect to avoid early return
   useEffect(() => {
@@ -61,14 +64,29 @@ export default function LoginPage() {
       router.replace("/");
       
     } catch (error: any) {
+      console.log("Login error details:", {
+        error,
+        status: error.status,
+        message: error.message,
+        type: error.type,
+        response: error.response,
+        responseData: error.response?.data
+      });
+      
       // Handle specific error types
       if (error.status === 429) {
         setRateLimitWarning("Too many login attempts. Please wait a moment before trying again.");
-      } else if (error.message?.toLowerCase().includes('verify') || 
-                 error.message?.toLowerCase().includes('verification') ||
-                 error.message?.toLowerCase().includes('not verified') ||
-                 error.status === 403) {
-        setEmailVerificationNotice("Please check your email and verify your account before logging in. Don't forget to check your spam folder.");
+      } else if (error.type === 'EMAIL_NOT_VERIFIED' || 
+                 (error.status === 403 && (
+                   error.message?.toLowerCase().includes('verify') || 
+                   error.message?.toLowerCase().includes('verification') ||
+                   error.message?.toLowerCase().includes('email') ||
+                   error.response?.data?.message?.toLowerCase().includes('verify') ||
+                   error.response?.data?.message?.toLowerCase().includes('verification') ||
+                   error.response?.data?.message?.toLowerCase().includes('email')
+                 ))) {
+        setEmailVerificationNotice("Your email address is not verified. Please verify your email before logging in.");
+        setShowVerificationModal(true); // Show the modal
       } else {
         setLoginError(error.message || "Login failed. Please check your credentials.");
       }
@@ -123,12 +141,25 @@ export default function LoginPage() {
             </Alert>
           )}
 
-          {/* Email verification notice */}
+          {/* Email verification notice with modal trigger */}
           {emailVerificationNotice && (
-            <Alert className="bg-blue-50 text-blue-800 border-blue-200">
+            <Alert className="bg-amber-50 text-amber-800 border-amber-200">
+              <Mail className="h-4 w-4" />
               <AlertDescription>
-                <p className="font-medium">Email Verification Required</p>
-                <p>{emailVerificationNotice}</p>
+                <div className="space-y-2">
+                  <p className="font-medium">Email Verification Required</p>
+                  <p className="text-sm">{emailVerificationNotice}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowVerificationModal(true)}
+                    className="text-amber-700 border-amber-300 hover:bg-amber-100"
+                  >
+                    <Mail className="mr-2 h-3 w-3" />
+                    Resend Verification Email
+                  </Button>
+                </div>
               </AlertDescription>
             </Alert>
           )}
@@ -197,6 +228,13 @@ export default function LoginPage() {
           </div>
         </CardFooter>
       </Card>
+
+      {/* Email Verification Modal */}
+      <EmailVerificationModal
+        isOpen={showVerificationModal}
+        onClose={() => setShowVerificationModal(false)}
+        message="Your email address needs to be verified before you can login. Please check your email or request a new verification email below."
+      />
     </div>
   );
 }

@@ -185,7 +185,7 @@ export interface IAuthService {
 
   // Account verification
   verifyEmail(verifyEmailRequest: IVerifyEmailRequest): Promise<void>;
-  resendVerificationEmail(): Promise<void>;
+  resendVerificationEmail(email: string): Promise<void>;
 }
 
 /**
@@ -535,18 +535,15 @@ export class EnhancedAuthService implements IAuthService {
   /**
    * Resend email verification
    *
-   * Note: Backend doesn't currently support email verification.
-   * This method throws a helpful error message.
-   *
+   * @param email User email to resend verification for
    * @returns Promise that resolves when verification email is sent
    */
-  async resendVerificationEmail(): Promise<void> {
-    throw new AuthError(
-      AuthErrorType.SERVER_ERROR,
-      "Email verification is not yet supported by the backend. This feature will be available in a future release.",
-      501,
-      { context: "resendVerificationEmail" }
-    );
+  async resendVerificationEmail(email: string): Promise<void> {
+    try {
+      await this.makeAuthenticatedRequest("POST", "/auth/resend-verification", { email });
+    } catch (err: any) {
+      throw err;
+    }
   }
 
   /**
@@ -639,6 +636,18 @@ export class EnhancedAuthService implements IAuthService {
         );
 
       case 403:
+        // Check if this is an email verification error
+        const errorMessage = error.response?.data?.message || error.message || "";
+        if (errorMessage.toLowerCase().includes('verify') || 
+            errorMessage.toLowerCase().includes('verification') ||
+            errorMessage.toLowerCase().includes('email')) {
+          return new AuthError(
+            AuthErrorType.EMAIL_NOT_VERIFIED,
+            errorMessage,
+            403,
+            { context, requiresEmailVerification: true }
+          );
+        }
         return new AuthError(
           AuthErrorType.PERMISSION_DENIED,
           "Access denied. You do not have permission to perform this action.",

@@ -42,6 +42,7 @@ interface AuthContextType {
     phoneNumber: string
   ) => Promise<void>;
   verifyEmail: (token: string) => Promise<void>;
+  resendVerificationEmail: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -171,6 +172,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const resendVerificationEmail = async (email: string): Promise<void> => {
+    try {
+      setError(null);
+      await authService.resendVerificationEmail(email);
+    } catch (err) {
+      setError(err as Error);
+      throw err;
+    }
+  };
+
   // Create context value with all required methods and state
   const contextValue: AuthContextType = {
     user,
@@ -180,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     register,
     verifyEmail,
+    resendVerificationEmail,
   };
 
   return (
