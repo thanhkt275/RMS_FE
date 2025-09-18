@@ -94,29 +94,17 @@ export function RankingRow({
     );
   };
 
-  // Rank display with trophy icons for top positions
+  // Rank display with simple numbers (no icons)
   const RankDisplay = () => {
     const rank = ranking.rank || index + 1;
 
-    if (rank === 1) {
+    if (rank <= 3) {
       return (
         <div className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-yellow-500" />
-          <span className="font-bold text-lg">{rank}</span>
-        </div>
-      );
-    } else if (rank === 2) {
-      return (
-        <div className="flex items-center gap-2">
-          <Medal className="h-5 w-5 text-gray-400" />
-          <span className="font-bold text-lg">{rank}</span>
-        </div>
-      );
-    } else if (rank === 3) {
-      return (
-        <div className="flex items-center gap-2">
-          <Award className="h-5 w-5 text-amber-600" />
-          <span className="font-bold text-lg">{rank}</span>
+          <span className="font-bold text-lg w-6 text-center">{rank}</span>
+          <AnimatePresence>
+            <RankChangeIndicator />
+          </AnimatePresence>
         </div>
       );
     }

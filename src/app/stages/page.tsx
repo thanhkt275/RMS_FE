@@ -4,10 +4,11 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/common/use-auth";
+import { useResponsiveLayout } from "@/hooks/common/use-responsive-layout";
 import { useTournaments } from "@/hooks/tournaments/use-tournaments";
 import { useUserTournamentPreferences, usePublicTournamentPreferences } from "@/hooks/common/use-tournament-preferences";
 import { useStage, useDeleteStage, useStagesByTournament } from "@/hooks/stages/use-stages";
-import { useMatchesByStage, useDeleteMatch } from "@/hooks/matches/use-matches";
+import { useMatchesByStage } from "@/hooks/matches/use-matches";
 import { useStageReadiness } from "@/hooks/stages/use-stage-advancement";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,7 +50,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { PlusIcon, PencilIcon, TrashIcon, InfoIcon, CalendarIcon, ArrowLeftIcon, ListIcon, ClipboardIcon, BarChart3Icon, AlarmClock, Medal, Crown, SaveIcon, CheckCircleIcon, Clock } from "lucide-react";
+import { PlusIcon, PencilIcon, TrashIcon, InfoIcon, CalendarIcon, ArrowLeftIcon, ListIcon, ClipboardIcon, BarChart3Icon, AlarmClock, Medal, Crown, SaveIcon, CheckCircleIcon, Clock, Trophy, Settings } from "lucide-react";
 import { InlineAuditTrail } from '@/components/ui/audit-trail';
 import StageDialog from "./stage-dialog";
 import MatchSchedulerDialog from "./match-scheduler-dialog";
@@ -57,9 +58,11 @@ import EndStageDialog from "@/components/features/stages/end-stage-dialog";
 import DeleteMatchDialog from "@/components/features/stages/delete-match-dialog";
 import { TimeManagementDialog } from "@/components/dialogs/time-management-dialog";
 import { MatchService } from "@/services/match-service";
+import { MobileMatchCard } from "@/components/features/stages/MobileMatchCard";
 
 export default function StagesPage() {
   const router = useRouter();
+  const { screenSize, isMounted } = useResponsiveLayout();
   const { user, isLoading: authLoading } = useAuth();
   const { data: tournamentData, isLoading: tournamentsLoading } = useTournaments();
 
@@ -362,44 +365,44 @@ export default function StagesPage() {
   const stageReadinessReason = stageReadiness?.reason;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8 px-4">
 
       <div className="container mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight mb-1">Stages</h1>
-            <p className="text-base text-gray-600">Manage tournament stages</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight mb-1">Stages</h1>
+            <p className="text-sm sm:text-base text-gray-600">Manage tournament stages</p>
           </div>
         </div>
 
         {/* Tournament selection - only show if no stage is selected */}
         {!selectedStageId && (
-          <Card className="mb-8 bg-white border border-gray-200 shadow-lg rounded-xl">
-            <CardHeader>
-              <div className="flex items-center justify-between">
+          <Card className="mb-6 sm:mb-8 bg-white border border-gray-200 shadow-lg rounded-xl">
+            <CardHeader className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <CardTitle className="text-gray-900">Select Tournament</CardTitle>
-                  <CardDescription className="text-gray-600">Choose a tournament to manage its stages</CardDescription>
+                  <CardTitle className="text-lg sm:text-xl text-gray-900">Select Tournament</CardTitle>
+                  <CardDescription className="text-sm sm:text-base text-gray-600">Choose a tournament to manage its stages</CardDescription>
                 </div>
 
                 {/* Auto-save preferences indicator */}
                 {hasStoredPreference && (
-                  <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 self-start sm:self-center">
                     <SaveIcon size={14} />
                     <span>Auto-save enabled</span>
                   </div>
                 )}
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-6">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="grid gap-4 sm:gap-6">
                 <div className="flex flex-col space-y-3">
                   <Select
                     value={selectedTournamentId}
                     onValueChange={setSelectedTournamentId}
                     disabled={tournamentsLoading || preferencesLoading}
                   >
-                    <SelectTrigger className="w-full md:w-[400px] bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg">
+                    <SelectTrigger className="w-full bg-white border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg min-h-[44px] touch-target">
                       <SelectValue placeholder="Select a tournament" />
                     </SelectTrigger>
                     <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
@@ -425,13 +428,13 @@ export default function StagesPage() {
               </div>
             </CardContent>
             {selectedTournament && (
-              <CardFooter className="bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-                <div className="flex items-center gap-4">
+              <CardFooter className="bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                   <div className="text-sm text-gray-700">
                     <span className="font-medium">Selected:</span> {selectedTournament.name}
                     <div className="text-xs text-gray-600 flex items-center gap-1 mt-1">
                       <CalendarIcon size={12} />
-                      {formatDate(selectedTournament.startDate)} - {formatDate(selectedTournament.endDate)}
+                      <span className="break-all">{formatDate(selectedTournament.startDate)} - {formatDate(selectedTournament.endDate)}</span>
                     </div>
                   </div>
 
@@ -452,10 +455,11 @@ export default function StagesPage() {
                 {selectedTournamentId && (
                   <Button
                     onClick={() => setIsCreateDialogOpen(true)}
-                    className="flex items-center gap-2 bg-blue-500 text-white font-semibold rounded-lg px-5 py-2.5 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200"
+                    className="flex items-center gap-2 bg-blue-500 text-white font-semibold rounded-lg px-4 sm:px-5 py-2.5 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200 min-h-[44px] touch-target w-full sm:w-auto justify-center"
                   >
                     <PlusIcon size={16} />
-                    Add Stage
+                    <span className="sm:hidden">Add Stage</span>
+                    <span className="hidden sm:inline">Add Stage</span>
                   </Button>
                 )}
               </CardFooter>
@@ -475,79 +479,82 @@ export default function StagesPage() {
 
         {/* Stage Detail View - show when a stage is selected */}
         {selectedStageId && stageDetails ? (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleBackClick}
-                className="flex items-center gap-1 mb-4 text-gray-700 hover:bg-gray-100 rounded-lg"
+                className="flex items-center gap-1 self-start text-gray-700 hover:bg-gray-100 rounded-lg min-h-[44px] touch-target"
             >
               <ArrowLeftIcon size={16} />
               Back to Stages
             </Button>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 min-h-[44px] touch-target"
                 onClick={() => handleEditStage(stageDetails)}
               >
                 <PencilIcon size={16} className="mr-1" />
-                Edit Stage
+                <span className="hidden sm:inline">Edit Stage</span>
+                <span className="sm:hidden">Edit</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                className={`border-green-300 text-green-600 hover:bg-green-50 hover:text-green-700 focus:ring-2 focus:ring-green-100 focus:border-green-400 ${!isStageReadyForAdvancement ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`border-green-300 text-green-600 hover:bg-green-50 hover:text-green-700 focus:ring-2 focus:ring-green-100 focus:border-green-400 min-h-[44px] touch-target ${!isStageReadyForAdvancement ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={() => setIsEndStageDialogOpen(true)}
                 disabled={!isStageReadyForAdvancement}
                 title={!isStageReadyForAdvancement ? stageReadinessReason || 'Stage not ready for advancement' : 'End stage and advance teams'}
               >
                 <Crown size={16} className="mr-1" />
-                End Stage
+                <span className="hidden sm:inline">End Stage</span>
+                <span className="sm:hidden">End</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 focus:ring-2 focus:ring-red-100 focus:border-red-400"
+                className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 focus:ring-2 focus:ring-red-100 focus:border-red-400 min-h-[44px] touch-target"
                 onClick={() => handleDeleteClick(stageDetails)}
               >
                 <TrashIcon size={16} className="mr-1" />
-                Delete Stage
+                <span className="hidden sm:inline">Delete Stage</span>
+                <span className="sm:hidden">Delete</span>
               </Button>
             </div>
           </div>
 
           {/* Stage Info Card */}
           <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
-            <CardHeader>
-              <div className="flex items-center justify-between">
+            <CardHeader className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <CardTitle className="text-gray-900">{stageDetails.name}</CardTitle>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <CardTitle className="text-lg sm:text-xl text-gray-900">{stageDetails.name}</CardTitle>
                     {getStageTypeBadge(stageDetails.type)}
                   </div>
-                  <CardDescription className="text-gray-600">
+                  <CardDescription className="text-sm sm:text-base text-gray-600 mt-1">
                     Part of {stageDetails?.tournament?.name || "tournament"}
                   </CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-4 p-4 sm:p-6 pt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <div className="text-sm text-gray-600">Start Date</div>
                   <div className="flex items-center gap-2">
                     <CalendarIcon size={16} className="text-blue-500" />
-                    <span className="text-gray-900">{formatDate(stageDetails.startDate)}</span>
+                    <span className="text-gray-900 text-sm sm:text-base break-all">{formatDate(stageDetails.startDate)}</span>
                   </div>
                 </div>
                 <div className="space-y-1">
                   <div className="text-sm text-gray-600">End Date</div>
                   <div className="flex items-center gap-2">
                     <CalendarIcon size={16} className="text-blue-500" />
-                    <span className="text-gray-900">{formatDate(stageDetails.endDate)}</span>
+                    <span className="text-gray-900 text-sm sm:text-base break-all">{formatDate(stageDetails.endDate)}</span>
                   </div>
                 </div>
               </div>
@@ -605,24 +612,25 @@ export default function StagesPage() {
 
           {/* Matches List */}
           <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
-            <CardHeader>
-              <div className="flex items-center justify-between">
+            <CardHeader className="p-4 sm:p-6">
+              <div className="flex flex-col gap-4">
                 <div>
-                  <CardTitle className="flex items-center gap-2 text-gray-900">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl text-gray-900">
                     <ListIcon size={20} />
                     Matches in this Stage
                   </CardTitle>
-                  <CardDescription className="text-gray-600">
+                  <CardDescription className="text-sm sm:text-base text-gray-600">
                     All scheduled matches for {stageDetails.name}
                   </CardDescription>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     onClick={() => setIsMatchSchedulerDialogOpen(true)}
-                    className="flex items-center gap-2 bg-blue-500 text-white font-semibold rounded-lg px-5 py-2.5 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200"
+                    className="flex items-center gap-2 bg-blue-500 text-white font-semibold rounded-lg px-4 sm:px-5 py-2.5 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200 min-h-[44px] touch-target justify-center"
                   >
                     <PlusIcon size={16} />
-                    Schedule Matches
+                    <span className="hidden sm:inline">Schedule Matches</span>
+                    <span className="sm:hidden">Schedule</span>
                   </Button>
                   {/* Show Generate Next Swiss Round button if stage is ready for advancement */}
                   {isSwissStage && isStageReadyForAdvancement && (
@@ -631,10 +639,11 @@ export default function StagesPage() {
                         setIsMatchSchedulerDialogOpen(true);
                         // Optionally, you could pass latestRoundNumber as a prop or context to the dialog
                       }}
-                      className="flex items-center gap-2 bg-blue-600 text-white font-semibold rounded-lg px-5 py-2.5 shadow-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200"
+                      className="flex items-center gap-2 bg-blue-600 text-white font-semibold rounded-lg px-4 sm:px-5 py-2.5 shadow-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200 min-h-[44px] touch-target justify-center"
                     >
                       <Medal size={16} />
-                      Generate Next Swiss Round
+                      <span className="hidden sm:inline">Generate Next Swiss Round</span>
+                      <span className="sm:hidden">Next Round</span>
                     </Button>
                   )}
                   {/* Bulk Time Management Button */}
@@ -642,10 +651,11 @@ export default function StagesPage() {
                     <Button
                       onClick={handleBulkTimeManagement}
                       variant="outline"
-                      className="flex items-center gap-2 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700 font-semibold rounded-lg px-5 py-2.5 shadow-md focus:ring-2 focus:ring-orange-400 focus:outline-none transition-colors duration-200"
+                      className="flex items-center gap-2 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700 font-semibold rounded-lg px-4 sm:px-5 py-2.5 shadow-md focus:ring-2 focus:ring-orange-400 focus:outline-none transition-colors duration-200 min-h-[44px] touch-target justify-center"
                     >
                       <Clock size={16} />
-                      Manage Times
+                      <span className="hidden sm:inline">Manage Times</span>
+                      <span className="sm:hidden">Times</span>
                     </Button>
                   )}
                 </div>
@@ -666,121 +676,161 @@ export default function StagesPage() {
                 </AlertDescription>
               </Alert>
             ) : filteredStageMatches && filteredStageMatches.length > 0 ? (
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50 border-b border-gray-200">
-                      <TableHead className="text-gray-700">Match #</TableHead>
-                      <TableHead className="text-gray-700">Round</TableHead>
-                      <TableHead className="text-gray-700">Status</TableHead>
-                      <TableHead className="text-gray-700">Scheduled Time</TableHead>
-                      <TableHead className="text-gray-700">Teams</TableHead>
-                      <TableHead className="text-gray-700">Scores</TableHead>
-                      <TableHead className="text-gray-700">Result</TableHead>
-                      <TableHead className="text-right text-gray-700">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredStageMatches.map((match) => (
-                      <TableRow key={match.id} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
-                        <TableCell className="font-medium text-gray-900">{match.matchNumber}</TableCell>
-                        <TableCell className="text-gray-600">{match.roundNumber}</TableCell>
-                        <TableCell>{getMatchStatusBadge(match.status)}</TableCell>
-                        <TableCell className="text-gray-600">{match.scheduledTime ? formatDate(match.scheduledTime) : "Not scheduled"}</TableCell>
-                        <TableCell>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <div className="text-xs font-semibold text-red-600">Red</div>
-                              {match.alliances?.find(a => a.color === 'RED')?.teamAlliances?.map((ta, idx) => (
-                                <div key={ta.team.id || idx} className="text-xs text-gray-900">{ta.team?.name ?? '-'}</div>
-                              ))}
-                            </div>
-                            <div>
-                              <div className="text-xs font-semibold text-blue-600">Blue</div>
-                              {match.alliances?.find(a => a.color === 'BLUE')?.teamAlliances?.map((ta, idx) => (
-                                <div key={ta.team.id || idx} className="text-xs text-gray-900">{ta.team?.name ?? '-'}</div>
-                              ))}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {matchScoresMap[match.id] ? (
-                            <div className="flex items-center space-x-1">
-                              <span className="text-red-600 font-medium">{matchScoresMap[match.id].redTotalScore}</span>
-                              <span className="text-gray-500">-</span>
-                              <span className="text-blue-600 font-medium">{matchScoresMap[match.id].blueTotalScore}</span>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-gray-500">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {match.status === "COMPLETED" ? (
-                            <div className="text-sm">
-                              {match.winningAlliance === "RED" && (
-                                <span className="text-red-600 font-semibold">Red Wins</span>
-                              )}
-                              {match.winningAlliance === "BLUE" && (
-                                <span className="text-blue-600 font-semibold">Blue Wins</span>
-                              )}
-                              {!match.winningAlliance && <span className="text-gray-600">No winner</span>}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-gray-500">Pending</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-2 justify-end">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-gray-600 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                              onClick={(e) => handleViewMatchClick(match.id, e)}
-                            >
-                              View
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={match.status !== "PENDING"}
-                              className={`${
-                                match.status === "PENDING"
-                                  ? "border-blue-600 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                                  : "border-gray-300 text-gray-400 cursor-not-allowed opacity-50"
-                              }`}
-                              onClick={(e) => handleTimeManagementClick(match, e)}
-                              title="Update match time"
-                            >
-                              <Clock size={16} />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={match.status !== "PENDING"}
-                              className={`${
-                                match.status === "PENDING"
-                                  ? "border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700"
-                                  : "border-gray-300 text-gray-400 cursor-not-allowed opacity-50"
-                              }`}
-                              onClick={(e) => handleDeleteMatchClick(match, e)}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </TableCell>
+              <CardContent className="p-4 sm:p-6">
+                {/* Desktop Table View - Hidden on Mobile */}
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50 border-b border-gray-200">
+                        <TableHead className="text-gray-700">Match #</TableHead>
+                        <TableHead className="text-gray-700">Round</TableHead>
+                        <TableHead className="text-gray-700">Status</TableHead>
+                        <TableHead className="text-gray-700">Scheduled Time</TableHead>
+                        <TableHead className="text-gray-700">Teams</TableHead>
+                        <TableHead className="text-gray-700">Scores</TableHead>
+                        <TableHead className="text-gray-700">Result</TableHead>
+                        <TableHead className="text-right text-gray-700">Actions</TableHead>
                       </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredStageMatches.map((match) => (
+                        <TableRow key={match.id} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
+                          <TableCell className="font-medium text-gray-900">{match.matchNumber}</TableCell>
+                          <TableCell className="text-gray-600">{match.roundNumber}</TableCell>
+                          <TableCell>{getMatchStatusBadge(match.status)}</TableCell>
+                          <TableCell className="text-gray-600">{match.scheduledTime ? formatDate(match.scheduledTime) : "Not scheduled"}</TableCell>
+                          <TableCell>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <div className="text-xs font-semibold text-red-600">Red</div>
+                                {match.alliances?.find((a: any) => a.color === 'RED')?.teamAlliances?.map((ta: any, idx: number) => (
+                                  <div key={ta.team.id || idx} className="text-xs text-gray-900">{ta.team?.name ?? '-'}</div>
+                                ))}
+                              </div>
+                              <div>
+                                <div className="text-xs font-semibold text-blue-600">Blue</div>
+                                {match.alliances?.find((a: any) => a.color === 'BLUE')?.teamAlliances?.map((ta: any, idx: number) => (
+                                  <div key={ta.team.id || idx} className="text-xs text-gray-900">{ta.team?.name ?? '-'}</div>
+                                ))}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {matchScoresMap[match.id] ? (
+                              <div className="flex items-center space-x-1">
+                                <span className="text-red-600 font-medium">{matchScoresMap[match.id].redTotalScore}</span>
+                                <span className="text-gray-500">-</span>
+                                <span className="text-blue-600 font-medium">{matchScoresMap[match.id].blueTotalScore}</span>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-gray-500">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {match.status === "COMPLETED" ? (
+                              <div className="text-sm">
+                                {match.winningAlliance === "RED" && (
+                                  <span className="text-red-600 font-semibold">Red Wins</span>
+                                )}
+                                {match.winningAlliance === "BLUE" && (
+                                  <span className="text-blue-600 font-semibold">Blue Wins</span>
+                                )}
+                                {!match.winningAlliance && <span className="text-gray-600">No winner</span>}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-gray-500">Pending</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-gray-600 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                                onClick={(e) => handleViewMatchClick(match.id, e)}
+                              >
+                                View
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={match.status !== "PENDING"}
+                                className={`${
+                                  match.status === "PENDING"
+                                    ? "border-blue-600 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                                    : "border-gray-300 text-gray-400 cursor-not-allowed opacity-50"
+                                }`}
+                                onClick={(e) => handleTimeManagementClick(match, e)}
+                                title="Update match time"
+                              >
+                                <Clock size={16} />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={match.status !== "PENDING"}
+                                className={`${
+                                  match.status === "PENDING"
+                                    ? "border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                    : "border-gray-300 text-gray-400 cursor-not-allowed opacity-50"
+                                }`}
+                                onClick={(e) => handleDeleteMatchClick(match, e)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Card View - Visible on Mobile */}
+                <div className="block sm:hidden">
+                  <div className="space-y-4">
+                    {filteredStageMatches.map((match) => (
+                      <MobileMatchCard
+                        key={match.id}
+                        match={match}
+                        matchScore={matchScoresMap[match.id]}
+                        onViewMatch={(matchId) => router.push(`/matches/${matchId}`)}
+                        onTimeManagement={(match) => {
+                          setSelectedMatchForTime({
+                            id: match.id,
+                            matchNumber: match.matchNumber ?? 0,
+                            currentTime: match.scheduledTime ? new Date(match.scheduledTime) : undefined
+                          });
+                          setTimeManagementMode('single');
+                          setIsTimeManagementDialogOpen(true);
+                        }}
+                        onDeleteMatch={(match) => {
+                          setSelectedMatch({
+                            id: match.id,
+                            matchNumber: match.matchNumber ?? 0,
+                            roundNumber: match.roundNumber,
+                            status: match.status
+                          });
+                          setIsDeleteMatchDialogOpen(true);
+                        }}
+                        formatDate={formatDate}
+                        getMatchStatusBadge={getMatchStatusBadge}
+                      />
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                </div>
               </CardContent>
             ) : (
-              <CardContent>
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="text-center mb-6">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-1">No matches found</h3>
-                    <p className="text-gray-600">This stage doesn't have any scheduled matches yet</p>
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col items-center justify-center py-8 sm:py-12">
+                  <div className="text-center mb-4 sm:mb-6">
+                    <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">No matches found</h3>
+                    <p className="text-sm sm:text-base text-gray-600">This stage doesn't have any scheduled matches yet</p>
                   </div>
-                  <Button onClick={() => router.push(`/match-scheduler?stageId=${stageDetails.id}`)} className="bg-blue-500 text-white font-semibold rounded-lg px-5 py-2.5 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200">
+                  <Button 
+                    onClick={() => router.push(`/match-scheduler?stageId=${stageDetails.id}`)} 
+                    className="bg-blue-500 text-white font-semibold rounded-lg px-4 sm:px-5 py-2.5 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200 min-h-[44px] touch-target"
+                  >
                     Create Matches
                   </Button>
                 </div>
@@ -803,85 +853,161 @@ export default function StagesPage() {
               </Card>
             ) : stages && stages.length > 0 ? (
               <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
-                <CardHeader>
-                  <CardTitle className="text-gray-900">Stages for {selectedTournament?.name}</CardTitle>
-                  <CardDescription className="text-gray-600">Manage qualification, playoff, and final stages</CardDescription>
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="text-lg sm:text-xl text-gray-900">Stages for {selectedTournament?.name}</CardTitle>
+                  <CardDescription className="text-sm sm:text-base text-gray-600">Manage qualification, playoff, and final stages</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gray-50 border-b border-gray-200">
-                        <TableHead className="text-gray-700">Name</TableHead>
-                        <TableHead className="text-gray-700">Type</TableHead>
-                        <TableHead className="text-gray-700">Start Date</TableHead>
-                        <TableHead className="text-gray-700">End Date</TableHead>
-                        <TableHead className="text-gray-700">Created</TableHead>
-                        <TableHead className="text-gray-700 text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {stages.map((stage) => (
-                        <TableRow
-                          key={stage.id}
-                          className="cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100"
-                          onClick={() => setSelectedStageId(stage.id)}
-                        >
-                          <TableCell className="font-medium text-gray-900">{stage.name}</TableCell>
-                          <TableCell>{getStageTypeBadge(stage.type)}</TableCell>
-                          <TableCell className="text-gray-700">{formatDate(stage.startDate)}</TableCell>
-                          <TableCell className="text-gray-700">{formatDate(stage.endDate)}</TableCell>
-                          <TableCell className="text-gray-700">
-                            <InlineAuditTrail
-                              data={{
-                                createdAt: stage.createdAt,
-                                updatedAt: stage.updatedAt,
-                              }}
-                              showRelativeTime={true}
-                              className="text-xs text-gray-600"
-                            />
-                          </TableCell>
-                          <TableCell className="text-right space-x-2">
+                  {/* Desktop Table View - Hidden on Mobile */}
+                  <div className="hidden sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-gray-700">Name</TableHead>
+                          <TableHead className="text-gray-700">Type</TableHead>
+                          <TableHead className="text-gray-700">Start Date</TableHead>
+                          <TableHead className="text-gray-700">End Date</TableHead>
+                          <TableHead className="text-gray-700">Created</TableHead>
+                          <TableHead className="text-gray-700 text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {stages.map((stage) => (
+                          <TableRow
+                            key={stage.id}
+                            className="cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100"
+                            onClick={() => setSelectedStageId(stage.id)}
+                          >
+                            <TableCell className="font-medium text-gray-900">{stage.name}</TableCell>
+                            <TableCell>{getStageTypeBadge(stage.type)}</TableCell>
+                            <TableCell className="text-gray-700">{formatDate(stage.startDate)}</TableCell>
+                            <TableCell className="text-gray-700">{formatDate(stage.endDate)}</TableCell>
+                            <TableCell className="text-gray-700">
+                              <InlineAuditTrail
+                                data={{
+                                  createdAt: stage.createdAt,
+                                  updatedAt: stage.updatedAt,
+                                }}
+                                showRelativeTime={true}
+                                className="text-xs text-gray-600"
+                              />
+                            </TableCell>
+                            <TableCell className="text-right space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditStage(stage);
+                                }}
+                              >
+                                <PencilIcon size={16} />
+                                <span className="sr-only">Edit</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 focus:ring-2 focus:ring-red-100 focus:border-red-400"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteClick(stage);
+                                }}
+                              >
+                                <TrashIcon size={16} />
+                                <span className="sr-only">Delete</span>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Mobile Card View - Visible on Mobile */}
+                  <div className="block sm:hidden p-4 space-y-4">
+                    {stages.map((stage) => (
+                      <Card
+                        key={stage.id}
+                        className="cursor-pointer bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.98]"
+                        onClick={() => setSelectedStageId(stage.id)}
+                      >
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <CardTitle className="text-lg text-gray-900 truncate">{stage.name}</CardTitle>
+                                {getStageTypeBadge(stage.type)}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                <InlineAuditTrail
+                                  data={{
+                                    createdAt: stage.createdAt,
+                                    updatedAt: stage.updatedAt,
+                                  }}
+                                  showRelativeTime={true}
+                                  className="text-xs text-gray-500"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <div className="space-y-2 mb-4">
+                            <div className="text-sm">
+                              <span className="text-gray-600">Start: </span>
+                              <span className="text-gray-900">{formatDate(stage.startDate)}</span>
+                            </div>
+                            <div className="text-sm">
+                              <span className="text-gray-600">End: </span>
+                              <span className="text-gray-900">{formatDate(stage.endDate)}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2 pt-3 border-t border-gray-100">
                             <Button
                               variant="outline"
                               size="sm"
-                              className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+                              className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 min-h-[40px] touch-target"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleEditStage(stage);
                               }}
                             >
-                              <PencilIcon size={16} />
-                              <span className="sr-only">Edit</span>
+                              <PencilIcon size={16} className="mr-1" />
+                              Edit
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
-                              className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 focus:ring-2 focus:ring-red-100 focus:border-red-400"
+                              className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 min-h-[40px] touch-target"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteClick(stage);
                               }}
                             >
                               <TrashIcon size={16} />
-                              <span className="sr-only">Delete</span>
                             </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             ) : (
               <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
-                <CardContent className="flex flex-col items-center justify-center py-12">
+                <CardContent className="flex flex-col items-center justify-center p-6 sm:p-12">
                   <div className="text-center mb-6">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-1">No stages found</h3>
-                    <p className="text-gray-600">Create your first stage for this tournament</p>
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                      <Settings className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">No stages found</h3>
+                    <p className="text-sm sm:text-base text-gray-600">Create your first stage for this tournament</p>
                   </div>
                   <Button
                     onClick={() => setIsCreateDialogOpen(true)}
-                    className="bg-blue-500 text-white font-semibold rounded-lg px-5 py-2.5 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200"
+                    className="w-full sm:w-auto bg-blue-500 text-white font-semibold rounded-lg px-5 py-3 sm:py-2.5 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200 min-h-[44px] touch-target"
                   >
                     Create Stage
                   </Button>
@@ -890,10 +1016,13 @@ export default function StagesPage() {
             )
           ) : (
             <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
-              <CardContent className="flex flex-col items-center justify-center py-12">
+              <CardContent className="flex flex-col items-center justify-center p-6 sm:p-12">
                 <div className="text-center">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-1">Select a Tournament</h3>
-                  <p className="text-gray-600">Please select a tournament to view and manage its stages</p>
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                    <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">Select a Tournament</h3>
+                  <p className="text-sm sm:text-base text-gray-600">Please select a tournament to view and manage its stages</p>
                 </div>
               </CardContent>
             </Card>

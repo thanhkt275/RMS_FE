@@ -113,8 +113,8 @@ export class StateSynchronizer {
       blueTeams: [],
       tournamentId: '',
       timer: {
-        duration: 150000, // 2.5 minutes default
-        remaining: 150000,
+        duration: 120000, // 2 minutes default
+        remaining: 120000,
         isRunning: false,
         tournamentId: initialState.tournamentId || ''
       },

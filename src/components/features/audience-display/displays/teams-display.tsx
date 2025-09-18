@@ -80,74 +80,110 @@ export const TeamsDisplay: React.FC<TeamsDisplayProps> = ({ teams, isLoading }) 
   return (
     <div className="flex flex-col h-full bg-gray-50">
       {/* Teams Page Header */}
-      <div className="bg-white border border-gray-200 shadow-lg p-6 md:p-8 rounded-xl animate-fade-in mb-6">
+      <div className="bg-white border border-gray-200 shadow-lg p-3 sm:p-4 lg:p-6 xl:p-8 rounded-xl animate-fade-in mb-3 sm:mb-4 lg:mb-6">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
             <div className="text-center w-full">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-1 text-gray-900">Tournament Teams</h1>
-            <p className="text-sm md:text-base text-gray-600 animate-fade-in-slow">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mb-1 text-gray-900">Tournament Teams</h1>
+            <p className="text-xs sm:text-sm lg:text-base text-gray-600 animate-fade-in-slow">
               <span className="text-blue-800 font-semibold">{teams.length}</span> {teams.length === 1 ? 'team' : 'teams'} registered
             </p>
             </div>
-          <div className="flex items-center space-x-2 bg-green-50 px-3 py-1 rounded-full border border-green-200">
-            <span className="inline-block w-3 h-3 rounded-full bg-green-500 animate-pulse shadow-md"></span>
-            <span className="text-xs text-green-800 font-semibold uppercase">Live</span>
+          <div className="flex items-center space-x-1 sm:space-x-2 bg-green-50 px-2 sm:px-3 py-1 rounded-full border border-green-200">
+            <span className="inline-block w-2 sm:w-3 h-2 sm:h-3 rounded-full bg-green-500 animate-pulse shadow-md"></span>
+            <span className="text-2xs sm:text-xs text-green-800 font-semibold uppercase">Live</span>
           </div>
         </div>
-      </div>      {/* Teams List Table Area */}
-      <div className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
+      </div>      
+      
+      {/* Teams List Table Area */}
+      <div className="flex-1 p-2 sm:p-3 lg:p-4 xl:p-6 overflow-auto">
         {isLoading ? (
-          <div className="flex flex-col justify-center items-center h-full min-h-[300px] bg-white border border-gray-200 rounded-xl shadow-lg p-8 animate-pulse">
-            <div className="text-xl text-gray-600 font-semibold mb-3">Loading teams...</div>
+          <div className="flex flex-col justify-center items-center h-full min-h-[200px] sm:min-h-[300px] bg-white border border-gray-200 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 animate-pulse">
+            <div className="text-base sm:text-lg lg:text-xl text-gray-600 font-semibold mb-2 sm:mb-3">Loading teams...</div>
             {/* Simple spinner or loading bar */}
-            <div className="w-16 h-16 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
+            <div className="w-12 sm:w-16 h-12 sm:h-16 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
           </div>
         ) : teams.length > 0 ? (
           <div className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden animate-fade-in">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                {table.getHeaderGroups().map(headerGroup => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map(header => (
-                      <th
-                        key={header.id}
-                        className={`px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider ${(header.column.columnDef.meta as any)?.responsiveClass || ''} cursor-pointer select-none whitespace-nowrap text-gray-900`}
-                        onClick={header.column.getToggleSortingHandler()}
-                        style={{ width: header.getSize() }}
-                      >
-                        <div className="flex items-center">
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          <span className="ml-1.5 inline-block w-4 text-center text-gray-600">
-                            {header.column.getIsSorted() === 'asc' ? '▲' : header.column.getIsSorted() === 'desc' ? '▼' : <span className="opacity-30">▲</span>}
-                          </span>
+            {/* Mobile Card View - Hidden on desktop */}
+            <div className="block lg:hidden">
+              <div className="space-y-2 sm:space-y-3 p-3 sm:p-4">
+                {table.getRowModel().rows.map((row, rowIndex) => {
+                  const team = row.original;
+                  return (
+                    <div key={row.id} className={`p-3 sm:p-4 rounded-lg border ${rowIndex % 2 === 0 ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300'}`}>
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center rounded-full bg-blue-50 text-blue-800 font-bold text-xs sm:text-sm border border-blue-200 shadow-sm">
+                            {team.teamNumber || '—'}
+                          </div>
+                          <div>
+                            <h3 className="text-sm sm:text-base font-medium text-gray-900">{team.name}</h3>
+                            {team.organization && (
+                              <p className="text-xs sm:text-sm text-gray-600 mt-1">{team.organization}</p>
+                            )}
+                          </div>
                         </div>
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {table.getRowModel().rows.map((row, rowIndex) => (
-                  <tr key={row.id} className={`${rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors duration-150`}>
-                    {row.getVisibleCells().map(cell => (
-                      <td
-                        key={cell.id}
-                        className={`px-5 py-4 whitespace-nowrap ${(cell.column.columnDef.meta as any)?.responsiveClass || ''}`}
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </div>
+                      {team.location && (
+                        <div className="text-xs sm:text-sm text-gray-500 mt-2">
+                          <span className="font-medium">Location:</span> {team.location}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Desktop Table View - Hidden on mobile */}
+            <div className="hidden lg:block">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  {table.getHeaderGroups().map(headerGroup => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map(header => (
+                        <th
+                          key={header.id}
+                          className={`px-3 sm:px-4 lg:px-5 py-2 sm:py-3 lg:py-3.5 text-left text-xs font-semibold uppercase tracking-wider ${(header.column.columnDef.meta as any)?.responsiveClass || ''} cursor-pointer select-none whitespace-nowrap text-gray-900`}
+                          onClick={header.column.getToggleSortingHandler()}
+                          style={{ width: header.getSize() }}
+                        >
+                          <div className="flex items-center">
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            <span className="ml-1.5 inline-block w-4 text-center text-gray-600">
+                              {header.column.getIsSorted() === 'asc' ? '▲' : header.column.getIsSorted() === 'desc' ? '▼' : <span className="opacity-30">▲</span>}
+                            </span>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {table.getRowModel().rows.map((row, rowIndex) => (
+                    <tr key={row.id} className={`${rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors duration-150`}>
+                      {row.getVisibleCells().map(cell => (
+                        <td
+                          key={cell.id}
+                          className={`px-3 sm:px-4 lg:px-5 py-3 sm:py-4 whitespace-nowrap ${(cell.column.columnDef.meta as any)?.responsiveClass || ''}`}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full min-h-[300px] bg-white border border-gray-200 rounded-xl shadow-lg p-12 text-center animate-fade-in">
-            <svg className="w-16 h-16 text-gray-400 mb-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <div className="flex flex-col items-center justify-center h-full min-h-[200px] sm:min-h-[300px] bg-white border border-gray-200 rounded-xl shadow-lg p-6 sm:p-8 lg:p-12 text-center animate-fade-in">
+            <svg className="w-12 sm:w-16 h-12 sm:h-16 text-gray-400 mb-3 sm:mb-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zM12 12.75a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
             </svg>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No Teams Available</h3>
-            <p className="text-sm text-gray-600">Teams registered for the tournament will appear here.</p>
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-700 mb-1 sm:mb-2">No Teams Available</h3>
+            <p className="text-xs sm:text-sm text-gray-600">Teams registered for the tournament will appear here.</p>
           </div>
         )}
       </div>

@@ -32,7 +32,7 @@ import {
   useTournaments,
   useDeleteTournament,
 } from "@/hooks/tournaments/use-tournaments";
-import type { Tournament } from "@/types/tournament.types";
+import type { Tournament } from "@/types/types";
 import TournamentDialog from "@/components/dialogs/TournamentDialog";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,9 +52,12 @@ import {
 } from "@/components/ui/card";
 import { useAuth } from "@/hooks/common/use-auth";
 import { UserRole } from "@/types/user.types";
+import { useResponsiveLayout } from "@/hooks/common/use-responsive-layout";
+import ResponsiveTournamentDisplay from "@/components/features/tournaments/ResponsiveTournamentDisplay";
 
 const TournamentDataTable = () => {
   const { user, isLoading: userIsLoading } = useAuth();
+  const { screenSize, isMounted } = useResponsiveLayout();
   const {
     data: tournaments,
     isLoading: tournamentsLoading,
@@ -79,7 +82,7 @@ const TournamentDataTable = () => {
     setSelectedTournament(undefined);
   };
 
-  if (userIsLoading) return;
+  if (userIsLoading) return null;
 
   const tournamentDataTableColumns: ColumnDef<Tournament>[] = [
     {
@@ -104,10 +107,6 @@ const TournamentDataTable = () => {
     {
       accessorKey: "numberOfFields",
       header: "Fields",
-    },
-    {
-      accessorKey: "admin.email",
-      header: "Admin",
     },
     {
       id: "actions",
@@ -204,18 +203,17 @@ const TournamentDataTable = () => {
 
   return (
     <>
-      <DataTable
-        data={tournaments ?? []}
-        columns={tournamentDataTableColumns as ColumnDef<unknown>[]}
+      <ResponsiveTournamentDisplay
+        tournaments={tournaments ?? []}
+        columns={tournamentDataTableColumns}
         tableState={tableState}
         setTableState={setTableState}
-        showPagination={false}
-        isLoading={tournamentsLoading}
+        loading={tournamentsLoading}
         actionControls={[
           user?.role === UserRole.ADMIN && (
             <Button
               onClick={() => setIsTournamentDialogOpen(true)}
-              className="flex items-center gap-2 bg-blue-500 text-white font-semibold rounded-lg px-5 py-2.5 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-500 text-white font-semibold rounded-lg px-5 py-2.5 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200 min-h-[44px] touch-target"
             >
               <PlusIcon size={18} />
               Add Tournament
@@ -223,13 +221,16 @@ const TournamentDataTable = () => {
           ),
         ]}
         emptyState={
-          <Card className="shadow-none border border-gray-800 bg-gray-900">
-            <CardContent className="flex flex-col items-center justify-center py-16">
+          <Card className="shadow-none border border-gray-200 bg-white">
+            <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16">
               <div className="text-center mb-6">
-                <h3 className="text-lg font-semibold text-gray-100 mb-1">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+                  <UsersRound className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   No tournaments available
                 </h3>
-                <p className="text-gray-400 text-base">
+                <p className="text-gray-600 text-sm sm:text-base max-w-md mx-auto">
                   {user?.role === UserRole.ADMIN
                     ? "Create your first tournament to get started."
                     : "There are currently no tournaments available to join. Please check back later."}
@@ -238,14 +239,20 @@ const TournamentDataTable = () => {
               {user?.role === UserRole.ADMIN && (
                 <Button
                   onClick={() => setIsTournamentDialogOpen(true)}
-                  className="bg-primary-600 text-white font-medium rounded-md px-5 py-2.5 shadow-sm hover:bg-primary-700 focus:ring-2 focus:ring-primary-400 focus:outline-none transition"
+                  className="bg-blue-600 text-white font-medium rounded-md px-5 py-2.5 shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 focus:outline-none transition min-h-[44px] touch-target"
                 >
+                  <PlusIcon className="w-4 h-4 mr-2" />
                   Create Tournament
                 </Button>
               )}
             </CardContent>
           </Card>
         }
+        onEdit={handleEditTournament}
+        onDelete={(tournament) => {
+          setSelectedTournament(tournament);
+          // The delete will be handled by the card's AlertDialog
+        }}
       />
 
       <TournamentDialog

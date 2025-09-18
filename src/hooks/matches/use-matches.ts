@@ -8,6 +8,20 @@ import { apiClient } from "@/lib/api-client";
 import { QueryKeys } from "@/lib/query-keys";
 import { MatchStatus } from "@/types/types";
 import { MatchService } from "@/services/match-service";
+import { MatchScoreDetails } from "@/hooks/scoring/types";
+
+const mapToMatchServiceScoreDetails = (details?: MatchScoreDetails) => {
+  if (!details) return undefined;
+
+  return {
+    red: details.red,
+    blue: details.blue,
+    penalties: undefined,
+    specialScoring: undefined,
+    breakdown: details.breakdown,
+    scoringMode: details.breakdown ? 'detailed' : 'legacy'
+  } as any;
+};
 
 /**
  * Hook to fetch all matches, optionally filtered by fieldId
@@ -181,10 +195,13 @@ export function useCreateMatchScores() {
       blueMultiplier?: number;
       redGameElements?: Record<string, number>;
       blueGameElements?: Record<string, number>;
-      scoreDetails?: Record<string, any>;
+      scoreDetails?: MatchScoreDetails;
     }) => {
       try {
-        return await MatchService.createOrUpdateMatchScores(data);
+        return await MatchService.createOrUpdateMatchScores({
+          ...data,
+          scoreDetails: mapToMatchServiceScoreDetails(data.scoreDetails),
+        });
       } catch (error: any) {
         if (error.status === 401 || error.message?.includes('Unauthorized')) {
           toast.error("Authentication required. Please log in to create match scores.");
@@ -229,13 +246,16 @@ export function useUpdateMatchScores() {
       blueMultiplier?: number;
       redGameElements?: Record<string, number>;
       blueGameElements?: Record<string, number>;
-      scoreDetails?: Record<string, any>;
+      scoreDetails?: MatchScoreDetails;
     }) => {
       if (!data.id) {
         throw new Error("Match scores ID is required for updates");
       }
       try {
-        return await MatchService.updateMatchScores(data);
+        return await MatchService.updateMatchScores({
+          ...data,
+          scoreDetails: mapToMatchServiceScoreDetails(data.scoreDetails),
+        });
       } catch (error: any) {
         if (error.status === 401 || error.message?.includes('Unauthorized')) {
           toast.error("Authentication required. Please log in to update match scores.");

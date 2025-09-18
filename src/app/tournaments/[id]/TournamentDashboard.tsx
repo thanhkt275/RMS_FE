@@ -10,11 +10,13 @@ import { FieldsSection } from "@/components/features/tournaments/fields-section"
 import { TabNavigation } from "@/components/ui/tab-navigation";
 import { TournamentSkeleton } from "@/components/ui/tournament-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { useResponsiveLayout } from "@/hooks/common/use-responsive-layout";
 
 type TabType = "overview" | "stages" | "fields";
 
 export default function TournamentDashboard() {
   const { id } = useParams<{ id: string }>();
+  const { screenSize, isMounted } = useResponsiveLayout();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
 
   const handleTabChange = (tab: string) => {
@@ -30,18 +32,18 @@ export default function TournamentDashboard() {
 
   if (isError || !tournament) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="text-center max-w-md mx-auto">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
             {isError ? "Error Loading Tournament" : "Tournament Not Found"}
           </h1>
-          <p className="text-gray-600 mb-4">
+          <p className="text-sm sm:text-base text-gray-600 mb-4">
             {error?.message ||
               "The tournament you're looking for doesn't exist."}
           </p>
           <button
             onClick={() => window.history.back()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 min-h-[44px] touch-target"
           >
             Go Back
           </button>
@@ -55,7 +57,7 @@ export default function TournamentDashboard() {
       <div className="min-h-screen bg-gray-50">
         <TournamentHeader tournament={tournament} />
 
-        <div className="container mx-auto px-4 py-6">
+        <div className="container mx-auto px-4 py-4 sm:py-6">
           <TabNavigation
             activeTab={activeTab}
             onTabChange={handleTabChange}
@@ -66,7 +68,7 @@ export default function TournamentDashboard() {
             ]}
           />
 
-          <div className="mt-6">
+          <div className="mt-4 sm:mt-6">
             {activeTab === "overview" && (
               <TournamentOverview tournament={tournament} stats={stats} />
             )}

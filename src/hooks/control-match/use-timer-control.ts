@@ -49,10 +49,12 @@ interface TimerControlReturn {
   formatTime: (ms: number) => string;
 }
 
+const ENDGAME_THRESHOLD_MS = 30000;
+
 export function useTimerControl({
   tournamentId,
   selectedFieldId,
-  initialDuration = 150000, // 2:30 in ms
+  initialDuration = 120000, // 2:00 in ms
   selectedMatchId,
   userRole,
   sendMatchStateChange,
@@ -62,7 +64,7 @@ export function useTimerControl({
   const hasTimerPermission = userRole === UserRole.ADMIN || userRole === UserRole.HEAD_REFEREE;
   // Timer configuration state
   const [timerDuration, setTimerDuration] = useState<number>(initialDuration);
-  const [matchPeriod, setMatchPeriod] = useState<string>("auto");
+  const [matchPeriod, setMatchPeriod] = useState<string>("teleop");
 
   // Timer display state for live clock
   const [timerRemaining, setTimerRemaining] = useState<number>(timerDuration);
@@ -179,6 +181,9 @@ export function useTimerControl({
       // Update local timer state with server data
       setTimerRemaining(correctedRemaining);
       setTimerIsRunning(data.isRunning || false);
+      if (data.period && ["teleop", "endgame", "completed"].includes(data.period)) {
+        setMatchPeriod(data.period);
+      }
 
       // Update sync tracking
       setServerTimestamp(data.startedAt || null);
@@ -226,14 +231,16 @@ export function useTimerControl({
         // Allow emission even without fieldId (tournament-wide timer)
         if (isConnected && tournamentId) {
           const currentTime = Date.now();
+          const recalculatedStart = currentTime - (timerDuration - newRemaining);
           const timerData = {
             duration: timerDuration,
             remaining: newRemaining,
             isRunning: true, // Always true during countdown - only stop when timer is manually paused/stopped
-            startedAt: localStartTime || currentTime,
+            startedAt: recalculatedStart,
             timestamp: currentTime, // Add timestamp for better sync
             tournamentId,
             fieldId: selectedFieldId || null, // Allow null fieldId for tournament-wide timer
+            matchId: selectedMatchId || null,
             period: matchPeriod, // Include current match period
           };
 
@@ -267,7 +274,16 @@ export function useTimerControl({
       clearInterval(interval);
       console.log('[useTimerControl] Cleaned up timer interval');
     };
-  }, [timerIsRunning, timerDuration, localStartTime, isConnected, selectedFieldId, tournamentId]);
+  }, [
+    timerIsRunning,
+    timerDuration,
+    localStartTime,
+    isConnected,
+    selectedFieldId,
+    tournamentId,
+    matchPeriod,
+    selectedMatchId,
+  ]);
 
   // Local timer continuation during connection loss (fallback)
   useEffect(() => {
@@ -292,7 +308,7 @@ export function useTimerControl({
     return () => clearInterval(interval);
   }, [timerIsRunning, connectionLost, localStartTime, timerDuration]);
 
-  // Period transition logic - matches the FRC timing
+  // Period transition logic - teleop into endgame for 120s matches
   useEffect(() => {
     // Allow completion logic to run even when timer is stopped (for auto-completion when timer reaches 0)
     const shouldRunCompletionCheck = timerRemaining <= 0 && matchPeriod !== "completed";
@@ -312,38 +328,10 @@ export function useTimerControl({
       shouldRunCompletionCheck
     });
 
-    // For FRC match timing:
-    // - Auto: 0-30 seconds elapsed (2:30 to 2:00 remaining for 2:30 match)
-    // - Teleop: 30-120 seconds elapsed (2:00 to 0:30 remaining)  
-    // - Endgame: 120+ seconds elapsed (last 30 seconds, 0:30 to 0:00 remaining)
-
     // Only run period transitions when timer is actively running
     if (timerIsRunning) {
-      // Transition to teleop after 30 seconds (when 2:00 remains for 2:30 match)
-      if (matchPeriod === "auto" && elapsedTime >= 30000) {
-        console.log('[useTimerControl] Transitioning from auto to teleop at', elapsedTime / 1000, 'seconds elapsed (', timerRemaining / 1000, 'seconds remaining)');
-        setMatchPeriod("teleop");
-
-        // Broadcast match state change via WebSocket (immediate)
-        if (sendMatchStateChangeRef.current && selectedMatchId) {
-          sendMatchStateChangeRef.current({
-            matchId: selectedMatchId,
-            status: MatchStatus.IN_PROGRESS,
-            currentPeriod: "teleop",
-            fieldId: selectedFieldId || undefined,
-          });
-        }
-
-        // Update API status
-        if (updateMatchStatusAPI && selectedMatchId) {
-          updateMatchStatusAPI({
-            matchId: selectedMatchId,
-            status: MatchStatus.IN_PROGRESS,
-          });
-        }
-      }
-      // Transition to endgame in the last 30 seconds (when 0:30 remains)
-      else if ((matchPeriod === "auto" || matchPeriod === "teleop") && timerRemaining <= 30000 && timerRemaining > 0) {
+      // Transition to endgame in the last 30 seconds
+      if (matchPeriod === "teleop" && timerRemaining <= ENDGAME_THRESHOLD_MS && timerRemaining > 0) {
         console.log('[useTimerControl] Transitioning to endgame at', timerRemaining / 1000, 'seconds remaining');
         setMatchPeriod("endgame");
 
@@ -429,7 +417,7 @@ export function useTimerControl({
       // Reset timer state when switching matches to avoid confusion
       setTimerRemaining(timerDuration);
       setTimerIsRunning(false);
-      setMatchPeriod("auto");
+      setMatchPeriod("teleop");
       setLocalStartTime(null);
       setServerTimestamp(null);
 
@@ -470,6 +458,7 @@ export function useTimerControl({
       isRunning: true, // Start the timer as running
       startedAt: effectiveStartTime, // Use calculated effective start time
       timestamp: currentTime,
+      matchId: selectedMatchId || null,
     };
 
     startTimer(timerData);
@@ -478,11 +467,8 @@ export function useTimerControl({
     setTimerIsRunning(true);
     setLocalStartTime(effectiveStartTime);
 
-    // Only set to auto period when starting from full duration
-    if (timerRemaining === timerDuration) {
-      setMatchPeriod("auto");
-    }
-    // Otherwise keep current period
+    const nextPeriod = timerRemaining === timerDuration ? "teleop" : matchPeriod;
+    setMatchPeriod(nextPeriod);
 
     // Emit immediate timer update for real-time sync
     if (isConnected && tournamentId) {
@@ -490,7 +476,8 @@ export function useTimerControl({
         ...timerData,
         tournamentId,
         fieldId: selectedFieldId || null,
-        period: 'auto',
+        period: nextPeriod,
+        matchId: selectedMatchId || null,
       } as any, {
         fieldId: selectedFieldId || undefined,
         tournamentId: tournamentId,
@@ -502,13 +489,13 @@ export function useTimerControl({
       sendMatchStateChangeRef.current({
         matchId: selectedMatchId,
         status: MatchStatus.IN_PROGRESS,
-        currentPeriod: "auto",
+        currentPeriod: nextPeriod,
         fieldId: selectedFieldId || undefined,
       });
     }
 
-    console.log('[useTimerControl] Timer started:', timerData);
-  }, [hasTimerPermission, canAccess, timerDuration, timerRemaining, startTimer, selectedMatchId, selectedFieldId, isConnected, tournamentId, userRole]);
+    console.log('[useTimerControl] Timer started:', { timerData, nextPeriod });
+  }, [hasTimerPermission, canAccess, timerDuration, timerRemaining, matchPeriod, startTimer, selectedMatchId, selectedFieldId, isConnected, tournamentId, userRole]);
 
   const handlePauseTimer = useCallback(() => {
     // Primary RBAC check - only ADMIN and HEAD_REFEREE allowed
@@ -538,6 +525,7 @@ export function useTimerControl({
       isRunning: false,
       pausedAt: currentTime,
       timestamp: currentTime,
+      matchId: selectedMatchId || null,
     };
 
     pauseTimer(timerData);
@@ -552,6 +540,8 @@ export function useTimerControl({
         ...timerData,
         tournamentId,
         fieldId: selectedFieldId || null,
+        matchId: selectedMatchId || null,
+        period: matchPeriod,
       } as any, {
         fieldId: selectedFieldId || undefined,
         tournamentId: tournamentId,
@@ -559,7 +549,19 @@ export function useTimerControl({
     }
 
     console.log('[useTimerControl] Timer paused:', timerData);
-  }, [hasTimerPermission, canAccess, timerDuration, timerRemaining, pauseTimer, isConnected, tournamentId, selectedFieldId, userRole]);
+  }, [
+    hasTimerPermission,
+    canAccess,
+    timerDuration,
+    timerRemaining,
+    pauseTimer,
+    isConnected,
+    tournamentId,
+    selectedFieldId,
+    selectedMatchId,
+    userRole,
+    matchPeriod
+  ]);
 
   const handleResetTimer = useCallback(() => {
     // Primary RBAC check - only ADMIN and HEAD_REFEREE allowed
@@ -588,6 +590,7 @@ export function useTimerControl({
       remaining: timerDuration, // Reset to full duration
       isRunning: false,
       timestamp: currentTime,
+      matchId: selectedMatchId || null,
     };
 
     resetTimer(timerData);
@@ -595,7 +598,7 @@ export function useTimerControl({
     // Update local state immediately for responsiveness
     setTimerRemaining(timerDuration);
     setTimerIsRunning(false);
-    setMatchPeriod("auto");
+    setMatchPeriod("teleop");
     setLocalStartTime(null);
     setServerTimestamp(null);
 
@@ -605,7 +608,8 @@ export function useTimerControl({
         ...timerData,
         tournamentId,
         fieldId: selectedFieldId || null,
-        period: 'auto',
+        period: 'teleop',
+        matchId: selectedMatchId || null,
       } as any, {
         fieldId: selectedFieldId || undefined,
         tournamentId: tournamentId,
@@ -617,7 +621,7 @@ export function useTimerControl({
       sendMatchStateChangeRef.current({
         matchId: selectedMatchId,
         status: MatchStatus.PENDING,
-        currentPeriod: "auto",
+        currentPeriod: "teleop",
         fieldId: selectedFieldId || undefined,
       });
     }

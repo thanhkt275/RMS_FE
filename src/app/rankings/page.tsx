@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Trophy, Target, Users, WifiOff, RefreshCw } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 import { RealTimeRankingTable } from '@/components/features/rankings';
 import { usePollingRankings } from '@/hooks/rankings/use-polling-rankings';
@@ -91,58 +92,60 @@ function RankingsContent() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4 space-y-6">
+    <div className="container mx-auto py-4 px-3 sm:py-6 sm:px-4 lg:py-8 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Trophy className="h-8 w-8 text-yellow-500" />
-            Tournament Rankings
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center gap-2 break-words">
+            <Trophy className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-yellow-500 flex-shrink-0" />
+            <span className="break-words">Tournament Rankings</span>
           </h1>
-          <p className="text-gray-500 mt-2">
+          <p className="text-gray-500 mt-1 sm:mt-2 text-sm sm:text-base break-words">
             Tournament standings with automatic updates
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
           {/* Polling Status */}
           <Badge
             variant="outline"
-            className={!rankingsError
-              ? "bg-green-50 text-green-700 border-green-300"
-              : "bg-red-50 text-red-700 border-red-300"
-            }
+            className={cn(
+              "text-xs flex-shrink-0",
+              !rankingsError
+                ? "bg-green-50 text-green-700 border-green-300"
+                : "bg-red-50 text-red-700 border-red-300"
+            )}
           >
             {!rankingsError ? (
               <>
-                <Target className="w-3 h-3 mr-2" />
-                Polling Active
+                <Target className="w-3 h-3 mr-1" />
+                <span className="hidden xs:inline">Polling </span>Active
               </>
             ) : (
               <>
-                <WifiOff className="w-3 h-3 mr-2" />
-                Polling Error
+                <WifiOff className="w-3 h-3 mr-1" />
+                <span className="hidden xs:inline">Polling </span>Error
               </>
             )}
           </Badge>
 
           {/* Last Update Time */}
           {lastUpdate && (
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
               Updated: {lastUpdate.toLocaleTimeString()}
             </Badge>
           )}
 
           {/* Update Count */}
           {updateCount > 0 && (
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-xs hidden md:inline-flex">
               Updates: {updateCount}
             </Badge>
           )}
 
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
-            <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse" />
-            Auto-Update
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 text-xs flex-shrink-0">
+            <div className="w-2 h-2 bg-blue-500 rounded-full mr-1 sm:mr-2 animate-pulse" />
+            <span className="hidden xs:inline">Auto-</span>Update
           </Badge>
         </div>
       </div>
@@ -150,34 +153,34 @@ function RankingsContent() {
       {/* Tournament and Stage Selection */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            Tournament Selection
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Target className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+            <span className="break-words">Tournament Selection</span>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm break-words">
             Select a tournament and stage to view rankings
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {/* Tournament Selection */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Tournament</label>
+              <label className="text-xs sm:text-sm font-medium">Tournament</label>
               <Select
                 value={selectedTournamentId}
                 onValueChange={setSelectedTournamentId}
                 disabled={tournamentsLoading}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select tournament..." />
+                <SelectTrigger className="text-sm w-full min-w-0">
+                  <SelectValue placeholder="Select tournament..." className="truncate" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-w-[calc(100vw-2rem)]">
                   {tournaments.map((tournament) => (
-                    <SelectItem key={tournament.id} value={tournament.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{tournament.name}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {tournament._count?.teams || 0} teams
+                    <SelectItem key={tournament.id} value={tournament.id} className="max-w-full">
+                      <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                        <span className="break-words text-sm truncate flex-1">{tournament.name}</span>
+                        <Badge variant="outline" className="text-xs flex-shrink-0 ml-auto">
+                          {tournament._count?.teams || 0}
                         </Badge>
                       </div>
                     </SelectItem>
@@ -188,24 +191,24 @@ function RankingsContent() {
 
             {/* Stage Selection */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Stage (Optional)</label>
+              <label className="text-xs sm:text-sm font-medium">Stage (Optional)</label>
               <Select
                 value={selectedStageId}
                 onValueChange={setSelectedStageId}
                 disabled={stagesLoading || !selectedTournamentId}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="All stages..." />
+                <SelectTrigger className="text-sm w-full min-w-0">
+                  <SelectValue placeholder="All stages..." className="truncate" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-w-[calc(100vw-2rem)]">
                   <SelectItem value="all-stages">All Stages</SelectItem>
                   {stages.map((stage) => (
-                    <SelectItem key={stage.id} value={stage.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{stage.name}</span>
+                    <SelectItem key={stage.id} value={stage.id} className="max-w-full">
+                      <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                        <span className="break-words text-sm truncate flex-1">{stage.name}</span>
                         <Badge
                           variant={stage.status === 'ACTIVE' ? 'default' : 'outline'}
-                          className="text-xs"
+                          className="text-xs flex-shrink-0 ml-auto"
                         >
                           {stage.status}
                         </Badge>
@@ -221,20 +224,24 @@ function RankingsContent() {
 
       {/* Rankings Display */}
       {selectedTournamentId && (
-        <Tabs defaultValue="tournament" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="tournament" className="flex items-center gap-2">
-              <Trophy className="h-4 w-4" />
-              Tournament Rankings
+        <Tabs defaultValue="tournament" className="space-y-3 sm:space-y-4">
+          <TabsList className="grid w-full grid-cols-2 h-auto">
+            <TabsTrigger value="tournament" className="flex items-center gap-1 sm:gap-2 py-2 px-2 sm:px-3">
+              <Trophy className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="text-xs sm:text-sm truncate">Tournament Rankings</span>
             </TabsTrigger>
-            <TabsTrigger value="stage" className="flex items-center gap-2" disabled={!selectedStageId || selectedStageId === 'all-stages'}>
-              <Target className="h-4 w-4" />
-              Stage Rankings
+            <TabsTrigger 
+              value="stage" 
+              className="flex items-center gap-1 sm:gap-2 py-2 px-2 sm:px-3" 
+              disabled={!selectedStageId || selectedStageId === 'all-stages'}
+            >
+              <Target className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="text-xs sm:text-sm truncate">Stage Rankings</span>
             </TabsTrigger>
           </TabsList>
 
           {/* Tournament Rankings Tab */}
-          <TabsContent value="tournament" className="space-y-4">
+          <TabsContent value="tournament" className="space-y-3 sm:space-y-4">
             <RealTimeRankingTable
               tournamentId={selectedTournamentId}
               config={{
@@ -249,7 +256,7 @@ function RankingsContent() {
           </TabsContent>
 
           {/* Stage Rankings Tab */}
-          <TabsContent value="stage" className="space-y-4">
+          <TabsContent value="stage" className="space-y-3 sm:space-y-4">
             {selectedStageId && selectedStageId !== 'all-stages' ? (
               <RealTimeRankingTable
                 tournamentId={selectedTournamentId}
@@ -266,10 +273,10 @@ function RankingsContent() {
               />
             ) : (
               <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Target className="h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Stage Selected</h3>
-                  <p className="text-gray-500">
+                <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
+                  <Target className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mb-3 sm:mb-4 flex-shrink-0" />
+                  <h3 className="text-base sm:text-lg font-semibold mb-2 text-center break-words">No Stage Selected</h3>
+                  <p className="text-gray-500 text-sm sm:text-base text-center break-words">
                     Please select a stage to view stage-specific rankings
                   </p>
                 </CardContent>
@@ -282,10 +289,10 @@ function RankingsContent() {
       {/* No Tournament Selected */}
       {!selectedTournamentId && (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users className="h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Tournament Selected</h3>
-            <p className="text-gray-500">
+          <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
+            <Users className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mb-3 sm:mb-4 flex-shrink-0" />
+            <h3 className="text-base sm:text-lg font-semibold mb-2 text-center break-words">No Tournament Selected</h3>
+            <p className="text-gray-500 text-sm sm:text-base text-center break-words">
               Please select a tournament to view rankings
             </p>
           </CardContent>
@@ -295,35 +302,35 @@ function RankingsContent() {
       {/* Feature Information */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Ranking Features</CardTitle>
+          <CardTitle className="text-base sm:text-lg break-words">Ranking Features</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
             <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-green-500 rounded-full mt-2 animate-pulse" />
-              <div>
-                <h4 className="font-semibold">Auto Updates</h4>
-                <p className="text-sm text-gray-500">
+              <div className="w-2 h-2 bg-green-500 rounded-full mt-2 animate-pulse flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h4 className="font-semibold text-sm sm:text-base break-words">Auto Updates</h4>
+                <p className="text-xs sm:text-sm text-gray-500 break-words">
                   Rankings update automatically when match scores are submitted
                 </p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <Users className="h-5 w-5 text-blue-500 mt-1" />
-              <div>
-                <h4 className="font-semibold">Complete Roster</h4>
-                <p className="text-sm text-gray-500">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 mt-1 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h4 className="font-semibold text-sm sm:text-base break-words">Complete Roster</h4>
+                <p className="text-xs sm:text-sm text-gray-500 break-words">
                   Shows all registered teams with their current standings
                 </p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <Trophy className="h-5 w-5 text-yellow-500 mt-1" />
-              <div>
-                <h4 className="font-semibold">Advanced Sorting</h4>
-                <p className="text-sm text-gray-500">
+              <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 mt-1 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h4 className="font-semibold text-sm sm:text-base break-words">Advanced Sorting</h4>
+                <p className="text-xs sm:text-sm text-gray-500 break-words">
                   Multiple tiebreakers and ranking algorithms
                 </p>
               </div>

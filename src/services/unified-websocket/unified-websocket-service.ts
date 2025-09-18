@@ -190,6 +190,15 @@ export class UnifiedWebSocketService implements IUnifiedWebSocketService {
     private sessionHeartbeats: Map<string, NodeJS.Timeout> = new Map();
     private userLastSeen: Map<string, Map<string, number>> = new Map(); // matchId -> userId -> timestamp
     private previousEventData: Map<string, WebSocketEventData> = new Map(); // Store previous data for change detection
+    private readonly bypassChangeDetectionEvents: Set<string> = new Set([
+        'join_tournament',
+        'leave_tournament',
+        'joinFieldRoom',
+        'leaveFieldRoom',
+        'join_collaborative_session',
+        'leave_collaborative_session',
+        'request_state_sync'
+    ]);
 
     constructor() {
         this.connectionManager = new ConnectionManager();
@@ -235,12 +244,14 @@ export class UnifiedWebSocketService implements IUnifiedWebSocketService {
 
     // === Event Management (Delegation) ===
 
-emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
-    // Check if there's an actual change in data (unless skipChangeDetection is true)
-    if (!options?.skipChangeDetection && this.isDataUnchanged(event, data)) {
-        console.log(`[UnifiedWebSocketService] No changes detected for event: ${event}`);
-        return;
-    }
+    emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
+        const skipChangeDetection = options?.skipChangeDetection || this.bypassChangeDetectionEvents.has(event);
+
+        // Check if there's an actual change in data (unless skipChangeDetection is true)
+        if (!skipChangeDetection && this.isDataUnchanged(event, data)) {
+            console.log(`[UnifiedWebSocketService] No changes detected for event: ${event}`);
+            return;
+        }
         // Check if user can emit this event
         if (!this.roleManager.canEmitEvent(event)) {
             console.warn(`[UnifiedWebSocketService] User role ${this.roleManager.getCurrentRole()} cannot emit event: ${event}`);
@@ -525,7 +536,10 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
 
     joinFieldRoom(fieldId: string): void {
         this.currentFieldId = fieldId;
-        this.emit('joinFieldRoom', { fieldId });
+        this.emit('joinFieldRoom', {
+            fieldId,
+            tournamentId: this.currentTournamentId || undefined
+        });
         console.log(`[UnifiedWebSocketService] Joined field room: ${fieldId}`);
     }
 
@@ -533,7 +547,10 @@ emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
         if (this.currentFieldId === fieldId) {
             this.currentFieldId = null;
         }
-        this.emit('leaveFieldRoom', { fieldId });
+        this.emit('leaveFieldRoom', {
+            fieldId,
+            tournamentId: this.currentTournamentId || undefined
+        });
         console.log(`[UnifiedWebSocketService] Left field room: ${fieldId}`);
     }
 

@@ -208,6 +208,13 @@
   .tablet-up {
     @apply hidden sm:block;
   }
+
+  /* Extra small breakpoint utility */
+  .xs\:inline {
+    @media (min-width: 480px) {
+      display: inline !important;
+    }
+  }
   
   /* Improved focus states for keyboard navigation */
   .focus-enhanced {

@@ -1,4 +1,5 @@
 import { TeamMember } from "@/types/team.types";
+import { MatchScoreDetails } from "@/hooks/scoring/types";
 
 export enum MatchStatus {
   PENDING = "PENDING",
@@ -241,7 +242,7 @@ export interface ScoreData {
   redMultiplier?: number;
   blueTeamCount?: number;
   blueMultiplier?: number;
-  scoreDetails?: Record<string, unknown>;
+  scoreDetails?: MatchScoreDetails;
 }
 
 export interface MatchStateData {

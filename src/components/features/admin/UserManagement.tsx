@@ -6,13 +6,15 @@
 import React, { useState, useCallback } from 'react';
 import { User, UserRole } from '../../../types/user.types';
 import { useUserManagement } from '../../../hooks/users/use-user-management';
+import { useResponsiveLayout } from '../../../hooks/common/use-responsive-layout';
 import UserStats from './UserStats';
 import { AdvancedUserSearch } from './UserSearch';
 import BulkActions from './BulkActions';
-import UserTable from './UserTable';
+import ResponsiveUserDisplay from './ResponsiveUserDisplay';
 import UserForm from './UserForm';
 
 export const UserManagement: React.FC = () => {
+  const { screenSize, isMounted } = useResponsiveLayout();
   const {
     users,
     loading,
@@ -146,39 +148,52 @@ export const UserManagement: React.FC = () => {
    */
   const totalPages = Math.ceil(totalUsers / pageSize);
 
+  // Show loading state if not mounted yet to prevent hydration issues
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading user management...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Header */}
-        <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-              <p className="mt-2 text-gray-700 font-medium">
+        <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">User Management</h1>
+              <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-700 font-medium">
                 Manage users, roles, and permissions across your tournament system
               </p>
             </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
               <button
                 onClick={refreshUsers}
                 disabled={loading}
-                className="flex items-center px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 transition-all duration-200 shadow-sm"
+                className="flex items-center px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 transition-all duration-200 shadow-sm touch-target"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                Refresh
+                <span className="hidden sm:inline">Refresh</span>
               </button>
               
               <button
                 onClick={handleCreateUser}
-                className="flex items-center px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                className="flex items-center px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg touch-target"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
-                Create User
+                <span className="sm:inline">Create</span>
+                <span className="hidden sm:inline"> User</span>
               </button>
             </div>
           </div>
@@ -186,17 +201,17 @@ export const UserManagement: React.FC = () => {
 
         {/* Error Alert */}
         {error && (
-          <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-xl p-4 shadow-sm">
+          <div className="mb-4 sm:mb-6 bg-red-50 border-2 border-red-200 rounded-xl p-3 sm:p-4 shadow-sm">
             <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <svg className="w-5 h-5 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-start">
+                <svg className="w-5 h-5 text-red-500 mr-2 sm:mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-red-800 font-medium">{error.message}</span>
+                <span className="text-sm sm:text-base text-red-800 font-medium">{error.message}</span>
               </div>
               <button
                 onClick={clearError}
-                className="text-red-400 hover:text-red-600 transition-colors"
+                className="text-red-400 hover:text-red-600 transition-colors p-1 touch-target"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -206,8 +221,8 @@ export const UserManagement: React.FC = () => {
           </div>
         )}
 
-        {/* Statistics */}
-        <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        {/* Statistics - Stack on mobile, grid on tablet+ */}
+        <div className="mb-4 sm:mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
           <UserStats stats={stats || {
             ADMIN: 0,
             HEAD_REFEREE: 0,
@@ -219,7 +234,7 @@ export const UserManagement: React.FC = () => {
         </div>
 
         {/* Search and Filters */}
-        <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="mb-4 sm:mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
           <AdvancedUserSearch
             value={searchQuery}
             onChange={setSearchQuery}
@@ -232,8 +247,8 @@ export const UserManagement: React.FC = () => {
           />
         </div>
 
-        {/* Bulk Actions */}
-        <div className="mb-4 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        {/* Bulk Actions - Responsive layout */}
+        <div className="mb-4 bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
           <BulkActions
             selectedUsers={selectedUsers}
             onBulkDelete={bulkDeleteUsers}
@@ -242,66 +257,68 @@ export const UserManagement: React.FC = () => {
           />
         </div>
 
-        {/* Users Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <UserTable
-            users={users}
-            selectedUsers={selectedUsers}
-            sortConfig={sortBy ? { field: sortBy as keyof User, direction: sortOrder } : null}
-            loading={loading}
-            onSelectUser={selectUser}
-            onSelectAll={selectAllUsers}
-            onSort={handleSort}
-            onEdit={handleEditUser}
-            onDelete={handleDeleteUser}
-            onViewProfile={handleViewProfile}
-            onChangeRole={handleChangeRole}
-          />
-        </div>
+        {/* Responsive Users Display */}
+        <ResponsiveUserDisplay
+          users={users}
+          selectedUsers={selectedUsers}
+          sortConfig={sortBy ? { field: sortBy as keyof User, direction: sortOrder } : null}
+          loading={loading}
+          onSelectUser={selectUser}
+          onSelectAll={selectAllUsers}
+          onSort={handleSort}
+          onEdit={handleEditUser}
+          onDelete={handleDeleteUser}
+          onViewProfile={handleViewProfile}
+          onChangeRole={handleChangeRole}
+        />
 
-        {/* Pagination */}
+        {/* Pagination - Responsive */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="text-sm text-gray-700 font-medium">
-              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalUsers)} of {totalUsers} users
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setPage(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-              >
-                Previous
-              </button>
+          <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="text-xs sm:text-sm text-gray-700 font-medium text-center sm:text-left">
+                Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalUsers)} of {totalUsers} users
+              </div>
               
-              {/* Page Numbers */}
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const page = i + Math.max(1, currentPage - 2);
-                if (page > totalPages) return null;
+              <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                <button
+                  onClick={() => setPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-gray-600 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 touch-target"
+                >
+                  <span className="hidden sm:inline">Previous</span>
+                  <span className="sm:hidden">Prev</span>
+                </button>
                 
-                return (
-                  <button
-                    key={page}
-                    onClick={() => setPage(page)}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
-                      page === currentPage
-                        ? 'text-white bg-blue-600 shadow-md'
-                        : 'text-gray-600 bg-white border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                );
-              })}
-              
-              <button
-                onClick={() => setPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-              >
-                Next
-              </button>
+                {/* Page Numbers - Show fewer on mobile */}
+                {Array.from({ length: Math.min(screenSize === 'mobile' ? 3 : 5, totalPages) }, (_, i) => {
+                  const page = i + Math.max(1, currentPage - (screenSize === 'mobile' ? 1 : 2));
+                  if (page > totalPages) return null;
+                  
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setPage(page)}
+                      className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200 touch-target ${
+                        page === currentPage
+                          ? 'text-white bg-blue-600 shadow-md'
+                          : 'text-gray-600 bg-white border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+                
+                <button
+                  onClick={() => setPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-gray-600 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 touch-target"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <span className="sm:hidden">Next</span>
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -401,28 +401,29 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900 shadow-xl text-white p-8 text-center rounded-b-3xl border-b-4 border-blue-400 relative">
-        <h2 className="text-5xl font-extrabold tracking-tight drop-shadow-lg mb-2 animate-fade-in">Match Schedule</h2>
-        <p className="text-lg text-blue-200 font-medium animate-fade-in-slow">Tournament ID: {tournamentId}</p>
-        <div className="absolute right-8 top-8 flex items-center space-x-2"></div>
+      <div className="bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900 shadow-xl text-white p-3 sm:p-4 lg:p-6 xl:p-8 text-center rounded-b-3xl border-b-4 border-blue-400 relative">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-extrabold tracking-tight drop-shadow-lg mb-1 sm:mb-2 animate-fade-in">Match Schedule</h2>
+        <p className="text-sm sm:text-base lg:text-lg text-blue-200 font-medium animate-fade-in-slow">Tournament ID: {tournamentId}</p>
+        <div className="absolute right-2 sm:right-4 lg:right-8 top-2 sm:top-4 lg:top-8 flex items-center space-x-1 sm:space-x-2"></div>
       </div>
+      
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 items-end p-4 bg-white border-b border-blue-100">
-        <div>
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 lg:gap-4 items-start sm:items-end p-2 sm:p-3 lg:p-4 bg-white border-b border-blue-100">
+        <div className="flex-1 min-w-0 sm:flex-initial sm:w-auto">
           <label className="block text-xs text-gray-400 mb-1">Team Name/Number</label>
           <input
             value={teamFilter}
             onChange={e => setTeamFilter(e.target.value)}
-            placeholder="Search by team name or number"
-            className="w-40 px-2 py-1 rounded border border-blue-200"
+            placeholder="Search teams..."
+            className="w-full sm:w-40 px-2 py-1 text-sm rounded border border-blue-200"
           />
         </div>
-        <div>
+        <div className="flex-1 min-w-0 sm:flex-initial sm:w-auto">
           <label className="block text-xs text-gray-400 mb-1">Status</label>
           <select
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
-            className="w-32 px-2 py-1 rounded border border-blue-200"
+            className="w-full sm:w-32 px-2 py-1 text-sm rounded border border-blue-200"
           >
             <option value="">All</option>
             <option value="PENDING">Pending</option>
@@ -431,52 +432,124 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           </select>
         </div>
       </div>
-      {/* Table */}
-      <div className="flex-1 p-8 overflow-auto bg-gradient-to-b from-gray-50 to-blue-50">
-        <div className="overflow-hidden shadow-lg rounded-lg border border-blue-100 bg-white">
-          <table className="min-w-full divide-y divide-blue-100">
-            <thead className="bg-gray-800 text-white">
-              {table.getHeaderGroups().map(headerGroup => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th
-                      key={header.id}
-                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none"
-                      onClick={header.column.getToggleSortingHandler()}
-                    >
-                      <div className="flex items-center">
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        <span className="ml-1 inline-block w-3 text-center">
-                          {header.column.getIsSorted() === 'asc' ? '▲' : header.column.getIsSorted() === 'desc' ? '▼' : <span className="opacity-0">▲</span>}
+
+      {/* Content Area */}
+      <div className="flex-1 p-2 sm:p-4 lg:p-6 xl:p-8 overflow-auto bg-gradient-to-b from-gray-50 to-blue-50">
+        {/* Mobile Card View - Hidden on desktop */}
+        <div className="block lg:hidden">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-blue-600">Loading matches...</div>
+            </div>
+          ) : table.getRowModel().rows.length === 0 ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-blue-600">No matches found.</div>
+            </div>
+          ) : (
+            <div className="space-y-3 sm:space-y-4">
+              {table.getRowModel().rows.map((row, index) => {
+                const match = row.original;
+                const getStatusColor = (status: string) => {
+                  switch (status) {
+                    case 'IN_PROGRESS':
+                      return 'bg-yellow-100 text-yellow-800 border-yellow-400';
+                    case 'COMPLETED':
+                      return 'bg-green-100 text-green-800 border-green-400';
+                    case 'PENDING':
+                    default:
+                      return 'bg-gray-100 text-gray-700 border-gray-300';
+                  }
+                };
+
+                return (
+                  <div key={row.id} className="bg-white rounded-lg shadow border border-blue-100 p-3 sm:p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <span className="text-lg sm:text-xl font-bold text-blue-900">Match {match.matchNumber}</span>
+                        <span className="text-sm text-blue-700 font-semibold">{formatTime(match.scheduledTime)}</span>
+                      </div>
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${getStatusColor(match.status)}`}>
+                        {match.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between py-2 px-3 bg-red-50 rounded border-l-4 border-red-500">
+                        <div className="text-sm font-semibold text-red-800">Red Alliance</div>
+                        <div className="text-sm font-bold text-red-700">{getTeams(match, 'RED').join(', ')}</div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between py-2 px-3 bg-blue-50 rounded border-l-4 border-blue-500">
+                        <div className="text-sm font-semibold text-blue-800">Blue Alliance</div>
+                        <div className="text-sm font-bold text-blue-700">{getTeams(match, 'BLUE').join(', ')}</div>
+                      </div>
+                    </div>
+
+                    {match.winningAlliance && (
+                      <div className="mt-3 text-center">
+                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                          match.winningAlliance === 'RED' ? 'bg-red-100 text-red-800' : 
+                          match.winningAlliance === 'BLUE' ? 'bg-blue-100 text-blue-800' : 
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {match.winningAlliance} Alliance Wins
                         </span>
                       </div>
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody className="bg-white divide-y divide-blue-50">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={table.getAllLeafColumns().length} className="text-center text-blue-400 py-8">Loading matches...</td>
-                </tr>
-              ) : table.getRowModel().rows.length === 0 ? (
-                <tr>
-                  <td colSpan={table.getAllLeafColumns().length} className="text-center text-blue-400 py-8">No matches found.</td>
-                </tr>
-              ) : (
-                table.getRowModel().rows.map(row => (
-                  <tr key={row.id} className="hover:bg-blue-50 transition-colors">
-                    {row.getVisibleCells().map(cell => (
-                      <td key={cell.id} className="px-4 py-3 whitespace-nowrap text-blue-900">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table View - Hidden on mobile */}
+        <div className="hidden lg:block">
+          <div className="overflow-hidden shadow-lg rounded-lg border border-blue-100 bg-white">
+            <table className="min-w-full divide-y divide-blue-100">
+              <thead className="bg-gray-800 text-white">
+                {table.getHeaderGroups().map(headerGroup => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map(header => (
+                      <th
+                        key={header.id}
+                        className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none"
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        <div className="flex items-center">
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          <span className="ml-1 inline-block w-3 text-center">
+                            {header.column.getIsSorted() === 'asc' ? '▲' : header.column.getIsSorted() === 'desc' ? '▼' : <span className="opacity-0">▲</span>}
+                          </span>
+                        </div>
+                      </th>
                     ))}
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ))}
+              </thead>
+              <tbody className="bg-white divide-y divide-blue-50">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={table.getAllLeafColumns().length} className="text-center text-blue-400 py-8">Loading matches...</td>
+                  </tr>
+                ) : table.getRowModel().rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={table.getAllLeafColumns().length} className="text-center text-blue-400 py-8">No matches found.</td>
+                  </tr>
+                ) : (
+                  table.getRowModel().rows.map(row => (
+                    <tr key={row.id} className="hover:bg-blue-50 transition-colors">
+                      {row.getVisibleCells().map(cell => (
+                        <td key={cell.id} className="px-3 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-blue-900 text-sm">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

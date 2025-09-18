@@ -7,7 +7,8 @@ import {
   ApiScoreData,
   Alliance,
   ScoreType,
-  GameElementDto
+  GameElementDto,
+  MatchScoreDetails
 } from '../types/index';
 
 // Score calculation service interface
@@ -65,7 +66,7 @@ export interface IScoringStateService {
   updateGameElements(alliance: Alliance, elements: GameElement[]): void;
   updateTeamCount(alliance: Alliance, count: number): void;
   updateMultiplier(alliance: Alliance, multiplier: number): void;
-  updateScoreDetails(details: any): void;
+  updateScoreDetails(details: Partial<MatchScoreDetails>): void;
   updateUIState(key: string, value: boolean): void;
   syncWithApiData(apiData: any): void;
   reset(): void;

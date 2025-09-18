@@ -1,4 +1,12 @@
-import { MatchScoreData, GameElement, Alliance, ScoreType } from '../types/index';
+import {
+  MatchScoreData,
+  GameElement,
+  Alliance,
+  ScoreType,
+  MatchScoreDetails,
+  AllianceScoreDetails,
+  AllianceScoreBreakdown,
+} from '../types/index';
 
 export type ScoringAction =
   | { type: 'SET_SCORE'; payload: { alliance: Alliance; scoreType: ScoreType; value: number } }
@@ -11,7 +19,61 @@ export type ScoringAction =
   | { type: 'CALCULATE_TOTALS' }
   | { type: 'RESET' };
 
-export const initialScoringState: MatchScoreData = {
+const SCORE_VALUES = {
+  flagsSecured: 20,
+  successfulFlagHits: 10,
+  opponentFieldAmmo: 5,
+} as const;
+
+const createAllianceDetails = (overrides?: Partial<AllianceScoreDetails>): AllianceScoreDetails => ({
+  flagsSecured: Math.max(0, Math.floor(overrides?.flagsSecured ?? 0)),
+  successfulFlagHits: Math.max(0, Math.floor(overrides?.successfulFlagHits ?? 0)),
+  opponentFieldAmmo: Math.max(0, Math.floor(overrides?.opponentFieldAmmo ?? 0)),
+});
+
+const createBreakdown = (details: AllianceScoreDetails): AllianceScoreBreakdown => {
+  const flagsPoints = details.flagsSecured * SCORE_VALUES.flagsSecured;
+  const flagHitsPoints = details.successfulFlagHits * SCORE_VALUES.successfulFlagHits;
+  const fieldControlPoints = details.opponentFieldAmmo * SCORE_VALUES.opponentFieldAmmo;
+
+  return {
+    flagsPoints,
+    flagHitsPoints,
+    fieldControlPoints,
+    totalPoints: flagsPoints + flagHitsPoints + fieldControlPoints,
+  };
+};
+
+const normaliseScoreDetails = (
+  details?: Partial<MatchScoreDetails> | null,
+): MatchScoreDetails => ({
+  red: createAllianceDetails(details?.red),
+  blue: createAllianceDetails(details?.blue),
+});
+
+const mergeScoreDetails = (
+  current: MatchScoreDetails,
+  updates?: Partial<MatchScoreDetails>,
+): MatchScoreDetails => {
+  if (!updates) {
+    return normaliseScoreDetails(current);
+  }
+
+  return normaliseScoreDetails({
+    red: { ...current.red, ...updates.red },
+    blue: { ...current.blue, ...updates.blue },
+  });
+};
+
+const detailsChanged = (current: MatchScoreDetails, next: MatchScoreDetails): boolean =>
+  current.red.flagsSecured !== next.red.flagsSecured ||
+  current.red.successfulFlagHits !== next.red.successfulFlagHits ||
+  current.red.opponentFieldAmmo !== next.red.opponentFieldAmmo ||
+  current.blue.flagsSecured !== next.blue.flagsSecured ||
+  current.blue.successfulFlagHits !== next.blue.successfulFlagHits ||
+  current.blue.opponentFieldAmmo !== next.blue.opponentFieldAmmo;
+
+const baseInitialState: MatchScoreData = {
   redAlliance: {
     autoScore: 0,
     driveScore: 0,
@@ -30,10 +92,12 @@ export const initialScoringState: MatchScoreData = {
     multiplier: 1.0,
     penalty: 0,
   },
-  scoreDetails: {},
+  scoreDetails: normaliseScoreDetails(),
   isAddingRedElement: false,
   isAddingBlueElement: false,
 };
+
+export const initialScoringState: MatchScoreData = calculateTotals(baseInitialState);
 
 export function scoringReducer(state: MatchScoreData, action: ScoringAction): MatchScoreData {
   switch (action.type) {    case 'SET_SCORE': {
@@ -110,16 +174,19 @@ export function scoringReducer(state: MatchScoreData, action: ScoringAction): Ma
           multiplier: multiplier,
         },
       };
-    }    case 'SET_SCORE_DETAILS': {
-      // Check if score details are actually different
-      if (JSON.stringify(state.scoreDetails) === JSON.stringify(action.payload)) {
+    }
+
+    case 'SET_SCORE_DETAILS': {
+      const mergedDetails = mergeScoreDetails(state.scoreDetails, action.payload);
+
+      if (!detailsChanged(state.scoreDetails, mergedDetails)) {
         return state;
       }
-      
-      return {
+
+      return calculateTotals({
         ...state,
-        scoreDetails: action.payload,
-      };
+        scoreDetails: mergedDetails,
+      });
     }
 
     case 'SET_UI_STATE': {
@@ -140,23 +207,22 @@ export function scoringReducer(state: MatchScoreData, action: ScoringAction): Ma
       const apiData = action.payload;
       if (!apiData) return state;
 
-      // Helper function to convert game elements from object to array
       const objectToArrayGameElements = (
-        gameElements: Record<string, any> | any[] | null | undefined
+        gameElements: Record<string, any> | any[] | null | undefined,
       ): GameElement[] => {
         if (!gameElements) return [];
         if (Array.isArray(gameElements)) return gameElements;
-        if (typeof gameElements === "object" && Object.keys(gameElements).length === 0) return [];
+        if (typeof gameElements === 'object' && Object.keys(gameElements).length === 0) return [];
 
         try {
           return Object.entries(gameElements).map(([element, value]) => {
-            if (typeof value === "object" && value !== null && "count" in value) {
+            if (typeof value === 'object' && value !== null && 'count' in value) {
               return {
                 element,
                 count: Number(value.count || 0),
                 pointsEach: Number(value.pointsEach || 1),
-                totalPoints: Number(value.totalPoints || value.count),
-                operation: value.operation || "multiply",
+                totalPoints: Number(value.totalPoints || value.count || 0),
+                operation: value.operation || 'multiply',
               };
             }
             return {
@@ -164,14 +230,18 @@ export function scoringReducer(state: MatchScoreData, action: ScoringAction): Ma
               count: Number(value),
               pointsEach: 1,
               totalPoints: Number(value),
-              operation: "multiply",
+              operation: 'multiply',
             };
           });
         } catch (error) {
-          console.error("Error converting game elements:", error, gameElements);
+          console.error('Error converting game elements:', error, gameElements);
           return [];
         }
-      };      const newState = {
+      };
+
+      const mergedDetails = normaliseScoreDetails(apiData.scoreDetails);
+
+      const newState: MatchScoreData = {
         ...state,
         redAlliance: {
           ...state.redAlliance,
@@ -181,7 +251,7 @@ export function scoringReducer(state: MatchScoreData, action: ScoringAction): Ma
           gameElements: objectToArrayGameElements(apiData.redGameElements),
           teamCount: apiData.redTeamCount || 0,
           multiplier: apiData.redMultiplier || 1.0,
-          penalty: apiData.redPenalty || 0,
+          penalty: 0,
         },
         blueAlliance: {
           ...state.blueAlliance,
@@ -191,9 +261,9 @@ export function scoringReducer(state: MatchScoreData, action: ScoringAction): Ma
           gameElements: objectToArrayGameElements(apiData.blueGameElements),
           teamCount: apiData.blueTeamCount || 0,
           multiplier: apiData.blueMultiplier || 1.0,
-          penalty: apiData.bluePenalty || 0,
+          penalty: 0,
         },
-        scoreDetails: apiData.scoreDetails || {},
+        scoreDetails: mergedDetails,
       };
 
       return calculateTotals(newState);
@@ -213,27 +283,65 @@ export function scoringReducer(state: MatchScoreData, action: ScoringAction): Ma
 }
 
 function calculateTotals(state: MatchScoreData): MatchScoreData {
-  // Calculate base scores and add opponent's penalties
-  const redTotal = (state.redAlliance.autoScore || 0) + (state.redAlliance.driveScore || 0) + (state.blueAlliance.penalty || 0);
-  const blueTotal = (state.blueAlliance.autoScore || 0) + (state.blueAlliance.driveScore || 0) + (state.redAlliance.penalty || 0);
+  const normalisedDetails = normaliseScoreDetails(state.scoreDetails);
 
-  // Only update state if totals have actually changed
-  const redTotalChanged = state.redAlliance.totalScore !== redTotal;
-  const blueTotalChanged = state.blueAlliance.totalScore !== blueTotal;
-  
-  if (!redTotalChanged && !blueTotalChanged) {
-    return state; // No changes needed, return same state reference
+  const redBreakdown = createBreakdown(normalisedDetails.red);
+  const blueBreakdown = createBreakdown(normalisedDetails.blue);
+
+  const redAuto = redBreakdown.flagsPoints;
+  const redDrive = redBreakdown.flagHitsPoints + redBreakdown.fieldControlPoints;
+  const redTotal = redBreakdown.totalPoints;
+
+  const blueAuto = blueBreakdown.flagsPoints;
+  const blueDrive = blueBreakdown.flagHitsPoints + blueBreakdown.fieldControlPoints;
+  const blueTotal = blueBreakdown.totalPoints;
+
+  const totalsUnchanged =
+    state.redAlliance.autoScore === redAuto &&
+    state.redAlliance.driveScore === redDrive &&
+    state.redAlliance.totalScore === redTotal &&
+    state.blueAlliance.autoScore === blueAuto &&
+    state.blueAlliance.driveScore === blueDrive &&
+    state.blueAlliance.totalScore === blueTotal;
+
+  const detailsUnchanged = !detailsChanged(state.scoreDetails, normalisedDetails);
+
+  const breakdownUnchanged =
+    state.scoreDetails?.breakdown &&
+    state.scoreDetails.breakdown.red.flagsPoints === redBreakdown.flagsPoints &&
+    state.scoreDetails.breakdown.red.flagHitsPoints === redBreakdown.flagHitsPoints &&
+    state.scoreDetails.breakdown.red.fieldControlPoints === redBreakdown.fieldControlPoints &&
+    state.scoreDetails.breakdown.blue.flagsPoints === blueBreakdown.flagsPoints &&
+    state.scoreDetails.breakdown.blue.flagHitsPoints === blueBreakdown.flagHitsPoints &&
+    state.scoreDetails.breakdown.blue.fieldControlPoints === blueBreakdown.fieldControlPoints;
+
+  if (totalsUnchanged && detailsUnchanged && breakdownUnchanged) {
+    return state;
   }
 
   return {
     ...state,
     redAlliance: {
       ...state.redAlliance,
+      autoScore: redAuto,
+      driveScore: redDrive,
       totalScore: redTotal,
+      penalty: 0,
     },
     blueAlliance: {
       ...state.blueAlliance,
+      autoScore: blueAuto,
+      driveScore: blueDrive,
       totalScore: blueTotal,
+      penalty: 0,
+    },
+    scoreDetails: {
+      red: normalisedDetails.red,
+      blue: normalisedDetails.blue,
+      breakdown: {
+        red: redBreakdown,
+        blue: blueBreakdown,
+      },
     },
   };
 }

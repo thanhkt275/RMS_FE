@@ -32,15 +32,15 @@ export function TeamCompositionSummary({
 
   return (
     <Card className="bg-gray-50 border-gray-200">
-      <CardContent className="pt-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <CardContent className="pt-4 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             {/* Team Captain */}
             <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-full">
-                <Crown className="h-4 w-4 text-green-600" />
+              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 bg-green-100 rounded-full flex-shrink-0">
+                <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
               </div>
-              <div className="text-sm">
+              <div className="text-xs sm:text-sm min-w-0 flex-1">
                 <div className="font-medium text-green-700">Team Captain</div>
                 <div className="text-gray-600">You</div>
               </div>
@@ -48,21 +48,23 @@ export function TeamCompositionSummary({
 
             {/* Team Members */}
             <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full">
-                <Users className="h-4 w-4 text-blue-600" />
+              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex-shrink-0">
+                <Users className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
               </div>
-              <div className="text-sm">
+              <div className="text-xs sm:text-sm min-w-0 flex-1">
                 <div className="font-medium text-blue-700">Team Members</div>
                 <div className="text-gray-600">
                   {memberCount - 1} added
-                  {maxTeamMembers && ` (${remainingSlots} slots left)`}
+                  {maxTeamMembers && (
+                    <span className="hidden sm:inline"> ({remainingSlots} slots left)</span>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Status */}
-          <div className="text-right">
+          <div className="text-left sm:text-right">
             <div className="text-sm font-medium text-gray-900">
               {memberCount}{maxTeamMembers && `/${maxTeamMembers}`} Members
             </div>
@@ -75,7 +77,7 @@ export function TeamCompositionSummary({
 
         {/* Progress Bar */}
         {maxTeamMembers && (
-          <div className="mt-3">
+          <div className="mt-3 sm:mt-4">
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
                 className={`h-2 rounded-full transition-all duration-300 ${

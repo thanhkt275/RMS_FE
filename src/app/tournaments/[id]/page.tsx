@@ -25,13 +25,13 @@ export default function TournamentPage() {
 
   // Other roles or unauthenticated users get access denied
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="text-center p-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
-        <p className="text-gray-600 mb-4">
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
+      <div className="text-center p-6 sm:p-8 max-w-md mx-auto">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
+        <p className="text-sm sm:text-base text-gray-600 mb-4">
           You need to be logged in as a registered user to access team registration.
         </p>
-        <p className="text-sm text-gray-500">
+        <p className="text-xs sm:text-sm text-gray-500">
           Contact an administrator if you believe this is an error.
         </p>
       </div>

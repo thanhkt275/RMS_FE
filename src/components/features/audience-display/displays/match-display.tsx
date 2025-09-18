@@ -54,18 +54,18 @@ const AllianceCard = ({
         isRed ? 'border-red-500 bg-red-950/50' : 'border-blue-500 bg-blue-950/50'
       )}
     >
-      <CardHeader>
+      <CardHeader className="pb-2 sm:pb-4">
         <CardTitle
           className={cn(
-            'text-5xl font-bold',
+            'text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold',
             isRed ? 'text-red-400' : 'text-blue-400'
           )}
         >
           {alliance.toUpperCase()} ALLIANCE
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-8">
-        <div className="text-6xl font-semibold text-white space-y-4 min-h-[16rem]">
+      <CardContent className="space-y-3 sm:space-y-6 lg:space-y-8">
+        <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-6xl font-semibold text-white space-y-2 sm:space-y-3 lg:space-y-4 min-h-[8rem] sm:min-h-[12rem] lg:min-h-[16rem]">
           {teams && teams.length > 0 ? (
             teams.map((team, index) => {
               // Handle different team data formats
@@ -93,21 +93,21 @@ const AllianceCard = ({
               })();
 
               return (
-                <div key={`${team.id || index}-${index}`}>
+                <div key={`${team.id || index}-${index}`} className="break-words px-1 sm:px-2">
                   {displayName}
                 </div>
               );
             })
           ) : (
             <>
-              <div>Team A</div>
-              <div>Team B</div>
+              <div className="break-words px-1 sm:px-2">Team A</div>
+              <div className="break-words px-1 sm:px-2">Team B</div>
             </>
           )}
         </div>
         <div
           className={cn(
-            'text-9xl font-bold tracking-tighter',
+            'text-4xl sm:text-6xl lg:text-7xl xl:text-9xl font-bold tracking-tighter',
             isRed ? 'text-red-500' : 'text-blue-500'
           )}
         >
@@ -153,17 +153,17 @@ const TimerDisplay = ({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center text-white w-1/3">
-      <div className="text-9xl font-mono font-bold tracking-tighter">
+    <div className="flex flex-col items-center justify-center text-white w-full lg:w-1/3">
+      <div className="text-4xl sm:text-6xl lg:text-7xl xl:text-9xl font-mono font-bold tracking-tighter">
         {timer ? formatTimeMsPad(timer.remaining) : '00:00'}
       </div>
-      <div className={`text-5xl font-bold ${getStatusColor(status)}`}>
+      <div className={`text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold ${getStatusColor(status)} mt-2`}>
         {status?.replace('_', ' ') || 'PENDING'}
       </div>
       {status === 'IN_PROGRESS' && period && (
         <div
           className={cn(
-            'mt-4 px-6 py-2 rounded-full text-3xl font-bold text-white',
+            'mt-2 sm:mt-4 px-3 sm:px-4 lg:px-6 py-1 sm:py-2 rounded-full text-lg sm:text-2xl lg:text-3xl font-bold text-white',
             getPeriodColor(period)
           )}
         >
@@ -180,13 +180,13 @@ export const MatchDisplay: React.FC<MatchDisplayProps> = ({
   score,
 }) => {
   return (
-    <div className="bg-black text-white h-full w-full flex flex-col p-8 space-y-8">
+    <div className="bg-black text-white h-full w-full flex flex-col p-2 sm:p-4 lg:p-6 xl:p-8 space-y-3 sm:space-y-6 lg:space-y-8">
       <header className="text-center">
-        <h1 className="text-6xl font-bold">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-6xl font-bold">
           {matchState?.name || `Match ${matchState?.matchNumber || 'TBD'}`}
         </h1>
       </header>
-      <main className="flex flex-1 space-x-8">
+      <main className="flex flex-col lg:flex-row flex-1 space-y-4 lg:space-y-0 lg:space-x-4 xl:space-x-8">
         <AllianceCard
           alliance="Blue"
           teams={matchState?.blueTeams || []}

@@ -19,15 +19,15 @@ interface TournamentDetailsProps {
 function TournamentDetails({ tournament }: TournamentDetailsProps) {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div>
           <label className="text-sm font-medium text-gray-700">Tournament Name</label>
-          <p className="text-gray-900 mt-1">{tournament.name}</p>
+          <p className="text-gray-900 mt-1 break-words">{tournament.name}</p>
         </div>
         
         <div>
           <label className="text-sm font-medium text-gray-700">Location</label>
-          <p className="text-gray-900 mt-1">{tournament.location || 'Not specified'}</p>
+          <p className="text-gray-900 mt-1 break-words">{tournament.location || 'Not specified'}</p>
         </div>
         
         <div>
@@ -47,7 +47,7 @@ function TournamentDetails({ tournament }: TournamentDetailsProps) {
         
         <div>
           <label className="text-sm font-medium text-gray-700">Administrator</label>
-          <p className="text-gray-900 mt-1">{tournament.admin.username}</p>
+          <p className="text-gray-900 mt-1 break-words">{tournament.admin.username}</p>
         </div>
       </div>
       
@@ -99,14 +99,14 @@ export function TournamentOverview({ tournament, stats }: TournamentOverviewProp
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard 
           title="Total Stages" 
           value={stats.totalStages}
           subtitle={`${stats.activeStages} active, ${stats.completedStages} completed`}
-          icon={<Trophy className="h-5 w-5" />}
+          icon={<Trophy className="h-4 w-4 sm:h-5 sm:w-5" />}
           variant={stats.activeStages > 0 ? 'success' : 'default'}
         />
         
@@ -114,14 +114,14 @@ export function TournamentOverview({ tournament, stats }: TournamentOverviewProp
           title="Fields with Head Referee" 
           current={stats.fieldsWithHeadReferee}
           total={stats.totalFields}
-          icon={<MapPin className="h-5 w-5" />}
+          icon={<MapPin className="h-4 w-4 sm:h-5 sm:w-5" />}
         />
         
         <StatCard 
           title="Total Referees" 
           value={stats.totalReferees}
           subtitle={`${stats.averageRefereesPerField.toFixed(1)} avg per field`}
-          icon={<Users className="h-5 w-5" />}
+          icon={<Users className="h-4 w-4 sm:h-5 sm:w-5" />}
           variant={stats.totalReferees > 0 ? 'info' : 'warning'}
         />
         
@@ -135,7 +135,7 @@ export function TournamentOverview({ tournament, stats }: TournamentOverviewProp
             ? `${tournament.maxTeams - (tournament._count?.teams || 0)} spots remaining`
             : "No limit set"
           }
-          icon={<Shield className="h-5 w-5" />}
+          icon={<Shield className="h-4 w-4 sm:h-5 sm:w-5" />}
           variant={tournament.maxTeams && (tournament._count?.teams || 0) >= tournament.maxTeams 
             ? 'warning' 
             : 'default'
@@ -145,20 +145,20 @@ export function TournamentOverview({ tournament, stats }: TournamentOverviewProp
       
       {/* Quick Actions */}
       <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-lg sm:text-xl">Quick Actions</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {quickActions.map((action, index) => (
               <Button
                 key={index}
                 variant={action.variant}
                 onClick={action.action}
-                className="h-auto p-4 flex flex-col items-center gap-2"
+                className="h-auto p-3 sm:p-4 flex flex-col items-center gap-2 min-h-[80px] sm:min-h-[90px] text-center touch-target"
               >
-                <action.icon className="h-5 w-5" />
-                <span className="text-sm">{action.label}</span>
+                <action.icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="text-xs sm:text-sm leading-tight">{action.label}</span>
               </Button>
             ))}
           </div>
@@ -167,17 +167,17 @@ export function TournamentOverview({ tournament, stats }: TournamentOverviewProp
 
       {/* Team Management Card */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users2 className="h-5 w-5" />
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Users2 className="h-4 w-4 sm:h-5 sm:w-5" />
             Team Management
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="p-4 sm:p-6 pt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div className="space-y-2">
               <div className="text-sm font-medium text-gray-700">Team Registration</div>
-              <div className="text-2xl font-bold flex items-center gap-2">
+              <div className="text-xl sm:text-2xl font-bold flex items-center gap-2">
                 {tournament.maxTeams 
                   ? `${tournament._count?.teams || 0}/${tournament.maxTeams}` 
                   : (tournament._count?.teams || 0).toString()

@@ -1,6 +1,29 @@
 import { ICacheService } from '../interfaces/index';
-import { RealtimeScoreUpdate } from '../types/index';
+import { RealtimeScoreUpdate, MatchScoreDetails } from '../types/index';
 import { QueryClient } from "@tanstack/react-query";
+
+const DEFAULT_SCORE_DETAILS: MatchScoreDetails = {
+  red: { flagsSecured: 0, successfulFlagHits: 0, opponentFieldAmmo: 0 },
+  blue: { flagsSecured: 0, successfulFlagHits: 0, opponentFieldAmmo: 0 },
+  breakdown: {
+    red: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
+    blue: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
+  },
+};
+
+const cloneScoreDetails = (details: MatchScoreDetails): MatchScoreDetails => ({
+  red: { ...details.red },
+  blue: { ...details.blue },
+  breakdown: details.breakdown
+    ? {
+        red: { ...details.breakdown.red },
+        blue: { ...details.breakdown.blue },
+      }
+    : {
+        red: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
+        blue: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
+      },
+});
 
 export class CacheService implements ICacheService {
   constructor(private queryClient: QueryClient) {}
@@ -34,7 +57,7 @@ export class CacheService implements ICacheService {
           blueMultiplier: 1.0,
           redGameElements: {},
           blueGameElements: {},
-          scoreDetails: {},
+          scoreDetails: cloneScoreDetails(DEFAULT_SCORE_DETAILS),
         };
 
         return {

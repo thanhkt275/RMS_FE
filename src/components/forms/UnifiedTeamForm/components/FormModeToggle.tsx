@@ -27,26 +27,30 @@ export function FormModeToggle({
   }
 
   return (
-    <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-      <span className="text-sm font-medium text-blue-700">Form Mode:</span>
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+      <span className="text-xs sm:text-sm font-medium text-blue-700">Form Mode:</span>
       <ToggleGroup 
         value={currentProfile} 
         onValueChange={(value) => value && onProfileChange(value as FormProfile)}
         type="single"
         disabled={disabled}
+        className="justify-start sm:justify-center"
       >
-        <ToggleGroupItem value="simple" className="text-xs">
-          Quick Entry
+        <ToggleGroupItem value="simple" className="text-xs touch-target">
+          <span className="hidden sm:inline">Quick Entry</span>
+          <span className="sm:hidden">Quick</span>
         </ToggleGroupItem>
-        <ToggleGroupItem value="detailed" className="text-xs">
-          Full Details
+        <ToggleGroupItem value="detailed" className="text-xs touch-target">
+          <span className="hidden sm:inline">Full Details</span>
+          <span className="sm:hidden">Details</span>
         </ToggleGroupItem>
-        <ToggleGroupItem value="admin" className="text-xs">
-          Admin Mode
+        <ToggleGroupItem value="admin" className="text-xs touch-target">
+          Admin
         </ToggleGroupItem>
       </ToggleGroup>
       <span className="text-xs text-blue-600">
-        Switch between different form complexities
+        <span className="hidden sm:inline">Switch between different form complexities</span>
+        <span className="sm:hidden">Switch form complexity</span>
       </span>
     </div>
   );

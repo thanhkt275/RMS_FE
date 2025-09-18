@@ -4,7 +4,38 @@ import { usePersistence } from "./use-persistence";
 import { useRealtime } from "./use-realtime";
 import { useUserActivity } from "./use-user-activity";
 import { useDataSync } from "./use-data-sync";
-import { ScoringConfig, GameElement, Alliance, ScoreType } from './types/index';
+import { ScoringConfig, GameElement, Alliance, ScoreType, MatchScoreDetails, AllianceScoreDetails } from './types/index';
+
+const EMPTY_DETAILS: MatchScoreDetails = {
+  red: { flagsSecured: 0, successfulFlagHits: 0, opponentFieldAmmo: 0 },
+  blue: { flagsSecured: 0, successfulFlagHits: 0, opponentFieldAmmo: 0 },
+  breakdown: {
+    red: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
+    blue: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
+  },
+};
+
+const cloneDetails = (details: MatchScoreDetails): MatchScoreDetails => ({
+  red: { ...details.red },
+  blue: { ...details.blue },
+  breakdown: details.breakdown
+    ? {
+        red: { ...details.breakdown.red },
+        blue: { ...details.breakdown.blue },
+      }
+    : {
+        red: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
+        blue: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
+      },
+});
+
+const ensureScoreDetails = (details?: unknown): MatchScoreDetails => {
+  const candidate = details as MatchScoreDetails | undefined;
+  if (candidate && candidate.red && candidate.blue) {
+    return cloneDetails(candidate);
+  }
+  return cloneDetails(EMPTY_DETAILS);
+};
 
 interface UseScoringControlProps extends ScoringConfig {}
 
@@ -44,7 +75,8 @@ export function useScoringControl({
     if (matchScores && selectedMatchId) {
       // Only broadcast when match changes, not when internal state changes
       // Use matchScores data instead of internal state to prevent loops
-      const scoreDataFromAPI = {        redAlliance: {
+      const scoreDataFromAPI = {
+        redAlliance: {
           autoScore: matchScores.redAutoScore || 0,
           driveScore: matchScores.redDriveScore || 0,
           totalScore: matchScores.redTotalScore || 0,
@@ -62,7 +94,7 @@ export function useScoringControl({
           multiplier: matchScores.blueMultiplier || 1.0,
           penalty: matchScores.bluePenalties || 0,
         },
-        scoreDetails: matchScores.scoreDetails || {},
+        scoreDetails: ensureScoreDetails(matchScores.scoreDetails),
         isAddingRedElement: false,
         isAddingBlueElement: false,
       };

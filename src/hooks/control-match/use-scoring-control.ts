@@ -6,7 +6,12 @@ import { useScoringState } from '../scoring/use-scoring-state';
 import { usePersistence } from '../scoring/use-persistence';
 import { useUserActivity } from '../scoring/use-user-activity';
 import { useDataSync } from '../scoring/use-data-sync';
-import { GameElement, ScoringConfig, Alliance, ScoreType } from '../scoring/types/index';
+import {
+  ScoringConfig,
+  AllianceScoreDetails,
+  AllianceScoreBreakdown,
+  MatchScoreDetails,
+} from '../scoring/types/index';
 import { ScoreData, UserRole } from '@/types/types';
 
 interface UseScoringControlProps extends ScoringConfig {
@@ -14,60 +19,46 @@ interface UseScoringControlProps extends ScoringConfig {
 }
 
 interface ScoringControlReturn {
-  // Score states
   redAutoScore: number;
   redDriveScore: number;
   blueAutoScore: number;
   blueDriveScore: number;
   redTotalScore: number;
   blueTotalScore: number;
-  redPenalty: number;
-  bluePenalty: number;
-  
-  // Game elements
-  redGameElements: GameElement[];
-  blueGameElements: GameElement[];
-  
-  // Team counts and multipliers
-  redTeamCount: number;
-  blueTeamCount: number;
-  redMultiplier: number;
-  blueMultiplier: number;
-  
-  // Score details
-  scoreDetails: any;
-  
-  // UI states
-  isAddingRedElement: boolean;
-  isAddingBlueElement: boolean;
-  
-  // Setters
-  setRedAutoScore: (score: number) => void;
-  setRedDriveScore: (score: number) => void;
-  setBlueAutoScore: (score: number) => void;
-  setBlueDriveScore: (score: number) => void;
-  setRedTotalScore: (score: number) => void;
-  setBlueTotalScore: (score: number) => void;
-  setRedPenalty: (penalty: number) => void;
-  setBluePenalty: (penalty: number) => void;
-  setRedGameElements: (elements: GameElement[]) => void;
-  setBlueGameElements: (elements: GameElement[]) => void;
-  setRedTeamCount: (count: number) => void;
-  setBlueTeamCount: (count: number) => void;
-  setRedMultiplier: (multiplier: number) => void;
-  setBlueMultiplier: (multiplier: number) => void;
-  setScoreDetails: (details: any) => void;
-  setIsAddingRedElement: (adding: boolean) => void;
-  setIsAddingBlueElement: (adding: boolean) => void;
-  
-  // Actions
+  redFlagsSecured: number;
+  redSuccessfulFlagHits: number;
+  redOpponentFieldAmmo: number;
+  blueFlagsSecured: number;
+  blueSuccessfulFlagHits: number;
+  blueOpponentFieldAmmo: number;
+  redBreakdown: AllianceScoreBreakdown;
+  blueBreakdown: AllianceScoreBreakdown;
+  scoreDetails: MatchScoreDetails;
+  setRedFlagsSecured: (value: number) => void;
+  setRedSuccessfulFlagHits: (value: number) => void;
+  setRedOpponentFieldAmmo: (value: number) => void;
+  setBlueFlagsSecured: (value: number) => void;
+  setBlueSuccessfulFlagHits: (value: number) => void;
+  setBlueOpponentFieldAmmo: (value: number) => void;
   sendRealtimeUpdate: () => void;
   saveScores: () => Promise<void>;
-  
-  // Query states
   isLoadingScores: boolean;
   matchScores: any;
+  hasScoringPermission: boolean;
 }
+
+const EMPTY_DETAILS: AllianceScoreDetails = Object.freeze({
+  flagsSecured: 0,
+  successfulFlagHits: 0,
+  opponentFieldAmmo: 0,
+});
+
+const EMPTY_BREAKDOWN: AllianceScoreBreakdown = Object.freeze({
+  flagsPoints: 0,
+  flagHitsPoints: 0,
+  fieldControlPoints: 0,
+  totalPoints: 0,
+});
 
 export function useScoringControl({
   tournamentId,
@@ -106,6 +97,11 @@ export function useScoringControl({
   // Queue for score updates during connection loss
   const [scoreUpdateQueue, setScoreUpdateQueue] = useState<ScoreData[]>([]);
   const previousMatchIdRef = useRef<string | null>(null);
+
+  const hasScoringPermission =
+    userRole === UserRole.ADMIN ||
+    userRole === UserRole.HEAD_REFEREE ||
+    userRole === UserRole.ALLIANCE_REFEREE;
 
   // Subscribe to WebSocket score updates with unified service
   useEffect(() => {
@@ -147,6 +143,11 @@ export function useScoringControl({
 
   // Process queued score updates when connection is restored
   useEffect(() => {
+    if (!hasScoringPermission) {
+      if (scoreUpdateQueue.length > 0) setScoreUpdateQueue([]);
+      return;
+    }
+
     if (unifiedWebSocket.isConnected && scoreUpdateQueue.length > 0) {
       console.log(`Processing ${scoreUpdateQueue.length} queued score updates`);
       
@@ -158,7 +159,7 @@ export function useScoringControl({
       // Clear the queue
       setScoreUpdateQueue([]);
     }
-  }, [unifiedWebSocket, scoreUpdateQueue]);
+  }, [hasScoringPermission, unifiedWebSocket, scoreUpdateQueue]);
 
   // Broadcast scores when match changes (but not when state changes)
   useEffect(() => {
@@ -166,6 +167,11 @@ export function useScoringControl({
       previousMatchIdRef.current = selectedMatchId;
       
       // Use matchScores data instead of internal state to prevent loops
+      const scoreDetails =
+        matchScores.scoreDetails && 'red' in matchScores.scoreDetails && 'blue' in matchScores.scoreDetails
+          ? (matchScores.scoreDetails as MatchScoreDetails)
+          : state.scoreDetails;
+
       const scoreData: ScoreData = {
         matchId: selectedMatchId,
         tournamentId,
@@ -176,13 +182,7 @@ export function useScoringControl({
         blueAutoScore: matchScores.blueAutoScore || 0,
         blueDriveScore: matchScores.blueDriveScore || 0,
         blueTotalScore: matchScores.blueTotalScore || 0,
-        redGameElements: matchScores.redGameElements || [],
-        blueGameElements: matchScores.blueGameElements || [],
-        redTeamCount: matchScores.redTeamCount || 0,
-        redMultiplier: matchScores.redMultiplier || 1.0,
-        blueTeamCount: matchScores.blueTeamCount || 0,
-        blueMultiplier: matchScores.blueMultiplier || 1.0,
-        scoreDetails: matchScores.scoreDetails || {},
+        scoreDetails,
       };
       
       console.log("📡 Broadcasting scores for NEW match:", selectedMatchId, scoreData);
@@ -190,42 +190,60 @@ export function useScoringControl({
     }
   }, [selectedMatchId, matchScores, tournamentId, selectedFieldId, unifiedWebSocket]);
 
-  // Score setter functions with activity tracking
-  const createScoreSetter = useCallback((alliance: Alliance, scoreType: ScoreType) => {
-    return (value: number) => {
-      userActivityService.markUserActive();
-      stateService.updateScore(alliance, scoreType, value);
-    };
-  }, [userActivityService, stateService]);
+  const getAllianceDetails = useCallback(
+    (alliance: 'red' | 'blue'): AllianceScoreDetails =>
+      state.scoreDetails?.[alliance] ?? EMPTY_DETAILS,
+    [state.scoreDetails],
+  );
 
-  const createSimpleSetter = useCallback((updateFn: (value: any) => void) => {
-    return (value: any) => {
-      userActivityService.markUserActive();
-      updateFn(value);
-    };
-  }, [userActivityService]);
+  const createAllianceDetailSetter = useCallback(
+    (alliance: 'red' | 'blue', key: keyof AllianceScoreDetails) => {
+      return (value: number) => {
+        if (!hasScoringPermission) return;
+
+        userActivityService.markUserActive();
+
+        const numericValue = Number(value ?? 0);
+        if (!Number.isFinite(numericValue)) return;
+        const sanitised = Math.max(0, Math.floor(numericValue));
+
+        const currentAllianceDetails = getAllianceDetails(alliance);
+        if (currentAllianceDetails[key] === sanitised) {
+          return;
+        }
+
+        const updatedDetails: MatchScoreDetails = {
+          red: alliance === 'red'
+            ? { ...currentAllianceDetails, [key]: sanitised }
+            : { ...getAllianceDetails('red') },
+          blue: alliance === 'blue'
+            ? { ...currentAllianceDetails, [key]: sanitised }
+            : { ...getAllianceDetails('blue') },
+        };
+
+        stateService.updateScoreDetails(updatedDetails);
+      };
+    },
+    [getAllianceDetails, hasScoringPermission, stateService, userActivityService],
+  );
 
   // Send real-time update with debouncing and queuing
   const handleSendRealtimeUpdate = useCallback(() => {
-    if (!selectedMatchId) return;
+    if (!selectedMatchId || !hasScoringPermission) return;
+
+    const latestState = stateService.getState();
 
     const scoreData: ScoreData = {
       matchId: selectedMatchId,
       tournamentId,
       fieldId: selectedFieldId || undefined,
-      redAutoScore: state.redAlliance.autoScore,
-      redDriveScore: state.redAlliance.driveScore,
-      redTotalScore: state.redAlliance.totalScore,
-      blueAutoScore: state.blueAlliance.autoScore,
-      blueDriveScore: state.blueAlliance.driveScore,
-      blueTotalScore: state.blueAlliance.totalScore,
-      redGameElements: state.redAlliance.gameElements,
-      blueGameElements: state.blueAlliance.gameElements,
-      redTeamCount: state.redAlliance.teamCount,
-      redMultiplier: state.redAlliance.multiplier,
-      blueTeamCount: state.blueAlliance.teamCount,
-      blueMultiplier: state.blueAlliance.multiplier,
-      scoreDetails: state.scoreDetails,
+      redAutoScore: latestState.redAlliance.autoScore,
+      redDriveScore: latestState.redAlliance.driveScore,
+      redTotalScore: latestState.redAlliance.totalScore,
+      blueAutoScore: latestState.blueAlliance.autoScore,
+      blueDriveScore: latestState.blueAlliance.driveScore,
+      blueTotalScore: latestState.blueAlliance.totalScore,
+      scoreDetails: latestState.scoreDetails,
     };
 
     console.log("📊 Sending real-time score update:", scoreData);
@@ -238,7 +256,13 @@ export function useScoringControl({
       console.log("📦 Queueing score update (connection lost)");
       setScoreUpdateQueue(prev => [...prev, scoreData]);
     }
-  }, [selectedMatchId, tournamentId, selectedFieldId, state, unifiedWebSocket]);
+  }, [selectedMatchId, tournamentId, selectedFieldId, stateService, unifiedWebSocket, hasScoringPermission]);
+
+  useEffect(() => {
+    if (!hasScoringPermission || !selectedMatchId) return;
+    if (!userActivityService.isUserActive()) return;
+    handleSendRealtimeUpdate();
+  }, [hasScoringPermission, selectedMatchId, state.scoreDetails, handleSendRealtimeUpdate, userActivityService]);
 
   // Save scores with real-time update
   const handleSaveScores = useCallback(async () => {
@@ -254,77 +278,44 @@ export function useScoringControl({
     console.log("✅ Scores saved successfully with totals updated and real-time update sent");
   }, [saveScores, state, handleSendRealtimeUpdate, userActivityService]);
 
+  const redDetails = state.scoreDetails?.red ?? EMPTY_DETAILS;
+  const blueDetails = state.scoreDetails?.blue ?? EMPTY_DETAILS;
+  const redBreakdown = state.scoreDetails?.breakdown?.red ?? EMPTY_BREAKDOWN;
+  const blueBreakdown = state.scoreDetails?.breakdown?.blue ?? EMPTY_BREAKDOWN;
+
+  const setRedFlagsSecured = createAllianceDetailSetter('red', 'flagsSecured');
+  const setRedSuccessfulFlagHits = createAllianceDetailSetter('red', 'successfulFlagHits');
+  const setRedOpponentFieldAmmo = createAllianceDetailSetter('red', 'opponentFieldAmmo');
+  const setBlueFlagsSecured = createAllianceDetailSetter('blue', 'flagsSecured');
+  const setBlueSuccessfulFlagHits = createAllianceDetailSetter('blue', 'successfulFlagHits');
+  const setBlueOpponentFieldAmmo = createAllianceDetailSetter('blue', 'opponentFieldAmmo');
+
   return {
-    // Score states
     redAutoScore: state.redAlliance.autoScore,
     redDriveScore: state.redAlliance.driveScore,
     blueAutoScore: state.blueAlliance.autoScore,
     blueDriveScore: state.blueAlliance.driveScore,
     redTotalScore: state.redAlliance.totalScore,
     blueTotalScore: state.blueAlliance.totalScore,
-    redPenalty: state.redAlliance.penalty,
-    bluePenalty: state.blueAlliance.penalty,
-    
-    // Game elements
-    redGameElements: state.redAlliance.gameElements,
-    blueGameElements: state.blueAlliance.gameElements,
-    
-    // Team counts and multipliers
-    redTeamCount: state.redAlliance.teamCount,
-    blueTeamCount: state.blueAlliance.teamCount,
-    redMultiplier: state.redAlliance.multiplier,
-    blueMultiplier: state.blueAlliance.multiplier,
-    
-    // Score details
-    scoreDetails: state.scoreDetails,
-    
-    // UI states
-    isAddingRedElement: state.isAddingRedElement,
-    isAddingBlueElement: state.isAddingBlueElement,
-    
-    // Setters
-    setRedAutoScore: createScoreSetter('red', 'auto'),
-    setRedDriveScore: createScoreSetter('red', 'drive'),
-    setBlueAutoScore: createScoreSetter('blue', 'auto'),
-    setBlueDriveScore: createScoreSetter('blue', 'drive'),
-    setRedTotalScore: createScoreSetter('red', 'total'),
-    setBlueTotalScore: createScoreSetter('blue', 'total'),
-    setRedPenalty: createScoreSetter('red', 'penalty'),
-    setBluePenalty: createScoreSetter('blue', 'penalty'),
-    setRedGameElements: createSimpleSetter((elements: GameElement[]) => 
-      stateService.updateGameElements('red', elements)
-    ),
-    setBlueGameElements: createSimpleSetter((elements: GameElement[]) => 
-      stateService.updateGameElements('blue', elements)
-    ),
-    setRedTeamCount: createSimpleSetter((count: number) => 
-      stateService.updateTeamCount('red', count)
-    ),
-    setBlueTeamCount: createSimpleSetter((count: number) => 
-      stateService.updateTeamCount('blue', count)
-    ),
-    setRedMultiplier: createSimpleSetter((multiplier: number) => 
-      stateService.updateMultiplier('red', multiplier)
-    ),
-    setBlueMultiplier: createSimpleSetter((multiplier: number) => 
-      stateService.updateMultiplier('blue', multiplier)
-    ),
-    setScoreDetails: createSimpleSetter((details: any) => 
-      stateService.updateScoreDetails(details)
-    ),
-    setIsAddingRedElement: createSimpleSetter((adding: boolean) => 
-      stateService.updateUIState('isAddingRedElement', adding)
-    ),
-    setIsAddingBlueElement: createSimpleSetter((adding: boolean) => 
-      stateService.updateUIState('isAddingBlueElement', adding)
-    ),
-    
-    // Actions
+    redFlagsSecured: redDetails.flagsSecured,
+    redSuccessfulFlagHits: redDetails.successfulFlagHits,
+    redOpponentFieldAmmo: redDetails.opponentFieldAmmo,
+    blueFlagsSecured: blueDetails.flagsSecured,
+    blueSuccessfulFlagHits: blueDetails.successfulFlagHits,
+    blueOpponentFieldAmmo: blueDetails.opponentFieldAmmo,
+    redBreakdown,
+    blueBreakdown,
+    scoreDetails: state.scoreDetails as MatchScoreDetails,
+    setRedFlagsSecured,
+    setRedSuccessfulFlagHits,
+    setRedOpponentFieldAmmo,
+    setBlueFlagsSecured,
+    setBlueSuccessfulFlagHits,
+    setBlueOpponentFieldAmmo,
     sendRealtimeUpdate: handleSendRealtimeUpdate,
     saveScores: handleSaveScores,
-    
-    // Query states
     isLoadingScores,
     matchScores,
+    hasScoringPermission,
   };
 }

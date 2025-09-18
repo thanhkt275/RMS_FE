@@ -39,7 +39,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
 
     return (
         <div className={cn(
-            'relative rounded-lg p-6 shadow-lg transition-all duration-300',
+            'relative rounded-lg p-3 sm:p-4 lg:p-6 shadow-lg transition-all duration-300',
             allianceColor,
             isAnimating && 'scale-105 shadow-xl',
             className
@@ -51,39 +51,39 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
 
             {/* Score difference indicator */}
             {isAnimating && scoreDifference > 0 && (
-                <div className="absolute -top-2 -right-2 bg-green-500 text-white text-sm font-bold px-2 py-1 rounded-full animate-bounce">
+                <div className="absolute -top-1 sm:-top-2 -right-1 sm:-right-2 bg-green-500 text-white text-xs sm:text-sm font-bold px-1 sm:px-2 py-1 rounded-full animate-bounce">
                     +{scoreDifference}
                 </div>
             )}
 
             <div className={cn('text-center', textColor)}>
-                <h3 className="text-2xl font-bold uppercase mb-4">
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold uppercase mb-2 sm:mb-3 lg:mb-4">
                     {alliance} Alliance
                 </h3>
 
                 {/* Total Score */}
                 <div className={cn(
-                    'text-6xl font-bold mb-4 transition-all duration-300',
+                    'text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold mb-2 sm:mb-3 lg:mb-4 transition-all duration-300',
                     isAnimating && 'text-yellow-300 drop-shadow-lg'
                 )}>
                     {totalScore}
                 </div>
 
                 {/* Score Breakdown */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="bg-black/20 rounded p-2">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:gap-4 text-xs sm:text-sm">
+                    <div className="bg-black/20 rounded p-1 sm:p-2">
                         <div className="font-semibold">Auto</div>
                         <div className={cn(
-                            'text-xl font-bold',
+                            'text-base sm:text-lg lg:text-xl font-bold',
                             isAnimating && 'text-yellow-300'
                         )}>
                             {autoScore}
                         </div>
                     </div>
-                    <div className="bg-black/20 rounded p-2">
+                    <div className="bg-black/20 rounded p-1 sm:p-2">
                         <div className="font-semibold">Drive</div>
                         <div className={cn(
-                            'text-xl font-bold',
+                            'text-base sm:text-lg lg:text-xl font-bold',
                             isAnimating && 'text-yellow-300'
                         )}>
                             {driveScore}
@@ -93,9 +93,9 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
 
                 {/* Penalty Display */}
                 {penalty > 0 && (
-                    <div className="mt-2 bg-yellow-500 text-black rounded p-2">
-                        <div className="font-semibold">Penalty</div>
-                        <div className="text-lg font-bold">-{penalty}</div>
+                    <div className="mt-1 sm:mt-2 bg-yellow-500 text-black rounded p-1 sm:p-2">
+                        <div className="font-semibold text-xs sm:text-sm">Penalty</div>
+                        <div className="text-sm sm:text-base lg:text-lg font-bold">-{penalty}</div>
                     </div>
                 )}
             </div>
@@ -161,22 +161,22 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
     if (!matchId) {
         return (
             <div className={cn(
-                'flex items-center justify-center h-64 bg-gray-100 rounded-lg',
+                'flex items-center justify-center h-32 sm:h-48 lg:h-64 bg-gray-100 rounded-lg',
                 className
             )}>
                 <div className="text-center text-gray-500">
-                    <div className="text-2xl font-bold mb-2">No Match Selected</div>
-                    <div>Select a match to view scores</div>
+                    <div className="text-lg sm:text-xl lg:text-2xl font-bold mb-1 sm:mb-2">No Match Selected</div>
+                    <div className="text-sm sm:text-base">Select a match to view scores</div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className={cn('space-y-6', className)}>
+        <div className={cn('space-y-3 sm:space-y-4 lg:space-y-6', className)}>
             {/* Connection Status */}
-            <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold">Match Scores</h2>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
+                <h2 className="text-xl sm:text-2xl font-bold">Match Scores</h2>
                 <ConnectionIndicator
                     isConnected={isConnected}
                     source={source}
@@ -185,7 +185,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
             </div>
 
             {/* Score Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
                 <ScoreCard
                     alliance="red"
                     autoScore={scores.redAutoScore}
@@ -210,7 +210,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
             {scores.redTotalScore !== scores.blueTotalScore && (
                 <div className="text-center">
                     <div className={cn(
-                        'inline-block px-6 py-3 rounded-lg text-white font-bold text-xl',
+                        'inline-block px-3 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-lg text-white font-bold text-base sm:text-lg lg:text-xl',
                         scores.redTotalScore > scores.blueTotalScore
                             ? 'bg-red-600'
                             : 'bg-blue-600'
@@ -222,9 +222,9 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
 
             {/* Debug Information */}
             {showDetails && (
-                <div className="bg-gray-100 rounded-lg p-4 text-sm">
-                    <h3 className="font-bold mb-2">Score Details</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-100 rounded-lg p-2 sm:p-3 lg:p-4 text-xs sm:text-sm">
+                    <h3 className="font-bold mb-1 sm:mb-2">Score Details</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                         <div>
                             <div><strong>Match ID:</strong> {matchId}</div>
                             <div><strong>Tournament:</strong> {tournamentId}</div>

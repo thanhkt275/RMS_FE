@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { UserSearchProps, User } from '../../../types/user.types';
+import { UserSearchProps } from '../../../types/user.types';
 
 export const UserSearch: React.FC<UserSearchProps> = ({
   value,
@@ -178,7 +178,7 @@ export const UserSearch: React.FC<UserSearchProps> = ({
           <button
             type="submit"
             disabled={disabled || (!value.trim() && !isSearching)}
-            className="flex items-center justify-center w-10 h-10 text-white bg-blue-600 rounded-r-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200"
+            className="flex items-center justify-center w-10 h-10 text-white bg-blue-600 rounded-r-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-200"
             title="Search"
           >
             <svg

@@ -9,7 +9,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import TournamentForm from "@/components/forms/TournamentForm";
-import type { Tournament } from "@/types/tournament.types";
+import type { Tournament } from "@/types/types";
 
 interface TournamentDialogProps extends React.ComponentProps<typeof Dialog> {
   tournament?: Tournament;

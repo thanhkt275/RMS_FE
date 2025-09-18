@@ -1,3 +1,5 @@
+import { MatchScoreDetails } from "@/hooks/scoring/types";
+
 // WebSocket Types for Real-time Score Synchronization
 // These interfaces mirror the backend DTOs for type safety
 
@@ -28,7 +30,7 @@ export interface BaseScoreData {
   redMultiplier?: number;
   blueTeamCount?: number;
   blueMultiplier?: number;
-  scoreDetails?: Record<string, unknown>;
+  scoreDetails?: MatchScoreDetails;
 }
 
 // For real-time score updates (no database persistence)

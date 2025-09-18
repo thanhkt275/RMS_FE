@@ -30,8 +30,8 @@ export function TimerDisplay({
   if (!timer) {
     return (
       <div className={`text-center ${className}`}>
-        <div className="text-6xl font-bold text-gray-400">--:--</div>
-        <div className="text-lg text-gray-500 mt-2">No Timer Data</div>
+        <div className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-400">--:--</div>
+        <div className="text-sm sm:text-base lg:text-lg text-gray-500 mt-2">No Timer Data</div>
       </div>
     );
   }
@@ -66,8 +66,8 @@ export function TimerDisplay({
     <div className={`text-center ${className}`}>
       {/* Connection Status Indicator */}
       {showConnectionStatus && showStatus && (
-        <Alert className="mb-4 bg-yellow-50 border-yellow-200">
-          <AlertDescription className="text-yellow-800">
+        <Alert className="mb-2 sm:mb-4 bg-yellow-50 border-yellow-200">
+          <AlertDescription className="text-yellow-800 text-xs sm:text-sm">
             {connectionMessage}
           </AlertDescription>
         </Alert>
@@ -76,7 +76,7 @@ export function TimerDisplay({
       {/* Timer Display */}
       <div className="relative">
         <div
-          className={`text-8xl font-bold transition-colors duration-300 ${
+          className={`text-4xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold transition-colors duration-300 ${
             timer.isRunning
               ? timer.remaining <= 30000
                 ? "text-red-600 animate-pulse"
@@ -90,7 +90,7 @@ export function TimerDisplay({
         {/* Period Indicator - Use synchronized match period */}
         {(matchPeriod || timer.period) && (
           <Badge
-            className={`mt-2 text-white text-lg px-4 py-2 ${getPeriodColor(
+            className={`mt-1 sm:mt-2 text-white text-sm sm:text-base lg:text-lg px-2 sm:px-3 lg:px-4 py-1 sm:py-2 ${getPeriodColor(
               matchPeriod || timer.period
             )} transition-all duration-500`}
           >
@@ -99,13 +99,13 @@ export function TimerDisplay({
         )}
 
         {/* Running Status */}
-        <div className="mt-2 flex items-center justify-center gap-2">
+        <div className="mt-1 sm:mt-2 flex items-center justify-center gap-1 sm:gap-2">
           <div
-            className={`w-3 h-3 rounded-full ${
+            className={`w-2 sm:w-3 h-2 sm:h-3 rounded-full ${
               timer.isRunning ? "bg-green-500 animate-pulse" : "bg-gray-400"
             }`}
           />
-          <span className="text-lg text-gray-600">
+          <span className="text-sm sm:text-base lg:text-lg text-gray-600">
             {timer.isRunning ? "RUNNING" : "STOPPED"}
           </span>
         </div>
@@ -115,7 +115,7 @@ export function TimerDisplay({
           <div className="absolute top-0 right-0">
             <Badge
               variant={isConnected ? "default" : "destructive"}
-              className="text-xs"
+              className="text-2xs sm:text-xs"
             >
               {isConnected ? "● LIVE" : "● OFFLINE"}
             </Badge>
@@ -125,14 +125,14 @@ export function TimerDisplay({
 
       {/* Match Period and Status Info */}
       {(matchStatus || matchPeriod !== 'auto') && (
-        <div className="mt-4 flex justify-center gap-2">
+        <div className="mt-2 sm:mt-4 flex justify-center gap-1 sm:gap-2">
           {matchStatus && (
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-2xs sm:text-xs">
               Status: {matchStatus}
             </Badge>
           )}
           {matchPeriod && matchPeriod !== 'auto' && (
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-2xs sm:text-xs">
               Period: {matchPeriod.toUpperCase()}
             </Badge>
           )}
@@ -141,7 +141,7 @@ export function TimerDisplay({
 
       {/* Debug Info (development only) */}
       {process.env.NODE_ENV === "development" && (
-        <div className="mt-4 text-xs text-gray-500 bg-gray-50 p-2 rounded">
+        <div className="mt-2 sm:mt-4 text-2xs sm:text-xs text-gray-500 bg-gray-50 p-1 sm:p-2 rounded">
           <div>Duration: {formatTime(timer.duration)}</div>
           <div>Remaining: {formatTime(timer.remaining)}</div>
           <div>Elapsed: {formatTime(timer.duration - timer.remaining)}</div>

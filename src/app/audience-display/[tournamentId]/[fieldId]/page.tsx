@@ -730,7 +730,7 @@ export default function LiveFieldDisplayPage() {
           ...data,
           isRunning: true,
           startedAt: data.startedAt || Date.now(),
-          remaining: data.remaining || data.duration || 150000
+          remaining: data.remaining || data.duration || 120000
         };
         
         setTimer(timerData);
@@ -772,7 +772,7 @@ export default function LiveFieldDisplayPage() {
         const timerData = {
           ...data,
           isRunning: false,
-          remaining: data.remaining || data.duration || 150000
+          remaining: data.remaining || data.duration || 120000
         };
         
         setTimer(timerData);
@@ -1314,13 +1314,13 @@ export default function LiveFieldDisplayPage() {
         return (
           <div
             key={contentKey}
-            className="flex flex-col items-center justify-center min-h-[70vh]"
+            className="flex flex-col items-center justify-center min-h-[50vh] sm:min-h-[60vh] lg:min-h-[70vh]"
           >
-            <div className="bg-blue-50 border border-blue-200 p-10 rounded-xl max-w-4xl text-center shadow-lg">
-              <h2 className="text-4xl font-bold mb-6 text-blue-800">
+            <div className="bg-blue-50 border border-blue-200 p-4 sm:p-6 lg:p-8 xl:p-10 rounded-xl max-w-4xl text-center shadow-lg mx-2">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 lg:mb-6 text-blue-800">
                 ANNOUNCEMENT
               </h2>
-              <p className="text-3xl text-gray-900">
+              <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl text-gray-900">
                 {displaySettings.message || "No announcement message"}
               </p>
             </div>
@@ -1409,44 +1409,37 @@ export default function LiveFieldDisplayPage() {
           />
           
           {/* Header with tournament and field info */}
-          <header className="mb-6 px-6 pt-8">
-            <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-extrabold text-blue-900 drop-shadow-lg mb-1">
+          <header className="mb-3 sm:mb-6 px-2 sm:px-6 pt-2 sm:pt-4 lg:pt-8">
+            <div className="container mx-auto flex flex-col lg:flex-row items-center justify-between gap-2 sm:gap-4">
+              <div className="text-center lg:text-left flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-blue-900 drop-shadow-lg mb-1 truncate">
                   {tournament?.name || "Tournament"}
                 </h1>
-                <div className="text-lg text-gray-700 font-semibold">
+                <div className="text-sm sm:text-base lg:text-lg text-gray-700 font-semibold truncate">
                   Field:{" "}
                   <span className="text-blue-700 font-bold">
-                    {field?.name || fieldId}
+                    {field?.name || `Field ${fieldId}`}
                   </span>
                 </div>
-                <div className="text-sm text-gray-500 font-medium mt-1">
-                  Dates:{" "}
-                  <span className="text-gray-900 font-semibold">
-                    {tournament
-                      ? formatDateRange(tournament.startDate, tournament.endDate)
-                      : ""}
-                  </span>
+                <div className="text-xs sm:text-sm text-gray-600 mt-1 truncate">
+                  {tournament && tournament.startDate && tournament.endDate
+                    ? formatDateRange(tournament.startDate, tournament.endDate)
+                    : "Tournament dates not available"}
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-2">
-                {matchState?.matchNumber && (
-                  <div className="text-2xl font-bold text-green-700 bg-green-100 px-6 py-2 rounded-xl shadow-md border-2 border-green-300">
-                    Match #{matchState.matchNumber}
-                  </div>
-                )}
-                {matchState?.status && (
+              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 flex-shrink-0">
+                {matchState.status && (
                   <div
-                    className={`text-sm font-bold px-4 py-1 rounded-full border-2 shadow-sm mt-1
+                    className={`
+                    inline-block px-2 sm:px-4 py-1 sm:py-2 rounded-full font-bold text-xs sm:text-sm lg:text-base border-2
                     ${
                       matchState.status === "IN_PROGRESS"
-                        ? "bg-blue-100 text-blue-800 border-blue-300"
+                        ? "bg-green-100 text-green-800 border-green-300"
                         : ""
                     }
                     ${
                       matchState.status === "COMPLETED"
-                        ? "bg-green-100 text-green-800 border-green-300"
+                        ? "bg-blue-100 text-blue-800 border-blue-300"
                         : ""
                     }
                     ${
@@ -1470,14 +1463,14 @@ export default function LiveFieldDisplayPage() {
                   </div>
                 )}
                 {timer && (
-                  <div className="text-4xl font-mono font-extrabold text-blue-700 bg-white px-8 py-2 rounded-xl shadow-lg border-2 border-blue-200 mt-2">
+                  <div className="text-2xl sm:text-3xl lg:text-4xl font-mono font-extrabold text-blue-700 bg-white px-2 sm:px-4 lg:px-6 py-1 sm:py-2 rounded-xl shadow-lg border-2 border-blue-200">
                     {timer.remaining !== undefined
                       ? formatTimeMsPad(timer.remaining)
                       : "--:--"}
                   </div>
                 )}
                 {matchState?.currentPeriod && (
-                  <div className="text-lg font-bold uppercase text-indigo-800 bg-indigo-100 px-4 py-1 rounded-full border border-indigo-200 mt-2 tracking-widest">
+                  <div className="text-xs sm:text-sm lg:text-base font-bold uppercase text-indigo-800 bg-indigo-100 px-2 sm:px-3 py-1 rounded-full border border-indigo-200 tracking-widest">
                     {matchState.currentPeriod}
                   </div>
                 )}
@@ -1486,9 +1479,9 @@ export default function LiveFieldDisplayPage() {
           </header>
           
           {/* Main content area */}
-          <main className="container mx-auto bg-white border-2 border-gray-200 rounded-2xl shadow-2xl p-10 mt-2 mb-8">
+          <main className="container mx-auto bg-white border-2 border-gray-200 rounded-2xl shadow-2xl p-2 sm:p-4 lg:p-8 xl:p-10 mt-1 sm:mt-2 mb-4 sm:mb-8">
             {connectionError ? (
-              <div className="text-center text-red-800 bg-red-50 border border-red-200 rounded-xl p-8 font-semibold text-lg">
+              <div className="text-center text-red-800 bg-red-50 border border-red-200 rounded-xl p-4 sm:p-6 lg:p-8 font-semibold text-sm sm:text-base lg:text-lg">
                 {connectionError}
               </div>
             ) : fieldError ? (
@@ -1502,7 +1495,7 @@ export default function LiveFieldDisplayPage() {
           </main>
           
           {/* Footer */}
-          <footer className="container mx-auto mt-8 text-center text-sm text-gray-600 pb-6">
+          <footer className="container mx-auto mt-4 sm:mt-8 text-center text-xs sm:text-sm text-gray-600 pb-3 sm:pb-6">
             <p>© Robotics Tournament Management System</p>
           </footer>
         </>

@@ -1,6 +1,6 @@
 import { useReducer, useCallback, useMemo, useRef } from 'react';
 import { scoringReducer, initialScoringState, ScoringAction } from './reducers/scoring-reducer';
-import { MatchScoreData, GameElement, Alliance, ScoreType } from './types/index';
+import { MatchScoreData, GameElement, Alliance, ScoreType, MatchScoreDetails } from './types/index';
 import { IScoringStateService } from './interfaces/index';
 
 export class ScoringStateService implements IScoringStateService {
@@ -41,7 +41,7 @@ export class ScoringStateService implements IScoringStateService {
     });
   }
 
-  updateScoreDetails(details: any): void {
+  updateScoreDetails(details: Partial<MatchScoreDetails>): void {
     this.dispatch({
       type: 'SET_SCORE_DETAILS',
       payload: details,

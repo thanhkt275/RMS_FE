@@ -35,18 +35,18 @@ export function FormActions({
 
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-center justify-between">
-          <div className={`text-sm ${disableSubmit ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
+      <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className={`text-xs sm:text-sm ${disableSubmit ? 'text-red-600 font-medium' : 'text-gray-600'} order-2 sm:order-1`}>
             {helpText}
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 order-1 sm:order-2">
             <Button
               type="button"
               variant="outline"
               onClick={onCancel}
               disabled={isSubmitting}
-              className="flex items-center gap-2"
+              className="flex items-center justify-center gap-2 min-h-[44px] touch-target w-full sm:w-auto"
             >
               <ArrowLeft className="h-4 w-4" />
               Cancel
@@ -54,17 +54,19 @@ export function FormActions({
             <Button
               type="submit"
               disabled={isDisabled}
-              className="flex items-center gap-2"
+              className="flex items-center justify-center gap-2 min-h-[44px] touch-target w-full sm:w-auto"
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  {submittingText}
+                  <span className="hidden sm:inline">{submittingText}</span>
+                  <span className="sm:hidden">{mode === 'edit' ? 'Updating...' : 'Saving...'}</span>
                 </>
               ) : (
                 <>
                   <Save className="h-4 w-4" />
-                  {submitText}
+                  <span className="hidden sm:inline">{submitText}</span>
+                  <span className="sm:hidden">{mode === 'edit' ? 'Update' : 'Register'}</span>
                 </>
               )}
             </Button>

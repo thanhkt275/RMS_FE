@@ -98,20 +98,20 @@ export default function TournamentTeamsPage() {
   return (
     <AdminRoute fallbackMessage="Only administrators can access team management.">
       <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 py-6">
+        <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Team Management</h1>
-              <p className="text-gray-600 mt-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-4">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 line-clamp-1">Team Management</h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">
                 {tournament?.name} • {teams.length} teams registered
                 {tournament?.maxTeams && ` (${teams.length}/${tournament.maxTeams})`}
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <Button
                 onClick={() => router.push(`/tournaments/${tournamentId}/teams/register`)}
-                className="flex items-center gap-2"
+                className="flex items-center justify-center gap-2 min-h-[44px] touch-target w-full sm:w-auto"
               >
                 <Plus className="h-4 w-4" />
                 Register New Team
@@ -119,6 +119,7 @@ export default function TournamentTeamsPage() {
               <Button
                 variant="outline"
                 onClick={() => router.back()}
+                className="min-h-[44px] touch-target w-full sm:w-auto"
               >
                 Back to Tournament
               </Button>
@@ -126,30 +127,30 @@ export default function TournamentTeamsPage() {
           </div>
 
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
             <Card className="border-blue-200">
-              <CardContent className="pt-6">
+              <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
                 <div className="flex items-center">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Users className="h-6 w-6 text-blue-600" />
+                  <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                    <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Teams</p>
-                    <p className="text-2xl font-bold text-blue-700">{teams.length}</p>
+                  <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Total Teams</p>
+                    <p className="text-xl sm:text-2xl font-bold text-blue-700">{teams.length}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             
             <Card className="border-green-200">
-              <CardContent className="pt-6">
+              <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
                 <div className="flex items-center">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <UserPlus className="h-6 w-6 text-green-600" />
+                  <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
+                    <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Spots Available</p>
-                    <p className="text-2xl font-bold text-green-700">
+                  <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Spots Available</p>
+                    <p className="text-xl sm:text-2xl font-bold text-green-700">
                       {tournament?.maxTeams ? Math.max(0, tournament.maxTeams - teams.length) : "∞"}
                     </p>
                   </div>
@@ -158,14 +159,14 @@ export default function TournamentTeamsPage() {
             </Card>
 
             <Card className="border-purple-200">
-              <CardContent className="pt-6">
+              <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
                 <div className="flex items-center">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Settings className="h-6 w-6 text-purple-600" />
+                  <div className="p-2 bg-purple-100 rounded-lg flex-shrink-0">
+                    <Settings className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Max Team Size</p>
-                    <p className="text-2xl font-bold text-purple-700">
+                  <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Max Team Size</p>
+                    <p className="text-xl sm:text-2xl font-bold text-purple-700">
                       {tournament?.maxTeamMembers || "No limit"}
                     </p>
                   </div>
@@ -174,14 +175,14 @@ export default function TournamentTeamsPage() {
             </Card>
 
             <Card className="border-orange-200">
-              <CardContent className="pt-6">
+              <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
                 <div className="flex items-center">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <Eye className="h-6 w-6 text-orange-600" />
+                  <div className="p-2 bg-orange-100 rounded-lg flex-shrink-0">
+                    <Eye className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Members</p>
-                    <p className="text-2xl font-bold text-orange-700">
+                  <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Total Members</p>
+                    <p className="text-xl sm:text-2xl font-bold text-orange-700">
                       {teams.reduce((sum, team) => sum + (team._count?.teamMembers || team.teamMemberCount || 0), 0)}
                     </p>
                   </div>

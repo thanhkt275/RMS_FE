@@ -49,22 +49,23 @@ export function TeamMemberCard({
 
   return (
     <Card className={`border-l-4 ${isCurrentUser ? 'border-l-green-500 bg-green-50' : 'border-l-blue-500'}`}>
-      <CardContent className="pt-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <h4 className="font-medium text-gray-900">
+      <CardContent className="pt-4 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <h4 className="font-medium text-gray-900 text-sm sm:text-base truncate">
               {memberTitle}
             </h4>
             {isCurrentUser && (
               <div className="flex items-center gap-1">
-                <Crown className="h-4 w-4 text-green-600" />
-                <span className="text-sm text-green-700 font-medium bg-green-100 px-2 py-1 rounded-full">
-                  Team Creator
+                <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
+                <span className="text-xs sm:text-sm text-green-700 font-medium bg-green-100 px-1 sm:px-2 py-1 rounded-full">
+                  <span className="hidden sm:inline">Team Creator</span>
+                  <span className="sm:hidden">Creator</span>
                 </span>
               </div>
             )}
             {isFirstMember && !isCurrentUser && (
-              <User className="h-4 w-4 text-blue-600" />
+              <User className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0" />
             )}
           </div>
           {canRemove && !isCurrentUser && (
@@ -74,7 +75,7 @@ export function TeamMemberCard({
               size="sm"
               onClick={onRemove}
               disabled={isLoading}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 min-h-[36px] touch-target flex-shrink-0"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -84,7 +85,7 @@ export function TeamMemberCard({
         {/* Show info message for current user */}
         {isCurrentUser && (
           <div className="mb-4 p-3 bg-green-100 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-800">
+            <p className="text-xs sm:text-sm text-green-800">
               <span className="font-medium">Your information:</span> This information has been automatically filled from your profile. 
               Please review and update any missing details.
             </p>
@@ -93,18 +94,19 @@ export function TeamMemberCard({
 
         <div className="space-y-4">
           {/* Basic Fields Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Full Name */}
             <FormField
               control={form.control}
               name={`teamMembers.${index}.name`}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Full Name</FormLabel>
+                  <FormLabel className="text-sm">Full Name</FormLabel>
                   <FormControl>
                     <Input 
                       placeholder="Member name" 
                       disabled={isLoading}
+                      className="min-h-[44px] touch-target"
                       {...field} 
                     />
                   </FormControl>
@@ -119,12 +121,13 @@ export function TeamMemberCard({
               name={`teamMembers.${index}.email`}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email (Optional)</FormLabel>
+                  <FormLabel className="text-sm">Email (Optional)</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
                       placeholder="member@example.com"
                       disabled={isLoading}
+                      className="min-h-[44px] touch-target"
                       {...field}
                     />
                   </FormControl>
@@ -139,11 +142,12 @@ export function TeamMemberCard({
               name={`teamMembers.${index}.role`}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Role</FormLabel>
+                  <FormLabel className="text-sm">Role</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Member role"
                       disabled={isLoading || (isFirstMember && profile === 'admin')}
+                      className="min-h-[44px] touch-target"
                       {...field}
                       value={isFirstMember && profile === 'admin' ? "Captain" : field.value || ''}
                     />
@@ -158,20 +162,20 @@ export function TeamMemberCard({
           {showDetailedFields && (
             <>
               {/* Gender and Date of Birth Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name={`teamMembers.${index}.gender`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Gender</FormLabel>
+                      <FormLabel className="text-sm">Gender</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value ?? ""}
                         disabled={isLoading}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="min-h-[44px] touch-target">
                             <SelectValue placeholder="Select gender" />
                           </SelectTrigger>
                         </FormControl>
@@ -191,11 +195,12 @@ export function TeamMemberCard({
                   name={`teamMembers.${index}.dateOfBirth`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Date of Birth</FormLabel>
+                      <FormLabel className="text-sm">Date of Birth</FormLabel>
                       <FormControl>
                         <Input 
                           type="date" 
                           disabled={isLoading}
+                          className="min-h-[44px] touch-target"
                           {...field} 
                         />
                       </FormControl>
@@ -211,11 +216,12 @@ export function TeamMemberCard({
                 name={`teamMembers.${index}.phoneNumber`}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
+                    <FormLabel className="text-sm">Phone Number</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="Phone number"
                         disabled={isLoading}
+                        className="min-h-[44px] touch-target"
                         {...field} 
                       />
                     </FormControl>
@@ -225,18 +231,20 @@ export function TeamMemberCard({
               />
 
               {/* Location Fields Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name={`teamMembers.${index}.province`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Province/City</FormLabel>
+                      <FormLabel className="text-sm">Province/City</FormLabel>
                       <FormControl>
-                        <ProvinceComboBox 
-                          disabled={isLoading}
-                          {...field} 
-                        />
+                        <div className="min-h-[44px] flex items-center">
+                          <ProvinceComboBox 
+                            disabled={isLoading}
+                            {...field} 
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -248,11 +256,12 @@ export function TeamMemberCard({
                   name={`teamMembers.${index}.ward`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>District</FormLabel>
+                      <FormLabel className="text-sm">District</FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="District name"
                           disabled={isLoading}
+                          className="min-h-[44px] touch-target"
                           {...field} 
                         />
                       </FormControl>
@@ -263,17 +272,18 @@ export function TeamMemberCard({
               </div>
 
               {/* Organization Fields Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name={`teamMembers.${index}.organization`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>School/Organization</FormLabel>
+                      <FormLabel className="text-sm">School/Organization</FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="School or organization name"
                           disabled={isLoading}
+                          className="min-h-[44px] touch-target"
                           {...field} 
                         />
                       </FormControl>
@@ -287,11 +297,12 @@ export function TeamMemberCard({
                   name={`teamMembers.${index}.organizationAddress`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>School/Organization Address</FormLabel>
+                      <FormLabel className="text-sm">School/Organization Address</FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="Address"
                           disabled={isLoading}
+                          className="min-h-[44px] touch-target"
                           {...field} 
                         />
                       </FormControl>

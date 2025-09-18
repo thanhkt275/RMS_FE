@@ -32,9 +32,9 @@ export function TeamLimitWarning({
   // Render blocking message when at limit
   if (isAtLimit && message) {
     return (
-      <Alert variant="destructive" className={`border-red-500 bg-red-50 ${className}`}>
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription className="text-red-700 font-medium">
+      <Alert variant="destructive" className={`border-red-500 bg-red-50 p-3 sm:p-4 ${className}`}>
+        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+        <AlertDescription className="text-red-700 font-medium text-sm sm:text-base">
           {message}
         </AlertDescription>
       </Alert>
@@ -44,9 +44,9 @@ export function TeamLimitWarning({
   // Render warning when near limit
   if (isNearLimit && warningMessage) {
     return (
-      <Alert variant="default" className={`border-yellow-500 bg-yellow-50 ${className}`}>
-        <Info className="h-4 w-4 text-yellow-600" />
-        <AlertDescription className="text-yellow-700">
+      <Alert variant="default" className={`border-yellow-500 bg-yellow-50 p-3 sm:p-4 ${className}`}>
+        <Info className="h-4 w-4 flex-shrink-0 text-yellow-600" />
+        <AlertDescription className="text-yellow-700 text-sm sm:text-base">
           <strong>Registration Notice:</strong> {warningMessage}
         </AlertDescription>
       </Alert>
@@ -55,9 +55,9 @@ export function TeamLimitWarning({
 
   // Render info message showing current count when not at/near limit
   return (
-    <Alert variant="default" className={`border-blue-500 bg-blue-50 ${className}`}>
-      <Users className="h-4 w-4 text-blue-600" />
-      <AlertDescription className="text-blue-700">
+    <Alert variant="default" className={`border-blue-500 bg-blue-50 p-3 sm:p-4 ${className}`}>
+      <Users className="h-4 w-4 flex-shrink-0 text-blue-600" />
+      <AlertDescription className="text-blue-700 text-sm sm:text-base">
         <strong>Current Registration:</strong> {currentCount} of {maxTeams} teams registered.
       </AlertDescription>
     </Alert>

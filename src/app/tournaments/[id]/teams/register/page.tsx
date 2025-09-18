@@ -36,12 +36,12 @@ export default function RegisterTeamPage() {
   return (
     <AdminRoute fallbackMessage="Only administrators can register teams.">
       <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 py-6 max-w-4xl">
+        <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-4xl">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Register New Team</h1>
-              <p className="text-gray-600 mt-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-4">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 line-clamp-1">Register New Team</h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">
                 {tournament?.name}
                 {tournament?.maxTeamMembers && ` • Max ${tournament.maxTeamMembers} members per team`}
               </p>
@@ -49,7 +49,7 @@ export default function RegisterTeamPage() {
             <Button
               variant="outline"
               onClick={() => router.back()}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 min-h-[44px] touch-target w-full sm:w-auto"
             >
               <ArrowLeft className="h-4 w-4" />
               Back

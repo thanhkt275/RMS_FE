@@ -347,11 +347,10 @@ function ControlMatchContent() {
     }) => {
       // Convert string currentPeriod to the expected union type
       const validPeriod =
-        params.currentPeriod === "auto" ||
         params.currentPeriod === "teleop" ||
         params.currentPeriod === "endgame" ||
         params.currentPeriod === null
-          ? (params.currentPeriod as "auto" | "teleop" | "endgame" | null)
+          ? (params.currentPeriod as "teleop" | "endgame" | null)
           : null;
 
       unifiedSendMatchStateChange({
@@ -400,7 +399,31 @@ function ControlMatchContent() {
     tournamentId,
     selectedMatchId,
     selectedFieldId,
+    userRole: roleAccess.currentRole,
   });
+
+  const {
+    redTotalScore,
+    blueTotalScore,
+    redFlagsSecured,
+    redSuccessfulFlagHits,
+    redOpponentFieldAmmo,
+    blueFlagsSecured,
+    blueSuccessfulFlagHits,
+    blueOpponentFieldAmmo,
+    redBreakdown,
+    blueBreakdown,
+    setRedFlagsSecured,
+    setRedSuccessfulFlagHits,
+    setRedOpponentFieldAmmo,
+    setBlueFlagsSecured,
+    setBlueSuccessfulFlagHits,
+    setBlueOpponentFieldAmmo,
+    sendRealtimeUpdate,
+    saveScores,
+    isLoadingScores,
+    matchScores,
+  } = scoringControl;
   const handleSelectMatch = (match: {
     id: string;
     matchNumber: string | number;
@@ -440,10 +463,11 @@ function ControlMatchContent() {
 
   // Enhanced timer controls with unified match control
   const handleEnhancedStartTimer = () => {
+    const nextPeriod = timerRemaining === timerDuration ? "teleop" : matchPeriod;
     handleStartTimer();
     // Update match status and period through unified service
     unifiedMatchControl.startMatch();
-    unifiedMatchControl.updateMatchPeriod(matchPeriod as any);
+    unifiedMatchControl.updateMatchPeriod(nextPeriod as any);
   };
 
   const handleEnhancedResetTimer = () => {
@@ -451,15 +475,16 @@ function ControlMatchContent() {
     handleResetTimer();
     // Reset match status and period through unified service
     unifiedMatchControl.resetMatch();
+    unifiedMatchControl.updateMatchPeriod("teleop");
   };
   // Handle submitting final scores and completing the match
   const handleSubmitScores = async () => {
     try {
-      await scoringControl.saveScores();
+      await saveScores();
       // Complete match through unified service
       await unifiedMatchControl.completeMatch();
       toast.success("Match Completed", {
-        description: `Final score: Red ${scoringControl.redTotalScore} - Blue ${scoringControl.blueTotalScore}`,
+        description: `Final score: Red ${redTotalScore} - Blue ${blueTotalScore}`,
       });
     } catch (error) {
       toast.error("Failed to submit scores");
@@ -511,133 +536,7 @@ function ControlMatchContent() {
     }
   };
 
-  // Enhanced game element handlers using the scoring control
-  const addRedGameElement = () => {
-    const elementName = (
-      document.getElementById("red-element-name") as HTMLInputElement
-    )?.value?.trim();
-    const elementCount = Number(
-      (document.getElementById("red-element-count") as HTMLInputElement)
-        ?.value || 1
-    );
-    const elementPoints = Number(
-      (document.getElementById("red-element-points") as HTMLInputElement)
-        ?.value || 1
-    );
-
-    if (!elementName) return;
-
-    const totalPoints = elementCount * elementPoints;
-    const newElement = {
-      element: elementName,
-      count: elementCount,
-      pointsEach: elementPoints,
-      operation: "multiply",
-      totalPoints,
-    };
-
-    scoringControl.setRedGameElements([
-      ...scoringControl.redGameElements,
-      newElement,
-    ]);
-    scoringControl.setIsAddingRedElement(false);
-
-    // Clear form
-    if (document.getElementById("red-element-name")) {
-      (document.getElementById("red-element-name") as HTMLInputElement).value =
-        "";
-    }
-  };
-
-  const addBlueGameElement = () => {
-    const elementName = (
-      document.getElementById("blue-element-name") as HTMLInputElement
-    )?.value?.trim();
-    const elementCount = Number(
-      (document.getElementById("blue-element-count") as HTMLInputElement)
-        ?.value || 1
-    );
-    const elementPoints = Number(
-      (document.getElementById("blue-element-points") as HTMLInputElement)
-        ?.value || 1
-    );
-
-    if (!elementName) return;
-
-    const totalPoints = elementCount * elementPoints;
-    const newElement = {
-      element: elementName,
-      count: elementCount,
-      pointsEach: elementPoints,
-      operation: "multiply",
-      totalPoints,
-    };
-
-    scoringControl.setBlueGameElements([
-      ...scoringControl.blueGameElements,
-      newElement,
-    ]);
-    scoringControl.setIsAddingBlueElement(false);
-
-    // Clear form
-    if (document.getElementById("blue-element-name")) {
-      (document.getElementById("blue-element-name") as HTMLInputElement).value =
-        "";
-    }
-  };
-
-  const removeGameElement = (alliance: "red" | "blue", index: number) => {
-    if (alliance === "red") {
-      const updatedElements = [...scoringControl.redGameElements];
-      updatedElements.splice(index, 1);
-      scoringControl.setRedGameElements(updatedElements);
-    } else {
-      const updatedElements = [...scoringControl.blueGameElements];
-      updatedElements.splice(index, 1);
-      scoringControl.setBlueGameElements(updatedElements);
-    }
-  };
-
-  // Handle multiplier selection based on team count
-  const updateRedTeamCount = (count: number) => {
-    scoringControl.setRedTeamCount(count);
-    switch (count) {
-      case 1:
-        scoringControl.setRedMultiplier(1.25);
-        break;
-      case 2:
-        scoringControl.setRedMultiplier(1.5);
-        break;
-      case 3:
-        scoringControl.setRedMultiplier(1.75);
-        break;
-      case 4:
-        scoringControl.setRedMultiplier(2.0);
-        break;
-      default:
-        scoringControl.setRedMultiplier(1.0);
-    }
-  };
-
-  const updateBlueTeamCount = (count: number) => {
-    scoringControl.setBlueTeamCount(count);
-    switch (count) {
-      case 1:
-        scoringControl.setBlueMultiplier(1.25);
-        break;
-      case 2:
-        scoringControl.setBlueMultiplier(1.5);
-        break;
-      case 3:
-        scoringControl.setBlueMultiplier(1.75);
-        break;
-      case 4:
-        scoringControl.setBlueMultiplier(2.0);
-        break;
-      default:
-        scoringControl.setBlueMultiplier(1.0);
-    }
-  };
+  // Legacy helpers removed in new scoring system
   return (
     <div className="min-h-screen bg-gray-50 p-0 w-full">
       <div className="w-full">
@@ -770,8 +669,8 @@ function ControlMatchContent() {
               getBlueTeams={getBlueTeams}
               formatDate={formatDate}
               getStatusBadgeColor={getStatusBadgeColor}
-              redTotalScore={scoringControl.redTotalScore}
-              blueTotalScore={scoringControl.blueTotalScore}
+              redTotalScore={redTotalScore}
+              blueTotalScore={blueTotalScore}
               isLoading={isLoadingMatchDetails}
             />
           </div>
@@ -804,20 +703,31 @@ function ControlMatchContent() {
         </div>
 
         {/* Secondary Control Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6 px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6 px-6">
           {/* Scoring Panel */}
-          <div>
+          <div className="lg:col-span-2">
             {roleAccess.showScoringPanel ? (
               <ScoringPanel
-                {...scoringControl}
-                onUpdateScores={scoringControl.sendRealtimeUpdate}
-                onSubmitScores={handleSubmitScores}
-                addRedGameElement={addRedGameElement}
-                addBlueGameElement={addBlueGameElement}
-                removeGameElement={removeGameElement}
-                updateRedTeamCount={updateRedTeamCount}
-                updateBlueTeamCount={updateBlueTeamCount}
                 selectedMatchId={selectedMatchId}
+                redFlagsSecured={redFlagsSecured}
+                redSuccessfulFlagHits={redSuccessfulFlagHits}
+                redOpponentFieldAmmo={redOpponentFieldAmmo}
+                blueFlagsSecured={blueFlagsSecured}
+                blueSuccessfulFlagHits={blueSuccessfulFlagHits}
+                blueOpponentFieldAmmo={blueOpponentFieldAmmo}
+                redBreakdown={redBreakdown}
+                blueBreakdown={blueBreakdown}
+                redTotalScore={redTotalScore}
+                blueTotalScore={blueTotalScore}
+                setRedFlagsSecured={setRedFlagsSecured}
+                setRedSuccessfulFlagHits={setRedSuccessfulFlagHits}
+                setRedOpponentFieldAmmo={setRedOpponentFieldAmmo}
+                setBlueFlagsSecured={setBlueFlagsSecured}
+                setBlueSuccessfulFlagHits={setBlueSuccessfulFlagHits}
+                setBlueOpponentFieldAmmo={setBlueOpponentFieldAmmo}
+                onUpdateScores={sendRealtimeUpdate}
+                onSubmitScores={handleSubmitScores}
+                isLoading={isLoadingScores}
                 disabled={!isConnected}
               />
             ) : (
@@ -834,7 +744,7 @@ function ControlMatchContent() {
             )}
           </div>
           {/* Announcement Panel */}
-          <div>
+          <div className="lg:col-span-1">
             {roleAccess.showDisplayControls ? (
               <AnnouncementPanel
                 announcement={announcement}

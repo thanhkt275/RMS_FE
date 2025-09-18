@@ -144,30 +144,30 @@ const UserRow: React.FC<{
         {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never'}
       </TableCell>
       <TableCell className="py-4">
-        <DropdownMenu>
+        <DropdownMenu >
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="hover:bg-gray-100">
+            <Button variant="ghost" size="sm" className="">
               <MoreHorizontal className="h-4 w-4 text-gray-600" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg">
+          <DropdownMenuContent align="end" className=" border border-gray-600 shadow-lg">
             <DropdownMenuItem onClick={() => onViewProfile(user)} className="hover:bg-gray-50">
-              <Eye className="h-4 w-4 mr-2 text-gray-600" />
+              <Eye className="h-4 w-4 mr-2 text-gray-200" />
               View Profile
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEdit(user)} className="hover:bg-gray-50">
-              <Edit className="h-4 w-4 mr-2 text-gray-600" />
+              <Edit className="h-4 w-4 mr-2 text-gray-200" />
               Edit User
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onChangeRole(user)} className="hover:bg-gray-50">
-              <Edit className="h-4 w-4 mr-2 text-gray-600" />
+              <Edit className="h-4 w-4 mr-2 text-gray-200" />
               Change Role
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => onDelete(user)}
               className="text-red-600 hover:bg-red-50"
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="h-4 w-4 mr-2 text-red-200" />
               Delete User
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -263,7 +263,7 @@ export const UserTable: React.FC<UserTableProps> = ({
               onSort={onSort}
             />
             <TableHead className="font-semibold text-gray-900 bg-gray-50">Last Login</TableHead>
-            <TableHead className="w-16 bg-gray-50">Actions</TableHead>
+            <TableHead className="w-16 text-gray-900 bg-gray-50">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="bg-white">

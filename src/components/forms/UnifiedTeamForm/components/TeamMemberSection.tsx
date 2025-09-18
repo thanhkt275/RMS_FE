@@ -81,18 +81,19 @@ export function TeamMemberSection({
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Team Members ({fields.length}
-              {maxTeamMembers && `/${maxTeamMembers}`})
+      <CardHeader className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="truncate">Team Members ({fields.length}
+              {maxTeamMembers && `/${maxTeamMembers}`})</span>
             </CardTitle>
             {isCreatorFirstMember && fields.length > 0 && (
-              <div className="flex items-center gap-2 text-sm text-green-700 bg-green-100 px-3 py-1 rounded-full">
-                <Info className="h-4 w-4" />
-                <span>You are the team captain</span>
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-green-700 bg-green-100 px-2 sm:px-3 py-1 rounded-full">
+                <Info className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span className="hidden sm:inline">You are the team captain</span>
+                <span className="sm:hidden">Captain</span>
               </div>
             )}
           </div>
@@ -105,16 +106,17 @@ export function TeamMemberSection({
               isLoading || 
               (maxTeamMembers ? fields.length >= maxTeamMembers : false)
             }
-            className="flex items-center gap-2"
+            className="flex items-center justify-center gap-2 min-h-[40px] touch-target w-full sm:w-auto"
           >
             <Plus className="h-4 w-4" />
-            Add Member
+            <span className="hidden sm:inline">Add Member</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         </div>
         
         {/* Information about team composition */}
         {maxTeamMembers && isCreatorFirstMember && (
-          <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200">
+          <div className="text-xs sm:text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200">
             <p>
               <span className="font-medium">Team setup:</span> You are automatically set as the team captain (first member). 
               {remainingSlots !== null && remainingSlots > 0 && (
@@ -127,7 +129,7 @@ export function TeamMemberSection({
           </div>
         )}
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 p-4 sm:p-6 pt-0">
         {fields.map((field, index) => (
           <TeamMemberCard
             key={field.id}
@@ -145,7 +147,7 @@ export function TeamMemberSection({
         
         {/* Max members warning */}
         {maxTeamMembers && fields.length >= maxTeamMembers && (
-          <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
+          <div className="text-xs sm:text-sm text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
             You have reached the maximum number of team members ({maxTeamMembers}).
           </div>
         )}

@@ -6,6 +6,28 @@ export interface GameElement {
   operation: string;
 }
 
+export interface AllianceScoreDetails {
+  flagsSecured: number;
+  successfulFlagHits: number;
+  opponentFieldAmmo: number;
+}
+
+export interface AllianceScoreBreakdown {
+  flagsPoints: number;
+  flagHitsPoints: number;
+  fieldControlPoints: number;
+  totalPoints: number;
+}
+
+export interface MatchScoreDetails {
+  red: AllianceScoreDetails;
+  blue: AllianceScoreDetails;
+  breakdown?: {
+    red: AllianceScoreBreakdown;
+    blue: AllianceScoreBreakdown;
+  };
+}
+
 export interface AllianceScores {
   autoScore: number;
   driveScore: number;
@@ -19,7 +41,7 @@ export interface AllianceScores {
 export interface MatchScoreData {
   redAlliance: AllianceScores;
   blueAlliance: AllianceScores;
-  scoreDetails: any;
+  scoreDetails: MatchScoreDetails;
   isAddingRedElement: boolean;
   isAddingBlueElement: boolean;
 }
@@ -48,7 +70,7 @@ export interface RealtimeScoreUpdate {
   blueMultiplier?: number;
   redPenalty?: number;
   bluePenalty?: number;
-  scoreDetails?: any;
+  scoreDetails?: MatchScoreDetails;
 }
 
 export interface GameElementDto {
@@ -75,7 +97,7 @@ export interface PersistScoreData {
   blueMultiplier: number;
   redPenalty: number;
   bluePenalty: number;
-  scoreDetails: any;
+  scoreDetails: MatchScoreDetails;
   fieldId?: string;
   tournamentId: string;
 }
@@ -96,7 +118,7 @@ export interface ApiScoreData {
   blueMultiplier: number;
   redPenalty: number;
   bluePenalty: number;
-  scoreDetails: any;
+  scoreDetails: MatchScoreDetails;
 }
 
 export type Alliance = 'red' | 'blue';

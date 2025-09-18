@@ -3,6 +3,7 @@ import { useUnifiedWebSocket } from '../websocket/use-unified-websocket';
 import { apiClient } from '@/lib/api-client';
 import { ScoreData } from '@/types/types';
 import { BaseScoreData, WebSocketConnectionStatus } from '@/types/websocket';
+import { MatchScoreDetails } from '@/hooks/scoring/types';
 
 interface GameElement {
     element: string;
@@ -27,7 +28,7 @@ interface AudienceScoreState {
     blueTeamCount?: number;
     redMultiplier?: number;
     blueMultiplier?: number;
-    scoreDetails?: Record<string, unknown>;
+    scoreDetails?: MatchScoreDetails;
     timestamp?: number;
     isRealtime?: boolean;
 }
@@ -46,6 +47,32 @@ interface UseAudienceScoresOptions {
     enableAnimations?: boolean;
 }
 
+const DEFAULT_DETAILS: MatchScoreDetails = {
+    red: { flagsSecured: 0, successfulFlagHits: 0, opponentFieldAmmo: 0 },
+    blue: { flagsSecured: 0, successfulFlagHits: 0, opponentFieldAmmo: 0 },
+    breakdown: {
+        red: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
+        blue: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
+    },
+};
+
+const cloneScoreDetails = (details: MatchScoreDetails): MatchScoreDetails => ({
+    red: { ...details.red },
+    blue: { ...details.blue },
+    breakdown: details.breakdown
+        ? {
+            red: { ...details.breakdown.red },
+            blue: { ...details.breakdown.blue },
+        }
+        : {
+            red: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
+            blue: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
+        },
+});
+
+const ensureScoreDetails = (details?: MatchScoreDetails): MatchScoreDetails =>
+    details ? cloneScoreDetails(details) : cloneScoreDetails(DEFAULT_DETAILS);
+
 const DEFAULT_SCORE_STATE: AudienceScoreState = {
     redAutoScore: 0,
     redDriveScore: 0,
@@ -61,7 +88,7 @@ const DEFAULT_SCORE_STATE: AudienceScoreState = {
     blueTeamCount: 2,
     redMultiplier: 1.0,
     blueMultiplier: 1.0,
-    scoreDetails: {},
+    scoreDetails: cloneScoreDetails(DEFAULT_DETAILS),
     timestamp: 0,
     isRealtime: false,
 };
@@ -231,7 +258,7 @@ export function useAudienceScores(
             blueTeamCount: data.blueTeamCount || 2,
             redMultiplier: data.redMultiplier || 1.0,
             blueMultiplier: data.blueMultiplier || 1.0,
-            scoreDetails: data.scoreDetails || {},
+            scoreDetails: ensureScoreDetails(data.scoreDetails),
             timestamp: updateTime,
             isRealtime: source === 'websocket',
         };
