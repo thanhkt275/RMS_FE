@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUnifiedWebSocket } from '../websocket/use-unified-websocket';
 import { apiClient } from '@/lib/api-client';
-import { ScoreData } from '@/types/types';
+import { ScoreData, MatchScoreDetailsPayload } from '@/types/types';
 import { BaseScoreData, WebSocketConnectionStatus } from '@/types/websocket';
 import { MatchScoreDetails } from '@/hooks/scoring/types';
+import { convertScoreDetailsPayload, createEmptyScoreDetails } from '@/hooks/scoring/utils/score-details';
 
 interface GameElement {
     element: string;
@@ -47,14 +48,7 @@ interface UseAudienceScoresOptions {
     enableAnimations?: boolean;
 }
 
-const DEFAULT_DETAILS: MatchScoreDetails = {
-    red: { flagsSecured: 0, successfulFlagHits: 0, opponentFieldAmmo: 0 },
-    blue: { flagsSecured: 0, successfulFlagHits: 0, opponentFieldAmmo: 0 },
-    breakdown: {
-        red: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
-        blue: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
-    },
-};
+const DEFAULT_DETAILS: MatchScoreDetails = createEmptyScoreDetails();
 
 const cloneScoreDetails = (details: MatchScoreDetails): MatchScoreDetails => ({
     red: { ...details.red },
@@ -70,8 +64,8 @@ const cloneScoreDetails = (details: MatchScoreDetails): MatchScoreDetails => ({
         },
 });
 
-const ensureScoreDetails = (details?: MatchScoreDetails): MatchScoreDetails =>
-    details ? cloneScoreDetails(details) : cloneScoreDetails(DEFAULT_DETAILS);
+const ensureScoreDetails = (details?: MatchScoreDetails | MatchScoreDetailsPayload | null): MatchScoreDetails =>
+    cloneScoreDetails(convertScoreDetailsPayload(details ?? DEFAULT_DETAILS));
 
 const DEFAULT_SCORE_STATE: AudienceScoreState = {
     redAutoScore: 0,

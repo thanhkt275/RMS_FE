@@ -44,6 +44,11 @@ const createBreakdown = (details: AllianceScoreDetails): AllianceScoreBreakdown 
   };
 };
 
+const hasAllianceDetails = (details: AllianceScoreDetails): boolean =>
+  details.flagsSecured > 0 ||
+  details.successfulFlagHits > 0 ||
+  details.opponentFieldAmmo > 0;
+
 const normaliseScoreDetails = (
   details?: Partial<MatchScoreDetails> | null,
 ): MatchScoreDetails => ({
@@ -288,13 +293,37 @@ function calculateTotals(state: MatchScoreData): MatchScoreData {
   const redBreakdown = createBreakdown(normalisedDetails.red);
   const blueBreakdown = createBreakdown(normalisedDetails.blue);
 
-  const redAuto = redBreakdown.flagsPoints;
-  const redDrive = redBreakdown.flagHitsPoints + redBreakdown.fieldControlPoints;
-  const redTotal = redBreakdown.totalPoints;
+  const redHasDetails = hasAllianceDetails(normalisedDetails.red);
+  const blueHasDetails = hasAllianceDetails(normalisedDetails.blue);
 
-  const blueAuto = blueBreakdown.flagsPoints;
-  const blueDrive = blueBreakdown.flagHitsPoints + blueBreakdown.fieldControlPoints;
-  const blueTotal = blueBreakdown.totalPoints;
+  const redAuto = redHasDetails
+    ? redBreakdown.flagsPoints
+    : state.redAlliance.autoScore;
+  const redDrive = redHasDetails
+    ? redBreakdown.flagHitsPoints + redBreakdown.fieldControlPoints
+    : state.redAlliance.driveScore;
+  const redTotal = redHasDetails
+    ? redBreakdown.totalPoints
+    : state.redAlliance.totalScore;
+
+  const blueAuto = blueHasDetails
+    ? blueBreakdown.flagsPoints
+    : state.blueAlliance.autoScore;
+  const blueDrive = blueHasDetails
+    ? blueBreakdown.flagHitsPoints + blueBreakdown.fieldControlPoints
+    : state.blueAlliance.driveScore;
+  const blueTotal = blueHasDetails
+    ? blueBreakdown.totalPoints
+    : state.blueAlliance.totalScore;
+
+  const nextBreakdown = {
+    red: redHasDetails
+      ? redBreakdown
+      : state.scoreDetails?.breakdown?.red ?? redBreakdown,
+    blue: blueHasDetails
+      ? blueBreakdown
+      : state.scoreDetails?.breakdown?.blue ?? blueBreakdown,
+  };
 
   const totalsUnchanged =
     state.redAlliance.autoScore === redAuto &&
@@ -306,14 +335,14 @@ function calculateTotals(state: MatchScoreData): MatchScoreData {
 
   const detailsUnchanged = !detailsChanged(state.scoreDetails, normalisedDetails);
 
+  const previousBreakdown = state.scoreDetails?.breakdown;
   const breakdownUnchanged =
-    state.scoreDetails?.breakdown &&
-    state.scoreDetails.breakdown.red.flagsPoints === redBreakdown.flagsPoints &&
-    state.scoreDetails.breakdown.red.flagHitsPoints === redBreakdown.flagHitsPoints &&
-    state.scoreDetails.breakdown.red.fieldControlPoints === redBreakdown.fieldControlPoints &&
-    state.scoreDetails.breakdown.blue.flagsPoints === blueBreakdown.flagsPoints &&
-    state.scoreDetails.breakdown.blue.flagHitsPoints === blueBreakdown.flagHitsPoints &&
-    state.scoreDetails.breakdown.blue.fieldControlPoints === blueBreakdown.fieldControlPoints;
+    previousBreakdown?.red?.flagsPoints === nextBreakdown.red.flagsPoints &&
+    previousBreakdown?.red?.flagHitsPoints === nextBreakdown.red.flagHitsPoints &&
+    previousBreakdown?.red?.fieldControlPoints === nextBreakdown.red.fieldControlPoints &&
+    previousBreakdown?.blue?.flagsPoints === nextBreakdown.blue.flagsPoints &&
+    previousBreakdown?.blue?.flagHitsPoints === nextBreakdown.blue.flagHitsPoints &&
+    previousBreakdown?.blue?.fieldControlPoints === nextBreakdown.blue.fieldControlPoints;
 
   if (totalsUnchanged && detailsUnchanged && breakdownUnchanged) {
     return state;
@@ -338,10 +367,7 @@ function calculateTotals(state: MatchScoreData): MatchScoreData {
     scoreDetails: {
       red: normalisedDetails.red,
       blue: normalisedDetails.blue,
-      breakdown: {
-        red: redBreakdown,
-        blue: blueBreakdown,
-      },
+      breakdown: nextBreakdown,
     },
   };
 }

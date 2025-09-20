@@ -6,6 +6,7 @@ import { useScoringState } from '../scoring/use-scoring-state';
 import { usePersistence } from '../scoring/use-persistence';
 import { useUserActivity } from '../scoring/use-user-activity';
 import { useDataSync } from '../scoring/use-data-sync';
+import { convertScoreDetailsPayload } from '../scoring/utils/score-details';
 import {
   ScoringConfig,
   AllianceScoreDetails,
@@ -167,10 +168,7 @@ export function useScoringControl({
       previousMatchIdRef.current = selectedMatchId;
       
       // Use matchScores data instead of internal state to prevent loops
-      const scoreDetails =
-        matchScores.scoreDetails && 'red' in matchScores.scoreDetails && 'blue' in matchScores.scoreDetails
-          ? (matchScores.scoreDetails as MatchScoreDetails)
-          : state.scoreDetails;
+      const scoreDetails = convertScoreDetailsPayload(matchScores.scoreDetails);
 
       const scoreData: ScoreData = {
         matchId: selectedMatchId,

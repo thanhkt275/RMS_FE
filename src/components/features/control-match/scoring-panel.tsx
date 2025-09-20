@@ -2,7 +2,7 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Save, CheckCircle, Plus, Minus } from "lucide-react";
+import { Save, CheckCircle, Plus, Minus, Flag, Target, Package } from "lucide-react";
 import { AllianceScoreBreakdown } from "@/hooks/scoring/types";
 
 interface AllianceSectionProps {
@@ -42,6 +42,40 @@ interface ScoringPanelProps {
   isLoading?: boolean;
   disabled?: boolean;
 }
+
+interface ScoreBreakdownRowProps {
+  icon: React.ReactNode;
+  label: string;
+  count: number;
+  points: number;
+  accentColor: "red" | "blue";
+}
+
+const ScoreBreakdownRow: React.FC<ScoreBreakdownRowProps> = ({
+  icon,
+  label,
+  count,
+  points,
+  accentColor,
+}) => {
+  const accentText = accentColor === "red" ? "text-red-800" : "text-blue-800";
+  const pointsText = accentColor === "red" ? "text-red-600" : "text-blue-600";
+
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <div className={`flex items-center gap-2 font-medium ${accentText}`}>
+        <span className="opacity-80">{icon}</span>
+        <span>{label}</span>
+      </div>
+      <div className="flex items-center gap-3 text-xs font-semibold text-gray-600">
+        <span className="rounded-full bg-white px-2 py-0.5 text-gray-700 border border-gray-200">
+          {count} ×
+        </span>
+        <span className={pointsText}>{points} pts</span>
+      </div>
+    </div>
+  );
+};
 
 const AllianceSection: React.FC<AllianceSectionProps> = ({
   allianceLabel,
@@ -88,6 +122,33 @@ const AllianceSection: React.FC<AllianceSectionProps> = ({
         <div className={`px-3 py-1 text-sm font-semibold rounded-full ${chipAccent}`}>
           Tổng điểm: {totalScore}
         </div>
+      </div>
+
+      <div className="space-y-2 rounded-xl border border-dashed border-gray-200 bg-white/80 p-4 shadow-sm">
+        <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
+          Score Breakdown
+        </h4>
+        <ScoreBreakdownRow
+          icon={<Flag className="w-4 h-4" />}
+          label="Flags Secured"
+          count={flagsSecured}
+          points={breakdown?.flagsPoints ?? flagsSecured * 20}
+          accentColor={accent}
+        />
+        <ScoreBreakdownRow
+          icon={<Target className="w-4 h-4" />}
+          label="Successful Flag Hits"
+          count={successfulFlagHits}
+          points={breakdown?.flagHitsPoints ?? successfulFlagHits * 10}
+          accentColor={accent}
+        />
+        <ScoreBreakdownRow
+          icon={<Package className="w-4 h-4" />}
+          label="Opponent Field Ammo"
+          count={opponentFieldAmmo}
+          points={breakdown?.fieldControlPoints ?? opponentFieldAmmo * 5}
+          accentColor={accent}
+        />
       </div>
 
       <div className="space-y-4">

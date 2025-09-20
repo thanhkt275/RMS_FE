@@ -5,15 +5,9 @@ import { useRealtime } from "./use-realtime";
 import { useUserActivity } from "./use-user-activity";
 import { useDataSync } from "./use-data-sync";
 import { ScoringConfig, GameElement, Alliance, ScoreType, MatchScoreDetails, AllianceScoreDetails } from './types/index';
+import { convertScoreDetailsPayload, createEmptyScoreDetails } from './utils/score-details';
 
-const EMPTY_DETAILS: MatchScoreDetails = {
-  red: { flagsSecured: 0, successfulFlagHits: 0, opponentFieldAmmo: 0 },
-  blue: { flagsSecured: 0, successfulFlagHits: 0, opponentFieldAmmo: 0 },
-  breakdown: {
-    red: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
-    blue: { flagsPoints: 0, flagHitsPoints: 0, fieldControlPoints: 0, totalPoints: 0 },
-  },
-};
+const EMPTY_DETAILS: MatchScoreDetails = createEmptyScoreDetails();
 
 const cloneDetails = (details: MatchScoreDetails): MatchScoreDetails => ({
   red: { ...details.red },
@@ -29,13 +23,8 @@ const cloneDetails = (details: MatchScoreDetails): MatchScoreDetails => ({
       },
 });
 
-const ensureScoreDetails = (details?: unknown): MatchScoreDetails => {
-  const candidate = details as MatchScoreDetails | undefined;
-  if (candidate && candidate.red && candidate.blue) {
-    return cloneDetails(candidate);
-  }
-  return cloneDetails(EMPTY_DETAILS);
-};
+const ensureScoreDetails = (details?: unknown): MatchScoreDetails =>
+  cloneDetails(convertScoreDetailsPayload(details as any));
 
 interface UseScoringControlProps extends ScoringConfig {}
 

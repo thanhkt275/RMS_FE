@@ -325,19 +325,7 @@ export interface MatchScores {
   blueEndgamePoints?: number;
   redGameElements?: Record<string, number>;
   blueGameElements?: Record<string, number>;
-  scoreDetails?: {
-    penalties?: {
-      red: number;
-      blue: number;
-    };
-    specialScoring?: Record<
-      string,
-      {
-        red: number;
-        blue: number;
-      }
-    >;
-  };
+  scoreDetails?: MatchScoreDetailsPayload | null;
   match?: {
     id: string;
     matchNumber: number;
@@ -351,6 +339,29 @@ export interface MatchScores {
   };
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AllianceScorePointsBreakdown {
+  flagsPoints?: number;
+  flagHitsPoints?: number;
+  fieldControlPoints?: number;
+  totalPoints?: number;
+}
+
+export interface AllianceScoreInputDetails {
+  flagsSecured?: number;
+  successfulFlagHits?: number;
+  opponentFieldAmmo?: number;
+}
+
+export interface MatchScoreDetailsPayload {
+  red?: AllianceScoreInputDetails;
+  blue?: AllianceScoreInputDetails;
+  breakdown?: {
+    red?: AllianceScorePointsBreakdown;
+    blue?: AllianceScorePointsBreakdown;
+  };
+  metadata?: Record<string, any>;
 }
 
 export interface ScoreUpdate {
