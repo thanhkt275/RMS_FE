@@ -22,6 +22,7 @@ export const QueryKeys = {
     all: () => ['stages'],
     byId: (id: string) => ['stages', id],
     byTournament: (tournamentId: string) => ['stages', 'tournament', tournamentId],
+    bracket: (stageId: string) => ['stages', stageId, 'bracket'],
   },
   
   // Match related queries

@@ -9,6 +9,8 @@ import {
   SortingState,
   ColumnFiltersState,
 } from '@tanstack/react-table';
+import { useNormalizedStageBracket } from "@/hooks/stages/use-normalized-stage-bracket";
+import BracketView from "@/components/features/bracket/bracket-view";
 
 // Define Schedule interface
 export interface Match {
@@ -30,7 +32,7 @@ export interface Match {
       };
     }>;
   }>;
-  round?: number;
+  roundNumber?: number | null;
   bracket?: string;
   stage?: {
     id: string;
@@ -38,6 +40,15 @@ export interface Match {
     tournamentId: string;
     type: 'SWISS' | 'PLAYOFF' | 'FINAL';
   };
+}
+
+type AudienceStageType = 'SWISS' | 'PLAYOFF' | 'FINAL' | 'UNKNOWN';
+
+interface StageSummary {
+  stageId: string;
+  stageName: string;
+  stageType: AudienceStageType;
+  matches: Match[];
 }
 
 interface ScheduleDisplayProps {
@@ -50,11 +61,6 @@ interface ScheduleDisplayProps {
 const formatTime = (timeString: string) => {
   const date = new Date(timeString);
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
-
-const formatDate = (timeString: string) => {
-  const date = new Date(timeString);
-  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
 };
 
 const getTeamDisplay = (team: { name: string, teamNumber?: string } | undefined) => {
@@ -96,48 +102,6 @@ const MatchTableRow: React.FC<{ match: Match; index: number }> = ({ match, index
     </tr>
   );
 };
-
-// Table for matches (SRP)
-const MatchesTable: React.FC<{ matches: Match[] }> = ({ matches }) => (
-  <div className="overflow-hidden shadow-lg rounded-lg">
-    <table className="min-w-full bg-white divide-y divide-gray-200">
-      <thead className="bg-gray-800 text-white">
-        <tr>
-          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Match #</th>
-          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Time</th>
-          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Red Alliance</th>
-          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Blue Alliance</th>
-          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Result</th>
-          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Status</th>
-        </tr>
-      </thead>
-      <tbody className="bg-white divide-y divide-gray-200">
-        {matches.map((match, index) => (
-          <MatchTableRow key={match.id} match={match} index={index} />
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
-
-// Swiss format section (SRP)
-const SwissFormat: React.FC<{ rounds: { [roundNumber: number]: Match[] } }> = ({ rounds }) => (
-  <div className="space-y-6">
-    {Object.keys(rounds)
-      .map(Number)
-      .sort((a, b) => a - b)
-      .map(roundNumber => (
-        <div key={roundNumber} className="bg-white rounded-lg shadow">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-4 py-3 rounded-t-lg">
-            <h3 className="text-lg font-bold">Round {roundNumber}</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <MatchesTable matches={rounds[roundNumber]} />
-          </div>
-        </div>
-      ))}
-  </div>
-);
 
 // Table columns for matches
 const getMatchColumns = (teamFilter: string): ColumnDef<Match, any>[] => [
@@ -201,16 +165,6 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   tournamentId 
 }) => {
   // Group matches by stage and round for visualization
-  const [groupedMatches, setGroupedMatches] = useState<{
-    [stageId: string]: {
-      stageName: string;
-      stageType: 'SWISS' | 'PLAYOFF' | 'FINAL';
-      rounds: {
-        [roundNumber: number]: Match[];
-      };
-    };
-  }>({});
-
   // State to track which tab is active
   const [activeStageId, setActiveStageId] = useState<string | null>(null);
   
@@ -220,14 +174,60 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   const [teamFilter, setTeamFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
+  const stageSummaries: StageSummary[] = useMemo(() => {
+    if (!matches.length) return [];
+
+    const grouped = new Map<string, StageSummary>();
+
+    matches.forEach((match) => {
+      const stageId = match.stage?.id || 'unknown';
+      const existing = grouped.get(stageId);
+
+      if (existing) {
+        existing.matches.push(match);
+        return;
+      }
+
+      grouped.set(stageId, {
+        stageId,
+        stageName: match.stage?.name || 'Unknown Stage',
+        stageType: match.stage?.type || 'UNKNOWN',
+        matches: [match],
+      });
+    });
+
+    return Array.from(grouped.values());
+  }, [matches]);
+
+  useEffect(() => {
+    if (!stageSummaries.length) {
+      setActiveStageId(null);
+      return;
+    }
+
+    if (!activeStageId || !stageSummaries.some((stage) => stage.stageId === activeStageId)) {
+      setActiveStageId(stageSummaries[0].stageId);
+    }
+  }, [activeStageId, stageSummaries]);
+
+  const activeStage = useMemo(
+    () => stageSummaries.find((stage) => stage.stageId === activeStageId) || stageSummaries[0] || null,
+    [activeStageId, stageSummaries]
+  );
+
+  const stageMatches = useMemo(() => {
+    if (activeStage) return activeStage.matches;
+    return matches;
+  }, [activeStage, matches]);
+
   // Prepare table data
   const tableData = useMemo(() => {
-    return matches.map(m => ({
+    return stageMatches.map(m => ({
       ...m,
       redAlliance: getTeams(m, 'RED').join(', '),
       blueAlliance: getTeams(m, 'BLUE').join(', ')
     }));
-  }, [matches]);
+  }, [stageMatches]);
 
   const columns = useMemo(() => getMatchColumns(teamFilter), [teamFilter]);
 
@@ -268,135 +268,22 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     }
   }, [teamFilter]);
 
-  useEffect(() => {
-    if (matches && matches.length > 0) {
-      const grouped: {
-        [stageId: string]: {
-          stageName: string;
-          stageType: 'SWISS' | 'PLAYOFF' | 'FINAL';
-          rounds: {
-            [roundNumber: number]: Match[];
-          };
-        };
-      } = {};
-      
-      // First, group matches by stage and round
-      matches.forEach(match => {
-        const stageId = match.stage?.id || 'unknown';
-        const stageName = match.stage?.name || 'Unknown Stage';
-        const stageType = match.stage?.type || 'PLAYOFF';
-        const roundNumber = match.round || 1;
-        
-        if (!grouped[stageId]) {
-          grouped[stageId] = {
-            stageName,
-            stageType,
-            rounds: {}
-          };
-        }
-        
-        if (!grouped[stageId].rounds[roundNumber]) {
-          grouped[stageId].rounds[roundNumber] = [];
-        }
-        
-        grouped[stageId].rounds[roundNumber].push(match);
-      });
-      
-      // Sort each round's matches by match number
-      Object.keys(grouped).forEach(stageId => {
-        Object.keys(grouped[stageId].rounds).forEach(roundNumber => {
-          grouped[stageId].rounds[Number(roundNumber)].sort((a, b) => {
-            return Number(a.matchNumber) - Number(b.matchNumber);
-          });
-        });
-      });
-      
-      setGroupedMatches(grouped);
-      
-      // Set the first stage as active if none is selected
-      if (!activeStageId && Object.keys(grouped).length > 0) {
-        setActiveStageId(Object.keys(grouped)[0]);
-      }
-    }
-  }, [matches, activeStageId]);
+  const shouldLoadBracket =
+    !!activeStage &&
+    activeStage.stageId !== 'unknown' &&
+    (activeStage.stageType === 'PLAYOFF' || activeStage.stageType === 'SWISS');
 
-  // Render a bracket visualization for elimination rounds
-  const renderEliminationBracket = (matches: Match[], stageType: string) => {
-    if (stageType !== 'PLAYOFF') return null;
-    // Group matches by round for the bracket
-    const roundMatches: {[key: number]: Match[]} = {};
-    matches.forEach(match => {
-      const round = match.round || 1;
-      if (!roundMatches[round]) roundMatches[round] = [];
-      roundMatches[round].push(match);
-    });
-    
-    const rounds = Object.keys(roundMatches).map(Number).sort((a, b) => b - a);
-    
-    // Calculate bracket size
-    const finalRound = rounds[0] || 1;
-    const bracketSize = Math.pow(2, finalRound);
-    
-    return (
-      <div className="overflow-x-auto">
-        <div className="flex space-x-8 p-4 min-w-max">
-          {rounds.map(roundNumber => (
-            <div key={roundNumber} className="flex flex-col space-y-4">
-              <div className="text-center font-bold">
-                {roundNumber === 1 ? 'Finals' : 
-                 roundNumber === 2 ? 'Semifinals' : 
-                 roundNumber === 3 ? 'Quarterfinals' : 
-                 `Round of ${Math.pow(2, roundNumber)}`}
-              </div>
-              <div className="flex flex-col space-y-8">
-                {roundMatches[roundNumber].map((match, idx) => {
-                  const spacingMultiplier = Math.pow(2, roundNumber - 1);
-                  return (
-                    <div 
-                      key={match.id} 
-                      className="relative"
-                      style={{ 
-                        marginTop: idx % 2 === 1 ? `${spacingMultiplier * 4}rem` : '0'
-                      }}
-                    >
-                      <div className="w-48 border border-gray-300 rounded shadow bg-white">
-                        <div className="p-2 border-b text-xs font-semibold bg-gray-50">
-                          Match {match.matchNumber} • {formatTime(match.scheduledTime)}
-                        </div>
-                        <div className={`p-2 border-b ${match.winningAlliance === 'RED' ? 'bg-red-50' : ''}`}>
-                          <div className="text-sm font-medium">
-                            {getTeams(match, 'RED')[0]} 
-                          </div>
-                          {match.redScore !== undefined && (
-                            <div className="text-xs text-right font-bold">{match.redScore}</div>
-                          )}
-                        </div>
-                        <div className={`p-2 ${match.winningAlliance === 'BLUE' ? 'bg-blue-50' : ''}`}>
-                          <div className="text-sm font-medium">
-                            {getTeams(match, 'BLUE')[0]}
-                          </div>
-                          {match.blueScore !== undefined && (
-                            <div className="text-xs text-right font-bold">{match.blueScore}</div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Draw connecting lines for brackets */}
-                      {roundNumber < finalRound && (
-                        <div className="absolute w-8 h-full -right-8 flex items-center justify-end">
-                          <div className="border-t border-gray-300 w-full"></div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
+  const {
+    normalizedBracket,
+    isLoading: bracketLoading,
+    error: bracketError,
+    errorMessage: bracketErrorMessage,
+    hasData: bracketHasData,
+    isEmpty: bracketEmpty,
+    data: bracketData,
+  } = useNormalizedStageBracket(shouldLoadBracket ? activeStage?.stageId : undefined, {
+    enabled: Boolean(shouldLoadBracket && activeStage?.stageId),
+  });
 
   return (
     <div className="flex flex-col h-full">
@@ -435,6 +322,52 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
 
       {/* Content Area */}
       <div className="flex-1 p-2 sm:p-4 lg:p-6 xl:p-8 overflow-auto bg-gradient-to-b from-gray-50 to-blue-50">
+        {stageSummaries.length > 1 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {stageSummaries.map((stage) => (
+              <button
+                key={stage.stageId}
+                onClick={() => setActiveStageId(stage.stageId)}
+                className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
+                  stage.stageId === activeStage?.stageId
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'
+                }`}
+                aria-pressed={stage.stageId === activeStage?.stageId}
+              >
+                {stage.stageName}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {shouldLoadBracket && (
+          <div className="mb-6">
+            <div className="bg-white border border-blue-100 rounded-xl shadow-sm p-4 sm:p-6">
+              {bracketLoading ? (
+                <div className="flex justify-center py-6">
+                  <div className="h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : bracketError ? (
+                <div className="text-sm text-red-600">
+                  {bracketErrorMessage || 'Unable to load bracket'}
+                </div>
+              ) : !bracketHasData || bracketEmpty || !normalizedBracket ? (
+                <div className="text-sm text-gray-600">
+                  Bracket data not available yet. Matches will appear here once generated.
+                </div>
+              ) : (
+                <BracketView
+                  normalizedBracket={normalizedBracket}
+                  stageName={activeStage?.stageName}
+                  stageType={activeStage?.stageType}
+                  generatedAt={bracketData?.generatedAt}
+                />
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Mobile Card View - Hidden on desktop */}
         <div className="block lg:hidden">
           {isLoading ? (

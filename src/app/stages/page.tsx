@@ -10,6 +10,7 @@ import { useUserTournamentPreferences, usePublicTournamentPreferences } from "@/
 import { useStage, useDeleteStage, useStagesByTournament } from "@/hooks/stages/use-stages";
 import { useMatchesByStage } from "@/hooks/matches/use-matches";
 import { useStageReadiness } from "@/hooks/stages/use-stage-advancement";
+import { useNormalizedStageBracket } from "@/hooks/stages/use-normalized-stage-bracket";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -54,6 +55,7 @@ import { PlusIcon, PencilIcon, TrashIcon, InfoIcon, CalendarIcon, ArrowLeftIcon,
 import { InlineAuditTrail } from '@/components/ui/audit-trail';
 import StageDialog from "./stage-dialog";
 import MatchSchedulerDialog from "./match-scheduler-dialog";
+import BracketView from "@/components/features/bracket/bracket-view";
 import EndStageDialog from "@/components/features/stages/end-stage-dialog";
 import DeleteMatchDialog from "@/components/features/stages/delete-match-dialog";
 import { TimeManagementDialog } from "@/components/dialogs/time-management-dialog";
@@ -115,6 +117,21 @@ export default function StagesPage() {
         : [],
     [stageMatches, selectedStageId]
   );
+
+  const shouldLoadBracket = useMemo(() =>
+    Boolean(selectedStageId && (stageDetails?.type === "PLAYOFF" || stageDetails?.type === "SWISS")),
+    [selectedStageId, stageDetails?.type]
+  );
+
+  const {
+    normalizedBracket,
+    isLoading: bracketLoading,
+    error: bracketError,
+    errorMessage: bracketErrorMessage,
+    isEmpty: bracketEmpty,
+    data: bracketData,
+    hasData: bracketHasData,
+  } = useNormalizedStageBracket(selectedStageId, { enabled: shouldLoadBracket });
 
   // Check if stage is ready for advancement using backend API
   const {
@@ -589,6 +606,46 @@ export default function StagesPage() {
               </div>
             </CardContent>
           </Card>
+
+          {(stageDetails?.type === 'PLAYOFF' || stageDetails?.type === 'SWISS') && (
+            <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
+              <CardHeader className="p-4 sm:p-6 pb-0 sm:pb-2">
+                <div className="space-y-1">
+                  <CardTitle className="text-lg sm:text-xl text-gray-900">
+                    {stageDetails.type === 'PLAYOFF' ? 'Playoff Bracket' : 'Swiss Bracket'}
+                  </CardTitle>
+                  <CardDescription className="text-sm sm:text-base text-gray-600">
+                    {stageDetails.type === 'PLAYOFF'
+                      ? 'Track advancing alliances as matches complete.'
+                      : 'See how teams flow between record buckets each round.'}
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6 pt-4">
+                {bracketLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : bracketError ? (
+                  <Alert variant="destructive">
+                    <AlertTitle>Unable to load bracket</AlertTitle>
+                    <AlertDescription>{bracketErrorMessage || 'Please try again later.'}</AlertDescription>
+                  </Alert>
+                ) : !bracketHasData || !normalizedBracket || bracketEmpty ? (
+                  <div className="border border-dashed border-gray-200 rounded-xl px-4 py-8 text-center text-gray-600 bg-gray-50">
+                    No bracket data yet. Generate matches to visualize the bracket structure.
+                  </div>
+                ) : (
+                  <BracketView
+                    normalizedBracket={normalizedBracket}
+                    stageName={stageDetails.name}
+                    stageType={stageDetails.type}
+                    generatedAt={bracketData?.generatedAt}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Stage Readiness Status */}
           {!readinessLoading && stageReadiness && (
