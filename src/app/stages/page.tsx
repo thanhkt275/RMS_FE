@@ -641,6 +641,8 @@ export default function StagesPage() {
                     stageName={stageDetails.name}
                     stageType={stageDetails.type}
                     generatedAt={bracketData?.generatedAt}
+                    teamsPerAlliance={bracketData?.teamsPerAlliance}
+                    rawBracket={bracketData}
                   />
                 )}
               </CardContent>

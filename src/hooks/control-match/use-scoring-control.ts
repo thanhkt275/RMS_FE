@@ -6,7 +6,6 @@ import { useScoringState } from '../scoring/use-scoring-state';
 import { usePersistence } from '../scoring/use-persistence';
 import { useUserActivity } from '../scoring/use-user-activity';
 import { useDataSync } from '../scoring/use-data-sync';
-import { convertScoreDetailsPayload } from '../scoring/utils/score-details';
 import {
   ScoringConfig,
   AllianceScoreDetails,
@@ -82,22 +81,23 @@ export function useScoringControl({
   const userActivityService = useUserActivity();
   
   // Data persistence
-  const { saveScores, matchScores, isLoading: isPersisting } = usePersistence({
+  const { saveScores, matchScores: persistedMatchScores } = usePersistence({
     selectedMatchId,
     tournamentId,
     selectedFieldId,
   });
   
   // Data synchronization
-  const { isLoadingScores } = useDataSync({
+  const { isLoadingScores, matchScores: syncedMatchScores } = useDataSync({
     selectedMatchId,
     stateService,
     isUserActive: userActivityService.isUserActive(),
+    autoSync: false,
   });
 
   // Queue for score updates during connection loss
   const [scoreUpdateQueue, setScoreUpdateQueue] = useState<ScoreData[]>([]);
-  const previousMatchIdRef = useRef<string | null>(null);
+  const lastSyncedMatchIdRef = useRef<string | null>(null);
 
   const hasScoringPermission =
     userRole === UserRole.ADMIN ||
@@ -162,31 +162,37 @@ export function useScoringControl({
     }
   }, [hasScoringPermission, unifiedWebSocket, scoreUpdateQueue]);
 
-  // Broadcast scores when match changes (but not when state changes)
+  // Populate scoring state when switching matches, without auto-broadcasting updates
   useEffect(() => {
-    if (matchScores && selectedMatchId && previousMatchIdRef.current !== selectedMatchId) {
-      previousMatchIdRef.current = selectedMatchId;
-      
-      // Use matchScores data instead of internal state to prevent loops
-      const scoreDetails = convertScoreDetailsPayload(matchScores.scoreDetails);
-
-      const scoreData: ScoreData = {
-        matchId: selectedMatchId,
-        tournamentId,
-        fieldId: selectedFieldId || undefined,
-        redAutoScore: matchScores.redAutoScore || 0,
-        redDriveScore: matchScores.redDriveScore || 0,
-        redTotalScore: matchScores.redTotalScore || 0,
-        blueAutoScore: matchScores.blueAutoScore || 0,
-        blueDriveScore: matchScores.blueDriveScore || 0,
-        blueTotalScore: matchScores.blueTotalScore || 0,
-        scoreDetails,
-      };
-      
-      console.log("📡 Broadcasting scores for NEW match:", selectedMatchId, scoreData);
-      unifiedWebSocket.sendScoreUpdate(scoreData);
+    if (!selectedMatchId) {
+      lastSyncedMatchIdRef.current = null;
+      stateService.reset();
+      return;
     }
-  }, [selectedMatchId, matchScores, tournamentId, selectedFieldId, unifiedWebSocket]);
+
+    if (syncedMatchScores === undefined) {
+      // Data still loading; wait until we know whether persisted scores exist
+      return;
+    }
+
+    if (lastSyncedMatchIdRef.current === selectedMatchId) {
+      return;
+    }
+
+    if (syncedMatchScores) {
+      console.log("🔄 Loading persisted scores into control panel:", {
+        matchId: selectedMatchId,
+        redTotal: syncedMatchScores.redTotalScore,
+        blueTotal: syncedMatchScores.blueTotalScore,
+      });
+      stateService.syncWithApiData(syncedMatchScores);
+    } else {
+      console.log("ℹ️ No persisted scores found for match. Resetting control panel state.", selectedMatchId);
+      stateService.reset();
+    }
+
+    lastSyncedMatchIdRef.current = selectedMatchId;
+  }, [selectedMatchId, syncedMatchScores, stateService]);
 
   const getAllianceDetails = useCallback(
     (alliance: 'red' | 'blue'): AllianceScoreDetails =>
@@ -256,11 +262,7 @@ export function useScoringControl({
     }
   }, [selectedMatchId, tournamentId, selectedFieldId, stateService, unifiedWebSocket, hasScoringPermission]);
 
-  useEffect(() => {
-    if (!hasScoringPermission || !selectedMatchId) return;
-    if (!userActivityService.isUserActive()) return;
-    handleSendRealtimeUpdate();
-  }, [hasScoringPermission, selectedMatchId, state.scoreDetails, handleSendRealtimeUpdate, userActivityService]);
+  // Manual updates only: no automatic broadcast on field edits
 
   // Save scores with real-time update
   const handleSaveScores = useCallback(async () => {
@@ -313,7 +315,7 @@ export function useScoringControl({
     sendRealtimeUpdate: handleSendRealtimeUpdate,
     saveScores: handleSaveScores,
     isLoadingScores,
-    matchScores,
+    matchScores: persistedMatchScores,
     hasScoringPermission,
   };
 }

@@ -6,11 +6,16 @@ interface UseDataSyncProps {
   selectedMatchId: string;
   stateService: IScoringStateService;
   isUserActive: boolean;
+  autoSync?: boolean;
 }
 
-export function useDataSync({ selectedMatchId, stateService, isUserActive }: UseDataSyncProps) {
+export function useDataSync({ selectedMatchId, stateService, isUserActive, autoSync = true }: UseDataSyncProps) {
   const { data: matchScores, isLoading } = useMatchScores(selectedMatchId || "");
   useEffect(() => {
+    if (!autoSync) {
+      return;
+    }
+
     // Skip sync if user is actively typing
     if (isUserActive) {
       console.log("🚫 Skipping ALL sync operations (user actively typing)");
@@ -42,7 +47,7 @@ export function useDataSync({ selectedMatchId, stateService, isUserActive }: Use
 
       stateService.syncWithApiData(matchScores);
     }
-  }, [matchScores, isLoading, selectedMatchId, isUserActive]); // Removed stateService dependency
+  }, [matchScores, isLoading, selectedMatchId, isUserActive, autoSync]); // Removed stateService dependency
 
   return {
     isLoadingScores: isLoading,

@@ -79,6 +79,10 @@ export default function Navbar() {
   // Get filtered navigation items based on user role
   const filteredNavigationItems = getFilteredNavigationItems(user?.role || null);
 
+  if (pathname?.startsWith("/audience-display")) {
+    return null;
+  }
+
   return (
     <nav className="bg-background border-b sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-4">

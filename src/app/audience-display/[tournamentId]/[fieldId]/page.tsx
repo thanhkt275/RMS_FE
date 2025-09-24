@@ -238,130 +238,204 @@ export default function LiveFieldDisplayPage() {
         // Announcements
         sendAnnouncement: (announcementData: any) =>
           sendAnnouncement(announcementData),
-        showTestAnnouncement: (message: string, seconds: number = 10, type: string = 'text', title?: string) => {
+        showTestAnnouncement: (
+          message: string,
+          seconds: number = 10,
+          type: string = "text",
+          title?: string
+        ) => {
           // Helper for testing announcements with countdown directly
           const announcementData = {
             type: type as any,
             content: message,
             title: title,
-            duration: seconds
+            duration: seconds,
           };
-          console.log('🧪 [Test] Creating test announcement:', announcementData);
+          console.log(
+            "🧪 [Test] Creating test announcement:",
+            announcementData
+          );
           setAnnouncement(announcementData);
           setShowAnnouncement(true);
           setAnnouncementCountdown(seconds); // Use the actual seconds parameter
-          
+
           // Auto-hide and switch to blank after duration
           setTimeout(() => {
             setShowAnnouncement(false);
-            setDisplaySettings(prev => ({
+            setDisplaySettings((prev) => ({
               ...prev,
               displayMode: "blank",
-              updatedAt: Date.now()
+              updatedAt: Date.now(),
             }));
           }, seconds * 1000);
         },
-        
+
         // Enhanced multimedia testing functions
-        testImageAnnouncement: (imageUrl?: string, title?: string, duration: number = 15) => {
-          const testUrl = imageUrl || 'https://picsum.photos/800/600?random=1';
+        testImageAnnouncement: (
+          imageUrl?: string,
+          title?: string,
+          duration: number = 15
+        ) => {
+          const testUrl = imageUrl || "https://picsum.photos/800/600?random=1";
           const announcementData = {
-            type: 'image' as const,
+            type: "image" as const,
             content: testUrl,
-            title: title || 'Test Image',
-            duration: duration
+            title: title || "Test Image",
+            duration: duration,
           };
-          console.log('🖼️ [Test] Testing image announcement:', announcementData);
+          console.log(
+            "🖼️ [Test] Testing image announcement:",
+            announcementData
+          );
           setAnnouncement(announcementData);
           setShowAnnouncement(true);
           setAnnouncementCountdown(duration);
           setTimeout(() => {
             setShowAnnouncement(false);
-            setDisplaySettings(prev => ({ ...prev, displayMode: "blank", updatedAt: Date.now() }));
+            setDisplaySettings((prev) => ({
+              ...prev,
+              displayMode: "blank",
+              updatedAt: Date.now(),
+            }));
           }, duration * 1000);
         },
-        
-        testVideoAnnouncement: (videoUrl?: string, title?: string, duration: number = 30) => {
-          const testUrl = videoUrl || 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4';
+
+        testVideoAnnouncement: (
+          videoUrl?: string,
+          title?: string,
+          duration: number = 30
+        ) => {
+          const testUrl =
+            videoUrl ||
+            "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4";
           const announcementData = {
-            type: 'video' as const,
+            type: "video" as const,
             content: testUrl,
-            title: title || 'Test Video',
-            duration: duration
+            title: title || "Test Video",
+            duration: duration,
           };
-          console.log('🎥 [Test] Testing video announcement:', announcementData);
+          console.log(
+            "🎥 [Test] Testing video announcement:",
+            announcementData
+          );
           setAnnouncement(announcementData);
           setShowAnnouncement(true);
           setAnnouncementCountdown(duration);
           setTimeout(() => {
             setShowAnnouncement(false);
-            setDisplaySettings(prev => ({ ...prev, displayMode: "blank", updatedAt: Date.now() }));
+            setDisplaySettings((prev) => ({
+              ...prev,
+              displayMode: "blank",
+              updatedAt: Date.now(),
+            }));
           }, duration * 1000);
         },
-        
-        testYouTubeAnnouncement: (youtubeUrl?: string, title?: string, duration: number = 60) => {
-          const testUrl = youtubeUrl || 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+
+        testYouTubeAnnouncement: (
+          youtubeUrl?: string,
+          title?: string,
+          duration: number = 60
+        ) => {
+          const testUrl =
+            youtubeUrl || "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
           const announcementData = {
-            type: 'youtube' as const,
+            type: "youtube" as const,
             content: testUrl,
-            title: title || 'Test YouTube Video',
-            duration: duration
+            title: title || "Test YouTube Video",
+            duration: duration,
           };
-          console.log('🎥 [Test] Testing YouTube announcement:', announcementData);
+          console.log(
+            "🎥 [Test] Testing YouTube announcement:",
+            announcementData
+          );
           setAnnouncement(announcementData);
           setShowAnnouncement(true);
           setAnnouncementCountdown(duration);
           setTimeout(() => {
             setShowAnnouncement(false);
-            setDisplaySettings(prev => ({ ...prev, displayMode: "blank", updatedAt: Date.now() }));
+            setDisplaySettings((prev) => ({
+              ...prev,
+              displayMode: "blank",
+              updatedAt: Date.now(),
+            }));
           }, duration * 1000);
         },
-        
-        testTextAnnouncement: (message?: string, title?: string, duration: number = 10) => {
-          const testMessage = message || 'This is a test text announcement with multimedia support!';
+
+        testTextAnnouncement: (
+          message?: string,
+          title?: string,
+          duration: number = 10
+        ) => {
+          const testMessage =
+            message ||
+            "This is a test text announcement with multimedia support!";
           const announcementData = {
-            type: 'text' as const,
+            type: "text" as const,
             content: testMessage,
-            title: title || 'Test Announcement',
-            duration: duration
+            title: title || "Test Announcement",
+            duration: duration,
           };
-          console.log('📝 [Test] Testing text announcement:', announcementData);
+          console.log("📝 [Test] Testing text announcement:", announcementData);
           setAnnouncement(announcementData);
           setShowAnnouncement(true);
           setAnnouncementCountdown(duration);
           setTimeout(() => {
             setShowAnnouncement(false);
-            setDisplaySettings(prev => ({ ...prev, displayMode: "blank", updatedAt: Date.now() }));
+            setDisplaySettings((prev) => ({
+              ...prev,
+              displayMode: "blank",
+              updatedAt: Date.now(),
+            }));
           }, duration * 1000);
         },
-        
+
         // Quick test suite
         runTestSuite: () => {
-          console.log('🧪 [Test Suite] Starting multimedia announcement test suite...');
-          
+          console.log(
+            "🧪 [Test Suite] Starting multimedia announcement test suite..."
+          );
+
           // Test text first
           setTimeout(() => {
-            (window as any).audienceDisplayWS.testTextAnnouncement('Testing text announcements...', 'Text Test', 3);
+            (window as any).audienceDisplayWS.testTextAnnouncement(
+              "Testing text announcements...",
+              "Text Test",
+              3
+            );
           }, 500);
-          
+
           // Test image
           setTimeout(() => {
-            (window as any).audienceDisplayWS.testImageAnnouncement('https://picsum.photos/800/600', 'Image Test', 3);
+            (window as any).audienceDisplayWS.testImageAnnouncement(
+              "https://picsum.photos/800/600",
+              "Image Test",
+              3
+            );
           }, 4000);
-          
+
           // Test video
           setTimeout(() => {
-            (window as any).audienceDisplayWS.testVideoAnnouncement('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'Video Test', 5);
+            (window as any).audienceDisplayWS.testVideoAnnouncement(
+              "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+              "Video Test",
+              5
+            );
           }, 8000);
-          
+
           // Test YouTube
           setTimeout(() => {
-            (window as any).audienceDisplayWS.testYouTubeAnnouncement('https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'YouTube Test', 5);
+            (window as any).audienceDisplayWS.testYouTubeAnnouncement(
+              "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+              "YouTube Test",
+              5
+            );
           }, 14000);
-          
-          console.log('🧪 [Test Suite] Test suite scheduled. Watch for announcements!');
+
+          console.log(
+            "🧪 [Test Suite] Test suite scheduled. Watch for announcements!"
+          );
         },
-        
+
         // Debug current announcement state
         getAnnouncementState: () => {
           return {
@@ -369,7 +443,7 @@ export default function LiveFieldDisplayPage() {
             showAnnouncement,
             announcementCountdown,
             isAnnouncementValid: !!(announcement && announcement.content),
-            overlayWillRender: !!(showAnnouncement && announcement?.content)
+            overlayWillRender: !!(showAnnouncement && announcement?.content),
           };
         },
 
@@ -402,16 +476,16 @@ export default function LiveFieldDisplayPage() {
   // ESC key functionality to manually close announcements
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && showAnnouncement) {
-        console.log('🔑 [ESC] Manually closing announcement');
+      if (event.key === "Escape" && showAnnouncement) {
+        console.log("🔑 [ESC] Manually closing announcement");
         setShowAnnouncement(false);
         setAnnouncementCountdown(null);
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [showAnnouncement, setShowAnnouncement, setAnnouncementCountdown]);
   // Log the rooms being joined for debugging
@@ -422,7 +496,7 @@ export default function LiveFieldDisplayPage() {
       );
       console.log(`[AudienceDisplay] WebSocket connected: ${unifiedConnected}`);
       console.log(`[AudienceDisplay] Connection status: ${connectionStatus}`);
-      
+
       // Log connection attempts
       if (!unifiedConnected) {
         console.log(`[AudienceDisplay] Waiting for WebSocket connection...`);
@@ -436,23 +510,47 @@ export default function LiveFieldDisplayPage() {
 
   // Sync local state with reactive data from the unified audience display hook
   useEffect(() => {
-    console.log('📺 [AudienceDisplay] Syncing unified match state:', unifiedMatchState);
-    console.log('📺 [AudienceDisplay] Unified match state teams - Red:', unifiedMatchState?.redTeams?.length || 0, 'Blue:', unifiedMatchState?.blueTeams?.length || 0);
-    
+    console.log(
+      "📺 [AudienceDisplay] Syncing unified match state:",
+      unifiedMatchState
+    );
+    console.log(
+      "📺 [AudienceDisplay] Unified match state teams - Red:",
+      unifiedMatchState?.redTeams?.length || 0,
+      "Blue:",
+      unifiedMatchState?.blueTeams?.length || 0
+    );
+
     if (unifiedMatchState?.matchId) {
       const isNewMatch = unifiedMatchState.matchId !== matchState.matchId;
-      console.log('📺 [AudienceDisplay] Is new match?:', isNewMatch, 'Current:', matchState.matchId, 'New:', unifiedMatchState.matchId);
-      
+      console.log(
+        "📺 [AudienceDisplay] Is new match?:",
+        isNewMatch,
+        "Current:",
+        matchState.matchId,
+        "New:",
+        unifiedMatchState.matchId
+      );
+
       // Check if we have complete team data
-      const hasRedTeams = unifiedMatchState.redTeams && unifiedMatchState.redTeams.length > 0;
-      const hasBlueTeams = unifiedMatchState.blueTeams && unifiedMatchState.blueTeams.length > 0;
-      
-      console.log('📺 [AudienceDisplay] Team data check - hasRedTeams:', hasRedTeams, 'hasBlueTeams:', hasBlueTeams);
-      
+      const hasRedTeams =
+        unifiedMatchState.redTeams && unifiedMatchState.redTeams.length > 0;
+      const hasBlueTeams =
+        unifiedMatchState.blueTeams && unifiedMatchState.blueTeams.length > 0;
+
+      console.log(
+        "📺 [AudienceDisplay] Team data check - hasRedTeams:",
+        hasRedTeams,
+        "hasBlueTeams:",
+        hasBlueTeams
+      );
+
       // For new matches, reset team data and update with new data if available
       // For same match, preserve existing team data when new data is not provided
       if (isNewMatch) {
-        console.log('📺 [AudienceDisplay] NEW MATCH - Resetting and updating state');
+        console.log(
+          "📺 [AudienceDisplay] NEW MATCH - Resetting and updating state"
+        );
         setMatchState({
           matchId: unifiedMatchState.matchId,
           matchNumber: unifiedMatchState.matchNumber,
@@ -460,16 +558,21 @@ export default function LiveFieldDisplayPage() {
           name: unifiedMatchState.name,
           currentPeriod: unifiedMatchState.currentPeriod,
           redTeams: hasRedTeams ? unifiedMatchState.redTeams : [],
-          blueTeams: hasBlueTeams ? unifiedMatchState.blueTeams : []
+          blueTeams: hasBlueTeams ? unifiedMatchState.blueTeams : [],
         });
-        
+
         // For new matches, if team data is missing, fetch immediately
         if (!hasRedTeams || !hasBlueTeams) {
-          console.log('📺 [AudienceDisplay] NEW MATCH with missing team data, fetching complete match details for:', unifiedMatchState.matchId);
+          console.log(
+            "📺 [AudienceDisplay] NEW MATCH with missing team data, fetching complete match details for:",
+            unifiedMatchState.matchId
+          );
           fetchAndSyncMatch(unifiedMatchState.matchId);
         }
       } else {
-        console.log('📺 [AudienceDisplay] SAME MATCH - Preserving existing data where appropriate');
+        console.log(
+          "📺 [AudienceDisplay] SAME MATCH - Preserving existing data where appropriate"
+        );
         setMatchState((prev: any) => ({
           ...prev,
           matchId: unifiedMatchState.matchId,
@@ -479,18 +582,27 @@ export default function LiveFieldDisplayPage() {
           currentPeriod: unifiedMatchState.currentPeriod || prev.currentPeriod,
           // Only update teams if we have new valid data, otherwise preserve existing
           redTeams: hasRedTeams ? unifiedMatchState.redTeams : prev.redTeams,
-          blueTeams: hasBlueTeams ? unifiedMatchState.blueTeams : prev.blueTeams
+          blueTeams: hasBlueTeams
+            ? unifiedMatchState.blueTeams
+            : prev.blueTeams,
         }));
-        
+
         // For same match, only fetch if we still don't have team data
-        if ((!hasRedTeams && (!matchState.redTeams || matchState.redTeams.length === 0)) ||
-            (!hasBlueTeams && (!matchState.blueTeams || matchState.blueTeams.length === 0))) {
-          console.log('📺 [AudienceDisplay] SAME MATCH still missing team data, fetching complete match details for:', unifiedMatchState.matchId);
+        if (
+          (!hasRedTeams &&
+            (!matchState.redTeams || matchState.redTeams.length === 0)) ||
+          (!hasBlueTeams &&
+            (!matchState.blueTeams || matchState.blueTeams.length === 0))
+        ) {
+          console.log(
+            "📺 [AudienceDisplay] SAME MATCH still missing team data, fetching complete match details for:",
+            unifiedMatchState.matchId
+          );
           fetchAndSyncMatch(unifiedMatchState.matchId);
         }
       }
     }
-    
+
     // Use the display settings from the hook directly
     setDisplaySettings(unifiedDisplaySettings);
   }, [unifiedMatchState, unifiedDisplaySettings]);
@@ -522,17 +634,20 @@ export default function LiveFieldDisplayPage() {
   // Helper to fetch and sync full match details and score
   async function fetchAndSyncMatch(matchId: string) {
     try {
-      console.log('🤼 [API Fallback] Fetching match details for:', matchId);
-      
+      console.log("🤼 [API Fallback] Fetching match details for:", matchId);
+
       // Fetch match metadata (teams, period, status, etc.)
       const matchDetails = await apiClient.get<any>(`/matches/${matchId}`);
-      console.log('🤼 [API Fallback] Raw match details received:', matchDetails);
-      console.log('🤼 [API Fallback] Match alliances:', matchDetails.alliances);
-      
+      console.log(
+        "🤼 [API Fallback] Raw match details received:",
+        matchDetails
+      );
+      console.log("🤼 [API Fallback] Match alliances:", matchDetails.alliances);
+
       // Extract team data from alliances
       let redTeams = [];
       let blueTeams = [];
-      
+
       if (matchDetails.alliances && Array.isArray(matchDetails.alliances)) {
         const redAlliance = matchDetails.alliances.find(
           (alliance: any) => alliance.color === "RED"
@@ -540,105 +655,113 @@ export default function LiveFieldDisplayPage() {
         const blueAlliance = matchDetails.alliances.find(
           (alliance: any) => alliance.color === "BLUE"
         );
-        
-        console.log('🤼 [API Fallback] Red alliance:', redAlliance);
-        console.log('🤼 [API Fallback] Blue alliance:', blueAlliance);
-        
+
+        console.log("🤼 [API Fallback] Red alliance:", redAlliance);
+        console.log("🤼 [API Fallback] Blue alliance:", blueAlliance);
+
         // Extract team numbers and format them like the WebSocket data
         if (redAlliance?.teamAlliances) {
           redTeams = redAlliance.teamAlliances.map((ta: any) => {
-            const originalTeamNumber = ta.team?.teamNumber || ta.team?.name || 'Unknown';
-            const teamName = ta.team?.name || 'Unknown Team';
-            
+            const originalTeamNumber =
+              ta.team?.teamNumber || ta.team?.name || "Unknown";
+            const teamName = ta.team?.name || "Unknown Team";
+
             // Improved team number extraction and processing
             const extractTeamNumber = (teamStr: string): string => {
               const str = String(teamStr);
-              
+
               // If it looks like a team identifier (e.g., "NIH00003"), return as-is
               if (/^[A-Z]+\d+$/.test(str)) {
                 return str;
               }
-              
+
               // If it's all numbers, clean up leading zeros but preserve the number
               if (/^\d+$/.test(str)) {
-                return str.replace(/^0+/, '') || str.slice(-1);
+                return str.replace(/^0+/, "") || str.slice(-1);
               }
-              
+
               // Extract trailing numbers (for cases like "Team 007")
               const match = str.match(/\d+$/);
               if (match) {
                 const numericPart = match[0];
-                return numericPart.replace(/^0+/, '') || numericPart.slice(-1);
+                return numericPart.replace(/^0+/, "") || numericPart.slice(-1);
               }
-              
+
               return str;
             };
-            
+
             const processedTeamNumber = extractTeamNumber(originalTeamNumber);
-            
+
             // Determine if we should separate teamNumber and name
-            const shouldSeparate = teamName !== 'Unknown Team' && 
-                                 teamName !== originalTeamNumber && 
-                                 !/^[A-Z]+\d+$/.test(teamName);
-            
+            const shouldSeparate =
+              teamName !== "Unknown Team" &&
+              teamName !== originalTeamNumber &&
+              !/^[A-Z]+\d+$/.test(teamName);
+
             return {
-              id: ta.team?.id || `${ta.team?.teamNumber || ta.team?.name}-${Math.random()}`,
-              name: shouldSeparate ? teamName : '',
+              id:
+                ta.team?.id ||
+                `${ta.team?.teamNumber || ta.team?.name}-${Math.random()}`,
+              name: shouldSeparate ? teamName : "",
               teamNumber: processedTeamNumber,
-              originalTeamNumber: String(originalTeamNumber)
+              originalTeamNumber: String(originalTeamNumber),
             };
           });
         }
-        
+
         if (blueAlliance?.teamAlliances) {
           blueTeams = blueAlliance.teamAlliances.map((ta: any) => {
-            const originalTeamNumber = ta.team?.teamNumber || ta.team?.name || 'Unknown';
-            const teamName = ta.team?.name || 'Unknown Team';
-            
+            const originalTeamNumber =
+              ta.team?.teamNumber || ta.team?.name || "Unknown";
+            const teamName = ta.team?.name || "Unknown Team";
+
             // Improved team number extraction and processing
             const extractTeamNumber = (teamStr: string): string => {
               const str = String(teamStr);
-              
+
               // If it looks like a team identifier (e.g., "NIH00003"), return as-is
               if (/^[A-Z]+\d+$/.test(str)) {
                 return str;
               }
-              
+
               // If it's all numbers, clean up leading zeros but preserve the number
               if (/^\d+$/.test(str)) {
-                return str.replace(/^0+/, '') || str.slice(-1);
+                return str.replace(/^0+/, "") || str.slice(-1);
               }
-              
+
               // Extract trailing numbers (for cases like "Team 007")
               const match = str.match(/\d+$/);
               if (match) {
                 const numericPart = match[0];
-                return numericPart.replace(/^0+/, '') || numericPart.slice(-1);
+                return numericPart.replace(/^0+/, "") || numericPart.slice(-1);
               }
-              
+
               return str;
             };
-            
+
             const processedTeamNumber = extractTeamNumber(originalTeamNumber);
-            
+
             // Determine if we should separate teamNumber and name
-            const shouldSeparate = teamName !== 'Unknown Team' && 
-                                 teamName !== originalTeamNumber && 
-                                 !/^[A-Z]+\d+$/.test(teamName);
-            
+            const shouldSeparate =
+              teamName !== "Unknown Team" &&
+              teamName !== originalTeamNumber &&
+              !/^[A-Z]+\d+$/.test(teamName);
+
             return {
-              id: ta.team?.id || `${ta.team?.teamNumber || ta.team?.name}-${Math.random()}`,
-              name: shouldSeparate ? teamName : '',
+              id:
+                ta.team?.id ||
+                `${ta.team?.teamNumber || ta.team?.name}-${Math.random()}`,
+              name: shouldSeparate ? teamName : "",
               teamNumber: processedTeamNumber,
-              originalTeamNumber: String(originalTeamNumber)
+              originalTeamNumber: String(originalTeamNumber),
             };
           });
         }
       }
-      
-      console.log('🤼 [API Fallback] Extracted red teams:', redTeams);
-      console.log('🤼 [API Fallback] Extracted blue teams:', blueTeams);
-      
+
+      console.log("🤼 [API Fallback] Extracted red teams:", redTeams);
+      console.log("🤼 [API Fallback] Extracted blue teams:", blueTeams);
+
       setMatchState((prev: any) => ({
         ...prev,
         matchId: matchDetails.id,
@@ -649,16 +772,21 @@ export default function LiveFieldDisplayPage() {
         redTeams: redTeams.length > 0 ? redTeams : prev.redTeams,
         blueTeams: blueTeams.length > 0 ? blueTeams : prev.blueTeams,
       }));
-      
+
       // Fetch score breakdown
       const scoreDetails = await apiClient.get(
         `/match-scores/match/${matchId}`
       );
       setScore(scoreDetails);
-      
-      console.log('🤼 [API Fallback] Successfully updated match state with team counts - Red:', redTeams.length, 'Blue:', blueTeams.length);
+
+      console.log(
+        "🤼 [API Fallback] Successfully updated match state with team counts - Red:",
+        redTeams.length,
+        "Blue:",
+        blueTeams.length
+      );
     } catch (error) {
-      console.error('🤼 [API Fallback] Error syncing match data:', error);
+      console.error("🤼 [API Fallback] Error syncing match data:", error);
     }
   }
 
@@ -724,15 +852,15 @@ export default function LiveFieldDisplayPage() {
           fieldId,
           data
         );
-        
+
         // Ensure the timer data has the correct structure for local countdown
         const timerData = {
           ...data,
           isRunning: true,
           startedAt: data.startedAt || Date.now(),
-          remaining: data.remaining || data.duration || 120000
+          remaining: data.remaining || data.duration || 120000,
         };
-        
+
         setTimer(timerData);
         console.log("🟢 [Timer Start] Set timer state:", timerData);
       }
@@ -746,14 +874,14 @@ export default function LiveFieldDisplayPage() {
           fieldId,
           data
         );
-        
+
         // Ensure the timer is marked as NOT running for pause events
         const timerData = {
           ...data,
           isRunning: false,
-          pausedAt: data.pausedAt || Date.now()
+          pausedAt: data.pausedAt || Date.now(),
         };
-        
+
         setTimer(timerData);
         console.log("🟡 [Timer Pause] Set timer state:", timerData);
       }
@@ -767,14 +895,14 @@ export default function LiveFieldDisplayPage() {
           fieldId,
           data
         );
-        
+
         // Ensure the timer is marked as NOT running for reset events
         const timerData = {
           ...data,
           isRunning: false,
-          remaining: data.remaining || data.duration || 120000
+          remaining: data.remaining || data.duration || 120000,
         };
-        
+
         setTimer(timerData);
         console.log("🔴 [Timer Reset] Set timer state:", timerData);
       }
@@ -854,11 +982,20 @@ export default function LiveFieldDisplayPage() {
       title?: string;
     }>("announcement", (data) => {
       console.log("🔔 [Unified WebSocket] Announcement received:", data);
-      console.log("🔔 [Announcement Debug] Raw data stringified:", JSON.stringify(data, null, 2));
-      console.log("🔔 [Announcement Debug] Data keys:", Object.keys(data || {}));
+      console.log(
+        "🔔 [Announcement Debug] Raw data stringified:",
+        JSON.stringify(data, null, 2)
+      );
+      console.log(
+        "🔔 [Announcement Debug] Data keys:",
+        Object.keys(data || {})
+      );
       console.log("🔔 [Announcement Debug] Data.type:", data.type);
       console.log("🔔 [Announcement Debug] Data.content:", data.content);
-      console.log("🔔 [Announcement Debug] Data.announcementData:", data.announcementData);
+      console.log(
+        "🔔 [Announcement Debug] Data.announcementData:",
+        data.announcementData
+      );
       console.log("🔔 [Announcement Debug] Data.message:", data.message);
 
       // Show if it's a tournament-wide announcement or specific to this field
@@ -866,115 +1003,172 @@ export default function LiveFieldDisplayPage() {
         console.log(
           "✅ [Unified WebSocket] Processing announcement for field:",
           fieldId,
-          "Tournament:", data.tournamentId
+          "Tournament:",
+          data.tournamentId
         );
-        
+
         let announcementData;
-        
+
         // ENHANCED FORMAT DETECTION WITH PRIORITY ORDER
         // Priority 1: Check for nested announcementData property
-        if (data.announcementData && typeof data.announcementData === 'object') {
-          console.log("📦 [Format Detection] Found nested announcementData property:", data.announcementData);
+        if (
+          data.announcementData &&
+          typeof data.announcementData === "object"
+        ) {
+          console.log(
+            "📦 [Format Detection] Found nested announcementData property:",
+            data.announcementData
+          );
           announcementData = data.announcementData;
         }
         // Priority 2: Check for root-level AnnouncementData format (type + content)
         // This handles the case where announcement fields are mixed with routing fields
         else if (data.type && data.content !== undefined) {
-          console.log("📄 [Format Detection] Found root-level AnnouncementData format (mixed with routing fields)");
+          console.log(
+            "📄 [Format Detection] Found root-level AnnouncementData format (mixed with routing fields)"
+          );
           // Extract only announcement-specific fields, ignore routing fields
           announcementData = {
             type: data.type,
             content: data.content,
             title: data.title,
-            duration: data.duration
+            duration: data.duration,
           };
         }
         // Priority 3: Check for legacy message format
         else if (data.message !== undefined) {
-          console.log("📜 [Format Detection] Found legacy message format:", data.message);
+          console.log(
+            "📜 [Format Detection] Found legacy message format:",
+            data.message
+          );
           announcementData = {
-            type: 'text' as const,
+            type: "text" as const,
             content: data.message,
             title: undefined,
-            duration: Math.floor((data.duration || 10000) / 1000)
+            duration: Math.floor((data.duration || 10000) / 1000),
           };
         }
         // Priority 4: Check if data itself IS the announcement (direct object) - exclude routing objects
-        else if (data && typeof data === 'object' && !data.fieldId && !data.tournamentId && Object.keys(data).length > 0) {
-          console.log("🎯 [Format Detection] Data appears to be direct AnnouncementData object:", data);
+        else if (
+          data &&
+          typeof data === "object" &&
+          !data.fieldId &&
+          !data.tournamentId &&
+          Object.keys(data).length > 0
+        ) {
+          console.log(
+            "🎯 [Format Detection] Data appears to be direct AnnouncementData object:",
+            data
+          );
           announcementData = data;
-        }
-        else {
-          console.error("❌ [Format Detection] Unknown announcement format, unable to process:", {
-            dataType: typeof data,
-            hasType: 'type' in data,
-            hasContent: 'content' in data,
-            hasMessage: 'message' in data,
-            hasAnnouncementData: 'announcementData' in data,
-            hasTournamentId: 'tournamentId' in data,
-            hasFieldId: 'fieldId' in data,
-            keys: Object.keys(data || {})
-          });
+        } else {
+          console.error(
+            "❌ [Format Detection] Unknown announcement format, unable to process:",
+            {
+              dataType: typeof data,
+              hasType: "type" in data,
+              hasContent: "content" in data,
+              hasMessage: "message" in data,
+              hasAnnouncementData: "announcementData" in data,
+              hasTournamentId: "tournamentId" in data,
+              hasFieldId: "fieldId" in data,
+              keys: Object.keys(data || {}),
+            }
+          );
           return;
         }
-        
+
         // VALIDATION AND SANITIZATION
-        if (!announcementData || typeof announcementData !== 'object') {
-          console.error("❌ [Validation] Invalid announcement data structure:", announcementData);
+        if (!announcementData || typeof announcementData !== "object") {
+          console.error(
+            "❌ [Validation] Invalid announcement data structure:",
+            announcementData
+          );
           return;
         }
-        
+
         // Ensure type is valid
-        const validTypes = ['text', 'image', 'video', 'youtube'];
-        if (!announcementData.type || !validTypes.includes(announcementData.type)) {
-          console.warn("⚠️ [Validation] Invalid or missing type, defaulting to 'text':", announcementData.type);
-          announcementData.type = 'text';
+        const validTypes = ["text", "image", "video", "youtube"];
+        if (
+          !announcementData.type ||
+          !validTypes.includes(announcementData.type)
+        ) {
+          console.warn(
+            "⚠️ [Validation] Invalid or missing type, defaulting to 'text':",
+            announcementData.type
+          );
+          announcementData.type = "text";
         }
-        
+
         // Ensure content exists
-        if (!announcementData.content && announcementData.content !== '') {
-          console.error("❌ [Validation] Missing content field:", announcementData);
+        if (!announcementData.content && announcementData.content !== "") {
+          console.error(
+            "❌ [Validation] Missing content field:",
+            announcementData
+          );
           return;
         }
-        
+
         // Ensure duration is a number
-        if (announcementData.duration && typeof announcementData.duration !== 'number') {
-          console.warn("⚠️ [Validation] Converting duration to number:", announcementData.duration);
+        if (
+          announcementData.duration &&
+          typeof announcementData.duration !== "number"
+        ) {
+          console.warn(
+            "⚠️ [Validation] Converting duration to number:",
+            announcementData.duration
+          );
           announcementData.duration = parseInt(announcementData.duration) || 10;
         }
-        
+
         console.log("✅ [Final Processing] Processed announcement data:", {
           type: announcementData.type,
-          content: announcementData.content?.substring(0, 100) + (announcementData.content?.length > 100 ? '...' : ''),
+          content:
+            announcementData.content?.substring(0, 100) +
+            (announcementData.content?.length > 100 ? "..." : ""),
           title: announcementData.title,
           duration: announcementData.duration,
-          contentLength: announcementData.content?.length
+          contentLength: announcementData.content?.length,
         });
-        
+
         // APPLY TO STATE
         setAnnouncement(announcementData);
         setShowAnnouncement(true);
-        
+
         // Set the countdown to match the actual duration
         const actualDuration = announcementData.duration || 10;
         setAnnouncementCountdown(actualDuration);
-        console.log("⏰ [Duration] Using announcement duration:", actualDuration, "seconds");
+        console.log(
+          "⏰ [Duration] Using announcement duration:",
+          actualDuration,
+          "seconds"
+        );
 
         // Calculate display duration in milliseconds
         const displayDuration = actualDuration * 1000;
-        console.log("⏰ [Timer] Setting display duration:", displayDuration, "ms");
+        console.log(
+          "⏰ [Timer] Setting display duration:",
+          displayDuration,
+          "ms"
+        );
 
         // Auto-hide announcement after duration and switch to blank display
         const timerId = setTimeout(() => {
-          console.log("⏰ [Timer] Auto-hiding announcement after", actualDuration, "seconds");
+          console.log(
+            "⏰ [Timer] Auto-hiding announcement after",
+            actualDuration,
+            "seconds"
+          );
           setShowAnnouncement(false);
-          
+
           // Switch to blank display mode after announcement ends
-          console.log("📺 [Display] Switching to blank display after announcement");
-          setDisplaySettings(prev => ({
+          console.log(
+            "📺 [Display] Switching to blank display after announcement"
+          );
+          setDisplaySettings((prev) => ({
             ...prev,
             displayMode: "blank",
-            updatedAt: Date.now()
+            updatedAt: Date.now(),
           }));
         }, displayDuration);
 
@@ -987,7 +1181,7 @@ export default function LiveFieldDisplayPage() {
         console.log("🚫 [Filter] Ignoring announcement - not for this field:", {
           announcementFieldId: data.fieldId,
           currentFieldId: fieldId,
-          match: data.fieldId === fieldId
+          match: data.fieldId === fieldId,
         });
       }
     });
@@ -1014,44 +1208,52 @@ export default function LiveFieldDisplayPage() {
 
   // Local countdown for smooth timer display on audience
   useEffect(() => {
-    console.log('🕒 [Timer State Monitor] Timer state changed:', {
+    console.log("🕒 [Timer State Monitor] Timer state changed:", {
       isRunning: timer?.isRunning,
       remaining: timer?.remaining,
-      timer: timer
+      timer: timer,
     });
-    
+
     if (!timer?.isRunning) {
-      console.log('⏸️ [Timer State Monitor] Timer is stopped');
+      console.log("⏸️ [Timer State Monitor] Timer is stopped");
       return;
     }
 
-    console.log('✅ [Timer State Monitor] Timer is running - starting local countdown');
-    
+    console.log(
+      "✅ [Timer State Monitor] Timer is running - starting local countdown"
+    );
+
     // Create local countdown for smooth display
     const interval = setInterval(() => {
-      setTimer((prevTimer:any) => {
+      setTimer((prevTimer: any) => {
         if (!prevTimer || !prevTimer.isRunning) {
           return prevTimer;
         }
-        
+
         const newRemaining = Math.max(0, prevTimer.remaining - 1000);
-        
-        console.log('🕰️ [Local Countdown] Updated timer:', {
+
+        console.log("🕰️ [Local Countdown] Updated timer:", {
           previous: prevTimer.remaining,
           new: newRemaining,
-          formatted: `${Math.floor(newRemaining / 60000)}:${Math.floor((newRemaining % 60000) / 1000).toString().padStart(2, '0')}`
+          formatted: `${Math.floor(newRemaining / 60000)}:${Math.floor(
+            (newRemaining % 60000) / 1000
+          )
+            .toString()
+            .padStart(2, "0")}`,
         });
-        
+
         return {
           ...prevTimer,
-          remaining: newRemaining
+          remaining: newRemaining,
         };
       });
     }, 1000); // Update every second
 
     return () => {
       clearInterval(interval);
-      console.log('🧹 [Timer State Monitor] Cleaned up local countdown interval');
+      console.log(
+        "🧹 [Timer State Monitor] Cleaned up local countdown interval"
+      );
     };
   }, [timer?.isRunning]);
 
@@ -1101,22 +1303,26 @@ export default function LiveFieldDisplayPage() {
       return;
     }
 
-    console.log('🔢 [Countdown] Starting countdown from', announcementCountdown, 'seconds');
-    
+    console.log(
+      "🔢 [Countdown] Starting countdown from",
+      announcementCountdown,
+      "seconds"
+    );
+
     const intervalId = setInterval(() => {
       setAnnouncementCountdown((prev) => {
         if (prev === null || prev <= 1) {
-          console.log('🔢 [Countdown] Countdown finished');
+          console.log("🔢 [Countdown] Countdown finished");
           return null;
         }
         const newValue = prev - 1;
-        console.log('🔢 [Countdown] Countdown:', newValue, 'seconds remaining');
+        console.log("🔢 [Countdown] Countdown:", newValue, "seconds remaining");
         return newValue;
       });
     }, 1000);
 
     return () => {
-      console.log('🧹 [Countdown] Cleaning up countdown interval');
+      console.log("🧹 [Countdown] Cleaning up countdown interval");
       clearInterval(intervalId);
     };
   }, [showAnnouncement, announcement, announcementCountdown]);
@@ -1270,8 +1476,13 @@ export default function LiveFieldDisplayPage() {
     switch (displaySettings.displayMode) {
       case "teams":
         return (
-          <div key={contentKey}>
-            <TeamsDisplay teams={teams} isLoading={isLoadingTeams} />
+          <div
+            key={contentKey}
+            className="flex h-full w-full flex-1 flex-col min-h-0"
+          >
+            <div className="flex-1">
+              <TeamsDisplay teams={teams} isLoading={isLoadingTeams} />
+            </div>
             <DebugInfo />
           </div>
         );
@@ -1283,30 +1494,43 @@ export default function LiveFieldDisplayPage() {
           scheduledTime: m.scheduledTime ?? "",
         }));
         return (
-          <div key={contentKey}>
-            <ScheduleDisplay
-              tournamentId={tournamentId}
-              matches={safeMatches}
-              isLoading={isLoadingMatches}
-            />
+          <div
+            key={contentKey}
+            className="flex h-full w-full flex-1 flex-col min-h-0"
+          >
+            <div className="flex-1 overflow-hidden">
+              <ScheduleDisplay
+                tournamentId={tournamentId}
+                matches={safeMatches}
+                isLoading={isLoadingMatches}
+              />
+            </div>
             <DebugInfo />
           </div>
         );
 
       case "rankings":
         return (
-          <div key={contentKey} className="p-0 md:p-4">
-            <SwissRankingsDisplay
-              rankings={Array.isArray(rankings) ? rankings : []}
-              isLoading={isLoadingRankings}
-            />
+          <div
+            key={contentKey}
+            className="flex h-full w-full flex-1 flex-col min-h-0"
+          >
+            <div className="flex-1 overflow-hidden p-0 md:p-4">
+              <SwissRankingsDisplay
+                rankings={Array.isArray(rankings) ? rankings : []}
+                isLoading={isLoadingRankings}
+              />
+            </div>
             <DebugInfo />
           </div>
         );
 
       case "blank":
         return (
-          <div key={contentKey} className="min-h-screen">
+          <div
+            key={contentKey}
+            className="flex h-full w-full flex-1 flex-col min-h-0"
+          >
             <DebugInfo />
           </div>
         );
@@ -1354,15 +1578,25 @@ export default function LiveFieldDisplayPage() {
           currentMatchId,
         });
 
+        const safeMatchesDashboard = matches.map((m: any) => ({
+          ...m,
+          scheduledTime: m.scheduledTime ?? "",
+        }));
+
         // Display match information with prioritized real-time scores
         return (
-          <div key={contentKey}>
-            <MatchDisplay
-              matchState={matchState}
-              timer={timer}
-              score={displayScore}
-            />
-            <DebugInfo />
+          <div
+            key={contentKey}
+            className="flex h-full w-full flex-1 flex-col min-h-0"
+          >
+            <div className="flex-1">
+              <MatchDisplay
+                matchState={matchState}
+                timer={timer}
+                score={displayScore}
+              />
+            </div>
+            {/* <DebugInfo /> */}
           </div>
         );
     }
@@ -1385,7 +1619,7 @@ export default function LiveFieldDisplayPage() {
 
   // --- UI Layout ---
   return (
-    <div className="audience-display-container min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="audience-display-container flex min-h-screen w-full flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Full-screen Announcement Overlay - Hides everything when active */}
       {showAnnouncement && (
         <AnnouncementOverlay
@@ -1394,7 +1628,7 @@ export default function LiveFieldDisplayPage() {
           announcementCountdown={announcementCountdown}
         />
       )}
-      
+
       {/* Main Layout - Hidden when announcement is showing for true full-screen experience */}
       {!showAnnouncement && (
         <>
@@ -1407,11 +1641,11 @@ export default function LiveFieldDisplayPage() {
             fallbackMode={fallbackMode}
             source={source}
           />
-          
+
           {/* Header with tournament and field info */}
-          <header className="mb-3 sm:mb-6 px-2 sm:px-6 pt-2 sm:pt-4 lg:pt-8">
-            <div className="container mx-auto flex flex-col lg:flex-row items-center justify-between gap-2 sm:gap-4">
-              <div className="text-center lg:text-left flex-1 min-w-0">
+          <header className="mb-3 w-full px-3 pt-2 sm:mb-6 sm:px-6 sm:pt-4 lg:pt-8">
+            <div className="flex w-full flex-col items-center gap-2 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex min-w-0 flex-1 flex-col items-center text-center lg:items-start lg:text-left">
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-blue-900 drop-shadow-lg mb-1 truncate">
                   {tournament?.name || "Tournament"}
                 </h1>
@@ -1427,7 +1661,7 @@ export default function LiveFieldDisplayPage() {
                     : "Tournament dates not available"}
                 </div>
               </div>
-              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 flex-shrink-0">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-4">
                 {matchState.status && (
                   <div
                     className={`
@@ -1477,9 +1711,9 @@ export default function LiveFieldDisplayPage() {
               </div>
             </div>
           </header>
-          
+
           {/* Main content area */}
-          <main className="container mx-auto bg-white border-2 border-gray-200 rounded-2xl shadow-2xl p-2 sm:p-4 lg:p-8 xl:p-10 mt-1 sm:mt-2 mb-4 sm:mb-8">
+          <main className="flex w-full flex-1 flex-col px-0 pb-4 sm:px-2 sm:pb-6 lg:px-4 lg:pb-8 min-h-0">
             {connectionError ? (
               <div className="text-center text-red-800 bg-red-50 border border-red-200 rounded-xl p-4 sm:p-6 lg:p-8 font-semibold text-sm sm:text-base lg:text-lg">
                 {connectionError}
@@ -1493,9 +1727,9 @@ export default function LiveFieldDisplayPage() {
               renderContent()
             )}
           </main>
-          
+
           {/* Footer */}
-          <footer className="container mx-auto mt-4 sm:mt-8 text-center text-xs sm:text-sm text-gray-600 pb-3 sm:pb-6">
+          <footer className="mt-4 w-full pb-3 text-center text-xs text-gray-600 sm:mt-8 sm:pb-6 sm:text-sm">
             <p>© Robotics Tournament Management System</p>
           </footer>
         </>

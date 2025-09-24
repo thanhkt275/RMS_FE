@@ -362,6 +362,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
                   stageName={activeStage?.stageName}
                   stageType={activeStage?.stageType}
                   generatedAt={bracketData?.generatedAt}
+                  teamsPerAlliance={bracketData?.teamsPerAlliance}
+                  rawBracket={bracketData}
                 />
               )}
             </div>

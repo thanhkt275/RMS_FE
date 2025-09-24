@@ -32,8 +32,11 @@ export default function MatchDetailsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === UserRole.ADMIN;
   
-  const { data: match, isLoading, error } = useMatch(id as string);
-  const { data: matchScores, isLoading: scoresLoading } = useMatchScores(id as string);
+  // Convert id to string safely
+  const matchId = Array.isArray(id) ? id[0] : id as string;
+  
+  const { data: match, isLoading, error } = useMatch(matchId);
+  const { data: matchScores, isLoading: scoresLoading } = useMatchScores(matchId);
   const { data: userTeams = [] } = useUserTeams();
   const [activeTab, setActiveTab] = useState("overview");
 

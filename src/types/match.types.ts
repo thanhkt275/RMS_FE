@@ -100,6 +100,7 @@ export interface StageBracketResponse {
   stageName: string;
   tournamentId: string;
   stageType: string;
+  teamsPerAlliance: number;
   generatedAt: string;
   matches: BracketMatch[];
   structure: BracketStructure;

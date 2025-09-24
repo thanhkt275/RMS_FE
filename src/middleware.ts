@@ -441,6 +441,12 @@ const jwtVerifier = new JWTVerifier(jwtSecret);
 const routeProtector = new EnhancedRouteProtectorService();
 const securityLogger = new SecurityLogger();
 
+const middlewareMode =
+  process.env.AUTH_MIDDLEWARE_MODE?.trim().toLowerCase() || "auto";
+const shouldBypassCookieCheck =
+  middlewareMode === "client" ||
+  (middlewareMode === "auto" && process.env.NODE_ENV === "production");
+
 /**
  * Enhanced RBAC Middleware Function
  *
@@ -467,11 +473,13 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
   console.log("[Middleware Debug] Route is protected:", pathname);
 
-  // For production cross-domain scenarios, we can't reliably check authentication in middleware
-  // Instead, let the protected pages handle authentication checks on the client side
-  if (process.env.NODE_ENV === "production") {
+  // Allow optional client-side authentication strategy for cross-domain setups
+  if (shouldBypassCookieCheck) {
     console.log(
-      "[Middleware Debug] Production mode - allowing access, authentication will be checked client-side"
+      `[Middleware Debug] Bypassing cookie check (mode:${middlewareMode}, env:${process.env.NODE_ENV})`
+    );
+    console.log(
+      "[Middleware Debug] Authentication will be verified by client-side logic"
     );
     return NextResponse.next();
   }

@@ -102,6 +102,9 @@ interface AllianceRowProps {
 
 const AllianceRow = ({ alliance, isWinner, labelClass }: AllianceRowProps) => {
   const score = getAllianceScore(alliance);
+  const allianceTeams = [...(alliance.teamAlliances ?? [])].sort(
+    (a, b) => (a.stationPosition ?? 0) - (b.stationPosition ?? 0)
+  );
 
   return (
     <div
@@ -123,28 +126,35 @@ const AllianceRow = ({ alliance, isWinner, labelClass }: AllianceRowProps) => {
           )}
         </div>
         <ul className="text-sm font-medium text-gray-900 space-y-1">
-          {alliance.teamAlliances?.map((team) => (
-            <li
-              key={team.id}
-              className="flex items-center gap-2"
-            >
-              <span className="inline-flex items-center gap-2">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold text-gray-600">
-                  {team.teamNumber?.slice(-2) || team.teamName?.[0] || "?"}
+          {allianceTeams.length > 0 ? (
+            allianceTeams.map((team) => (
+              <li
+                key={team.id}
+                className="flex flex-wrap items-center gap-2"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
+                    Slot {team.stationPosition ?? '?'}
+                  </span>
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-50 text-[10px] font-semibold text-blue-700">
+                    {team.teamNumber?.slice(-2) || team.teamName?.[0] || "?"}
+                  </span>
+                  <span className="truncate">
+                    {team.teamNumber ? `#${team.teamNumber}` : null}
+                    {team.teamNumber && team.teamName ? " • " : null}
+                    {team.teamName}
+                  </span>
                 </span>
-                <span className="truncate">
-                  {team.teamNumber ? `#${team.teamNumber}` : null}
-                  {team.teamNumber && team.teamName ? " • " : null}
-                  {team.teamName}
-                </span>
-              </span>
-              {team.isSurrogate && (
-                <span className="text-[10px] font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
-                  Surrogate
-                </span>
-              )}
-            </li>
-          )) || <li className="text-sm text-gray-500">Teams TBA</li>}
+                {team.isSurrogate && (
+                  <span className="text-[10px] font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
+                    Surrogate
+                  </span>
+                )}
+              </li>
+            ))
+          ) : (
+            <li className="text-sm text-gray-500">Teams TBA</li>
+          )}
         </ul>
       </div>
       {typeof score === "number" && (
