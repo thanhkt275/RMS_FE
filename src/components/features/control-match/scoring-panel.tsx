@@ -41,6 +41,10 @@ interface ScoringPanelProps {
   onSubmitScores: () => void;
   isLoading?: boolean;
   disabled?: boolean;
+  // Winner badge control
+  matchStatus?: string;
+  showWinnerBadge?: boolean;
+  onToggleWinnerBadge?: () => void;
 }
 
 interface ScoreBreakdownRowProps {
@@ -305,6 +309,9 @@ export function ScoringPanel({
   onSubmitScores,
   isLoading = false,
   disabled = false,
+  matchStatus,
+  showWinnerBadge = false,
+  onToggleWinnerBadge,
 }: ScoringPanelProps) {
   const isDisabled = disabled || !selectedMatchId || isLoading;
 
@@ -369,6 +376,17 @@ export function ScoringPanel({
               <Save className="w-4 h-4 mr-2" />
               Lưu điểm trận đấu
             </Button>
+            {matchStatus === 'COMPLETED' && onToggleWinnerBadge && (
+              <Button
+                variant={showWinnerBadge ? "default" : "outline"}
+                onClick={onToggleWinnerBadge}
+                disabled={isDisabled}
+                className="w-full sm:w-auto"
+              >
+                <Flag className="w-4 h-4 mr-2" />
+                {showWinnerBadge ? 'Ẩn huy hiệu thắng' : 'Hiển thị huy hiệu thắng'}
+              </Button>
+            )}
           </div>
         </div>
       )}

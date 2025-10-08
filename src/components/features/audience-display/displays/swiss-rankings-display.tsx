@@ -1,5 +1,10 @@
-import React from 'react';
-import { useReactTable, getCoreRowModel, getSortedRowModel, flexRender, ColumnDef, SortingState } from '@tanstack/react-table';
+import React from "react";
+import Image from "next/image";
+import DataTable, {
+  defaultTableState,
+} from "@/components/data-table/DataTable";
+import type { ColumnDef } from "@tanstack/react-table";
+import { TeamRanking } from "@/types/stage-advancement.types";
 
 interface TeamInfo {
   teamNumber?: string;
@@ -7,243 +12,353 @@ interface TeamInfo {
 }
 
 interface RankingRow {
+  rank: number;
   teamId: string;
-  team?: TeamInfo;
+  teamNumber: string;
+  teamName: string;
   wins: number;
   losses: number;
   ties: number;
+  pointsScored: number;
+  pointsConceded: number;
+  pointDifferential: number;
   rankingPoints: number;
   opponentWinPercentage: number;
-  pointDifferential: number;
   matchesPlayed: number;
-  highestScore?: number;
-  totalScore?: number;
-  // For display purposes, not directly in data
-  rank?: number;
 }
 
-export function SwissRankingsDisplay({ rankings: rawRankings, isLoading }: { rankings: any[], isLoading?: boolean }) {
-  const [sorting, setSorting] = React.useState<SortingState>([{ id: 'rank', desc: false }]);
-
-  // Auto-calculate rank by totalScore (pointsScored), then wins
-  const rankings = React.useMemo(() => {
+export function SwissRankingsDisplay({
+  rankings: rawRankings,
+  isLoading,
+}: {
+  rankings: any[];
+  isLoading?: boolean;
+}) {
+  // Transform raw rankings data to table format
+  const tableData = React.useMemo((): RankingRow[] => {
     if (!Array.isArray(rawRankings)) return [];
-    // Sort by totalScore (pointsScored) desc, then wins desc
+
+    // Sort by ranking priority: Ranking Points -> OWP -> Point Differential
     const sorted = [...rawRankings].sort((a, b) => {
-      const aScore = a.totalScore ?? a.pointsScored ?? 0;
-      const bScore = b.totalScore ?? b.pointsScored ?? 0;
-      if (bScore !== aScore) return bScore - aScore;
-      if ((b.wins ?? 0) !== (a.wins ?? 0)) return (b.wins ?? 0) - (a.wins ?? 0);
+      // First priority: Ranking Points (higher is better)
+      const aRankingPoints = a.rankingPoints ?? 0;
+      const bRankingPoints = b.rankingPoints ?? 0;
+      if (bRankingPoints !== aRankingPoints)
+        return bRankingPoints - aRankingPoints;
+
+      // Second priority: Opponent Win Percentage (higher is better)
+      const aOWP = a.opponentWinPercentage ?? 0;
+      const bOWP = b.opponentWinPercentage ?? 0;
+      if (bOWP !== aOWP) return bOWP - aOWP;
+
+      // Third priority: Point Differential (higher is better)
+      const aPointDiff = a.pointDifferential ?? 0;
+      const bPointDiff = b.pointDifferential ?? 0;
+      if (bPointDiff !== aPointDiff) return bPointDiff - aPointDiff;
+
       return 0;
     });
-    return sorted.map((r, idx) => ({ ...r, rank: idx + 1 }));
+
+    return sorted.map((r, idx) => ({
+      rank: idx + 1,
+      teamId: r.teamId,
+      teamNumber: r.teamNumber || r.team?.teamNumber || "N/A",
+      teamName: r.teamName || r.team?.name || "Unknown Team",
+      wins: r.wins ?? 0,
+      losses: r.losses ?? 0,
+      ties: r.ties ?? 0,
+      pointsScored: r.totalScore ?? r.pointsScored ?? 0,
+      pointsConceded: r.pointsConceded ?? 0,
+      pointDifferential: r.pointDifferential ?? 0,
+      rankingPoints: r.rankingPoints ?? 0,
+      opponentWinPercentage: r.opponentWinPercentage ?? 0,
+      matchesPlayed: r.matchesPlayed ?? 0,
+    }));
   }, [rawRankings]);
 
-  // Update columns: display totalScore as pointsScored, display wins
-  const columns = React.useMemo<ColumnDef<RankingRow>[]>(() => [
-    {
-      accessorKey: 'rank',
-      header: () => <span className="text-slate-300">Rank</span>,
-      cell: info => <div className="flex items-center justify-center font-extrabold text-blue-900 text-lg">{info.getValue() as number}</div>,
-      size: 70,
-    },
-    {
-      accessorKey: 'teamNumber',
-      header: () => <span className="text-slate-300">Team #</span>,
-      cell: info => {
-        const value = info.getValue() as string | undefined;
-        return (
-          <div className="flex items-center justify-center">
-            <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-sm border border-blue-200 shadow-sm">
-              {value || '—'}
-            </div>
+  // Define table columns for rankings display
+  const columns = React.useMemo(() => {
+    const cols: ColumnDef<any>[] = [
+      {
+        id: "rank",
+        header: "Hạng",
+        cell: ({ row }: any) => (
+          <div className="text-xl md:text-xl text-foreground font-bold text-center">
+            {row.original.rank}
           </div>
-        );
+        ),
+        enableSorting: false,
+        size: 80,
       },
-      size: 90,
-    },
-    {
-      accessorKey: 'teamName',
-      header: () => <span className="text-slate-300">Team Name</span>,
-      cell: info => <div className="text-sm font-bold text-slate-900">{info.getValue() as string || '-'}</div>,
-      size: 180,
-    },
-    {
-      accessorKey: 'totalScore',
-      header: () => <span className="text-slate-300">Total Score</span>,
-      cell: info => {
-        // Show totalScore if present, else pointsScored if present, else '-'
-        const val = info.getValue();
-        const fallback = (info.row.original as any).pointsScored;
-        return <span className="text-blue-900 font-bold">{val ?? fallback ?? '-'}</span>;
+      {
+        accessorKey: "teamNumber",
+        header: "Mã đội",
+        cell: ({ getValue }: any) => (
+          <div className="text-xl md:text-xl text-foreground font-bold ">
+            {getValue() as string}
+          </div>
+        ),
+        enableSorting: true,
+        size: 120,
       },
-      size: 110,
-    },
-    {
-      accessorKey: 'wins',
-      header: () => <span className="text-green-300">Wins</span>,
-      cell: info => <span className="font-extrabold text-green-700 text-lg">{info.getValue() as number}</span>,
-      size: 90,
-    },
-    {
-      accessorKey: 'matchesPlayed',
-      header: () => <span className="text-slate-300">Matches</span>,
-      cell: info => <span className="text-blue-700 font-semibold">{info.getValue() as number}</span>,
-      size: 90,
-    },
-    {
-      id: 'wlt',
-      header: () => <span className="text-blue-100 text-sm">W-L-T</span>,
-      accessorFn: row => `${row.wins}-${row.losses}-${row.ties}`,
-      cell: info => <span className="text-blue-600 text-sm">{info.getValue() as string}</span>,
-      size: 90,
-    },
-    {
-      accessorKey: 'opponentWinPercentage',
-      header: () => <span className="text-blue-100 text-sm">OWP</span>,
-      cell: info => <span className="text-blue-500 text-xs">{((info.getValue() as number) * 100).toFixed(1)}%</span>,
-      size: 80,
-    },
-    {
-      accessorKey: 'pointDifferential',
-      header: () => <span className="text-blue-100 text-sm">Pt Diff</span>,
-      cell: info => <span className="text-blue-500 text-xs">{info.getValue() as number}</span>,
-      size: 80,
-    },
-  ], []);
+      {
+        accessorKey: "teamName",
+        header: "Tên đội",
+        cell: ({ getValue }: any) => (
+          <div className="text-xl md:text-xl font-bold text-foreground">
+            {getValue() as string}
+          </div>
+        ),
+        enableSorting: true,
+        size: 300,
+      },
+      {
+        accessorKey: "rankingPoints",
+        header: "Điểm xếp hạng",
+        cell: ({ getValue }: any) => (
+          <div className="text-xl md:text-2xl font-bold text-primary text-center">
+            {getValue() as number}
+          </div>
+        ),
+        enableSorting: true,
+        size: 140,
+      },
+      {
+        accessorKey: "opponentWinPercentage",
+        header: "Tỉ lệ thua",
+        cell: ({ getValue }: any) => (
+          <div className="text-xl md:text-2xl font-bold text-foreground text-center">
+            {((getValue() as number) * 100).toFixed(1)}%
+          </div>
+        ),
+        enableSorting: true,
+        size: 140,
+      },
 
-  const table = useReactTable({
-    data: rankings,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    columnResizeMode: 'onChange',
-    debugTable: false,
-  });
+      {
+        accessorKey: "pointsScored",
+        header: "Điểm ghi",
+        cell: ({ getValue }: any) => (
+          <div className="text-xl md:text-2xl font-semibold text-foreground text-center">
+            {getValue() as number}
+          </div>
+        ),
+        enableSorting: true,
+        size: 120,
+      },
+      {
+        accessorKey: "pointsConceded",
+        header: "Điểm thua",
+        cell: ({ getValue }: any) => (
+          <div className="text-xl md:text-2xl font-semibold text-foreground text-center">
+            {getValue() as number}
+          </div>
+        ),
+        enableSorting: true,
+        size: 120,
+      },
+      {
+        accessorKey: "pointDifferential",
+        header: "Hiệu số",
+        cell: ({ getValue }: any) => {
+          const value = getValue() as number;
+          return (
+            <div
+              className={`text-xl md:text-2xl font-semibold text-center ${
+                value > 0
+                  ? "text-green-600"
+                  : value < 0
+                  ? "text-red-600"
+                  : "text-foreground"
+              }`}
+            >
+              {value > 0 ? "+" : ""}
+              {value}
+            </div>
+          );
+        },
+        enableSorting: true,
+        size: 120,
+      },
+      {
+        accessorKey: "matchesPlayed",
+        header: "Số trận đã đấu",
+        cell: ({ getValue }: any) => (
+          <div className="text-lg md:text-2xl font-semibold text-foreground text-center">
+            {getValue() as number}
+          </div>
+        ),
+        enableSorting: true,
+        size: 100,
+      },
+      {
+        id: "record",
+        header: "Thành tích",
+        cell: ({ row }: any) => {
+          const wins = row.original.wins;
+          const ties = row.original.ties;
+          const losses = row.original.losses;
+          return (
+            <div className="text-xl md:text-2xl font-bold text-center">
+              <span className="text-green-600">{wins}</span>
+              <span className="text-gray-400">-</span>
+              <span className="text-yellow-600">{ties}</span>
+              <span className="text-gray-400">-</span>
+              <span className="text-red-600">{losses}</span>
+            </div>
+          );
+        },
+        enableSorting: false,
+        size: 150,
+      },
+      
+    ];
+    return cols;
+  }, []);
 
   return (
-    <div className="flex flex-col h-full bg-slate-100">
-      {/* Rankings Page Header */}
-      <div className="bg-slate-800 shadow-lg text-white p-3 sm:p-4 lg:p-6 xl:p-8 rounded-b-xl animate-fade-in">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="text-center w-full">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mb-1">Tournament Rankings</h1>
-            <p className="text-xs sm:text-sm lg:text-base text-slate-300 animate-fade-in-slow">
-              <span className="text-sky-400 font-semibold">{rankings.length}</span> {rankings.length === 1 ? 'team' : 'teams'} ranked
-            </p>
-          </div>
+    <div className="bg-black text-white w-screen h-screen flex flex-col relative overflow-hidden">
+      {/* Top White Bar */}
+      {/* <div className="absolute top-0 left-0 right-0 h-[110px] bg-white z-30 flex items-center justify-center">
+        <div className="text-center w-full">
+          <h1 className="text-black text-5xl font-bold tracking-tight mb-2">
+            Bảng xếp hạng vòng thể thức Thụy Sĩ
+          </h1>
+          <p className="text-black text-3xl md:text-lg animate-fade-in-slow">
+            Bảng xếp hạng gồm có{" "}
+            <span className="text-primary font-bold text-3xl">
+              {tableData.length}
+            </span>{" "}
+            đội
+          </p>
         </div>
-      </div>
-      
-      {/* Rankings Content Area */}
-      <div className="flex-1 p-2 sm:p-3 lg:p-4 xl:p-6 overflow-auto">
-        {isLoading ? (
-          <div className="flex flex-col justify-center items-center h-full min-h-[200px] sm:min-h-[300px] bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 animate-pulse">
-            <div className="text-base sm:text-lg lg:text-xl text-slate-500 font-semibold mb-2 sm:mb-3">Loading rankings...</div>
-            <div className="w-12 sm:w-16 h-12 sm:h-16 border-4 border-sky-500 border-dashed rounded-full animate-spin"></div>
-          </div>
-        ) : rankings.length > 0 ? (
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden animate-fade-in">
-            {/* Mobile Card View - Hidden on desktop */}
-            <div className="block lg:hidden">
-              <div className="space-y-2 sm:space-y-3 p-3 sm:p-4">
-                {table.getRowModel().rows.map((row, rowIndex) => {
-                  const ranking = row.original;
-                  return (
-                    <div key={row.id} className={`p-3 sm:p-4 rounded-lg border ${rowIndex % 2 === 0 ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-300'}`}>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-100 text-blue-800 font-bold text-sm border-2 border-blue-200">
-                            #{ranking.rank}
-                          </div>
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <div className="flex-shrink-0 h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center rounded-full bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200">
-                                {ranking.teamNumber || '—'}
-                              </div>
-                              <h3 className="text-sm sm:text-base font-bold text-slate-900">{ranking.teamName || '-'}</h3>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg sm:text-xl font-bold text-blue-900">{ranking.totalScore ?? ranking.pointsScored ?? '-'}</div>
-                          <div className="text-xs sm:text-sm text-slate-600">Total Score</div>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center">
-                        <div className="bg-green-50 rounded p-2 border border-green-200">
-                          <div className="text-lg sm:text-xl font-bold text-green-700">{ranking.wins}</div>
-                          <div className="text-xs text-green-600">Wins</div>
-                        </div>
-                        <div className="bg-blue-50 rounded p-2 border border-blue-200">
-                          <div className="text-lg sm:text-xl font-semibold text-blue-700">{ranking.matchesPlayed}</div>
-                          <div className="text-xs text-blue-600">Matches</div>
-                        </div>
-                        <div className="bg-slate-50 rounded p-2 border border-slate-200 col-span-2 sm:col-span-1">
-                          <div className="text-sm font-semibold text-slate-700">{ranking.wins}-{ranking.losses}-{ranking.ties}</div>
-                          <div className="text-xs text-slate-600">W-L-T</div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+      </div> */}
 
-            {/* Desktop Table View - Hidden on mobile */}
-            <div className="hidden lg:block">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-700">
-                  {table.getHeaderGroups().map(headerGroup => (
-                    <tr key={headerGroup.id}>
-                      {headerGroup.headers.map(header => (
-                        <th
-                          key={header.id}
-                          className="px-3 sm:px-4 lg:px-5 py-2 sm:py-3 lg:py-3.5 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none whitespace-nowrap"
-                          onClick={header.column.getToggleSortingHandler()}
-                          style={{ width: header.getSize() }}
-                        >
-                          <div className="flex items-center text-slate-300">
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            <span className="ml-1.5 inline-block w-4 text-center">
-                              {header.column.getIsSorted() === 'asc' ? '▲' : header.column.getIsSorted() === 'desc' ? '▼' : <span className="opacity-30">▲</span>}
-                            </span>
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
-                  {table.getRowModel().rows.map((row, rowIndex) => (
-                    <tr key={row.id} className={`${rowIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-sky-50/70 transition-colors duration-150`}>
-                      {row.getVisibleCells().map(cell => (
-                        <td
-                          key={cell.id}
-                          className="px-3 sm:px-4 lg:px-5 py-3 sm:py-4 whitespace-nowrap text-sm"
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {/* Rankings Content Area */}
+      <div className="flex-1 p-1 overflow-auto pt-[120px] flex items-center justify-center">
+        {isLoading ? (
+          <div className="flex flex-col justify-center items-center h-full min-h-[300px] bg-white rounded-xl shadow-lg p-8 animate-pulse">
+            <div className="text-xl text-slate-500 font-semibold mb-4">
+              Loading rankings...
+            </div>
+          </div>
+        ) : tableData.length > 0 ? (
+          <div
+            className="bg-white rounded-xl shadow-lg overflow-hidden animate-fade-in"
+            style={{ width: "80%", maxWidth: "1440px" }}
+          >
+            <style jsx global>{`
+              .audience-rankings-table .bg-card {
+                background-color: white !important;
+                border: none !important;
+                box-shadow: none !important;
+              }
+              .audience-rankings-table .bg-muted {
+                background-color: #f3f4f6 !important;
+              }
+              .audience-rankings-table .hover\:bg-muted\/50:hover {
+                background-color: #f9fafb !important;
+              }
+              .audience-rankings-table .text-foreground {
+                color: #111827 !important;
+              }
+              .audience-rankings-table .text-muted-foreground {
+                color: #6b7280 !important;
+              }
+              .audience-rankings-table .border-border {
+                border-color: #e5e7eb !important;
+              }
+              .audience-rankings-table th {
+                background-color: #f3f4f6 !important;
+                color: #111827 !important;
+                font-weight: 700 !important;
+                font-size: 1.125rem !important;
+                padding: 0.75rem !important;
+              }
+              .audience-rankings-table td {
+                padding: 0.75rem !important;
+                border-bottom: 1px solid #e5e7eb !important;
+              }
+              .audience-rankings-table tbody tr:last-child td {
+                border-bottom: none !important;
+              }
+            `}</style>
+            <div className="audience-rankings-table">
+              <DataTable
+                data={tableData}
+                columns={columns as any}
+                totalCount={tableData.length}
+                isLoading={isLoading}
+                showPagination={false}
+                tableState={{ ...defaultTableState, pageSize: 10 }}
+                setTableState={() => {}} // Read-only for audience display
+                emptyState={
+                  <div className="flex flex-col items-center justify-center py-16 text-center bg-white">
+                    <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">
+                      No Rankings Available
+                    </h3>
+                    <p className="text-base md:text-lg text-gray-600">
+                      Rankings for this tournament will appear here.
+                    </p>
+                  </div>
+                }
+              />
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full min-h-[200px] sm:min-h-[300px] bg-white rounded-xl shadow-lg p-6 sm:p-8 lg:p-12 text-center animate-fade-in">
-            <svg className="w-12 sm:w-16 h-12 sm:h-16 text-slate-300 mb-3 sm:mb-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zM12 12.75a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+          <div className="flex flex-col items-center justify-center h-full min-h-[300px] bg-white rounded-xl shadow-lg p-12 text-center animate-fade-in">
+            <svg
+              className="w-16 h-16 text-slate-300 mb-6"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zM12 12.75a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
+              />
             </svg>
-            <h3 className="text-lg sm:text-xl font-semibold text-slate-700 mb-1 sm:mb-2">No Rankings Available</h3>
-            <p className="text-xs sm:text-sm text-slate-500">Rankings for this tournament will appear here.</p>
+            <h3 className="text-xl font-semibold text-slate-700 mb-3">
+              No Rankings Available
+            </h3>
+            <p className="text-base text-slate-500">
+              Rankings for this tournament will appear here.
+            </p>
           </div>
         )}
       </div>
+
+      {/* Bottom White Bar - Footer */}
+      <footer className="bg-white h-[10%] w-full flex items-center px-8 relative z-20">
+        {/* Logos */}
+        <div className="flex items-center gap-4 h-full py-2 w-[400px]">
+          <div className="relative h-full aspect-square w-full">
+            <Image
+              src="/btc_trans.png"
+              alt="Logo STEAM For Vietnam, Đại học Bách khoa Hà Nội, UNICEF, Đại sứ quán Hoa Kỳ"
+              fill
+              className="object-contain"
+              sizes="400px"
+            />
+          </div>
+        </div>
+
+        {/* Event info */}
+        <div className="flex-1 text-center">
+          <p className="text-black text-3xl font-bold">
+            STEMESE Festival - 19/10 - Đại học Bách Khoa Hà Nội
+          </p>
+        </div>
+
+        {/* Rankings indicator */}
+        <div className="flex items-center justify-end gap-2 w-[320px]">
+          <div className="w-[18px] h-[18px] bg-[#00FF2F] rounded-full animate-pulse" />
+          <span className="text-[#00FF2F] text-[32px] font-bold">LIVE</span>
+        </div>
+      </footer>
     </div>
   );
 }

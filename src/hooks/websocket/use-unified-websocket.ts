@@ -21,17 +21,17 @@ export interface UseUnifiedWebSocketOptions {
  * Provides timer synchronization with drift correction and connection recovery
  */
 export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
-  const { 
-    tournamentId, 
-    fieldId, 
-    autoConnect = true, 
-    userRole = UserRole.COMMON 
+  const {
+    tournamentId,
+    fieldId,
+    autoConnect = true,
+    userRole = UserRole.COMMON
   } = options;
 
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isReady, setIsReady] = useState<boolean>(false);
   const [connectionStatus, setConnectionStatus] = useState<string>('disconnected');
-  
+
   // Use refs to track current values without causing re-renders
   // Initialize with the passed value, "all" is a valid tournament ID
   const currentTournamentRef = useRef<string | null>(tournamentId || null);
@@ -89,7 +89,7 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
   const startTimer = useCallback((timerData: Omit<TimerData, 'tournamentId' | 'fieldId'>) => {
     const tournamentId = currentTournamentRef.current;
     const fieldId = currentFieldRef.current;
-    
+
     if (!tournamentId) {
       console.error('[useUnifiedWebSocket] No tournament ID available for startTimer');
       return;
@@ -105,7 +105,7 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
   const pauseTimer = useCallback((timerData: Omit<TimerData, 'tournamentId' | 'fieldId'>) => {
     const tournamentId = currentTournamentRef.current;
     const fieldId = currentFieldRef.current;
-    
+
     if (!tournamentId) {
       console.error('[useUnifiedWebSocket] No tournament ID available for pauseTimer');
       return;
@@ -121,7 +121,7 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
   const resetTimer = useCallback((timerData: Omit<TimerData, 'tournamentId' | 'fieldId'>) => {
     const tournamentId = currentTournamentRef.current;
     const fieldId = currentFieldRef.current;
-    
+
     if (!tournamentId) {
       console.error('[useUnifiedWebSocket] No tournament ID available for resetTimer');
       return;
@@ -138,7 +138,7 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
   const sendScoreUpdate = useCallback((scoreData: Omit<ScoreData, 'tournamentId' | 'fieldId'>) => {
     const currentTournamentId = currentTournamentRef.current || tournamentId;
     const currentFieldId = currentFieldRef.current || fieldId;
-    
+
     console.log('[useUnifiedWebSocket] sendScoreUpdate called:', {
       tournamentIdFromOptions: tournamentId,
       fieldIdFromOptions: fieldId,
@@ -149,7 +149,7 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
       scoreData,
       timestamp: new Date().toISOString()
     });
-    
+
     if (!currentTournamentId) {
       console.error('[useUnifiedWebSocket] No tournament ID available for sendScoreUpdate', {
         tournamentIdFromOptions: tournamentId,
@@ -167,11 +167,38 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
     });
   }, [tournamentId, fieldId]);
 
+  // Winner badge updates
+  const sendWinnerBadgeUpdate = useCallback((badgeData: Omit<{ matchId: string; tournamentId: string; fieldId?: string; showWinnerBadge: boolean }, 'tournamentId' | 'fieldId'>) => {
+    console.log('[useUnifiedWebSocket] sendWinnerBadgeUpdate hook called with:', badgeData);
+    console.log('[useUnifiedWebSocket] Current tournament ref:', currentTournamentRef.current);
+    console.log('[useUnifiedWebSocket] Current field ref:', currentFieldRef.current);
+
+    const currentTournamentId = currentTournamentRef.current || tournamentId;
+    const currentFieldId = currentFieldRef.current || fieldId;
+
+    console.log('[useUnifiedWebSocket] Final tournament ID:', currentTournamentId);
+    console.log('[useUnifiedWebSocket] Final field ID:', currentFieldId);
+
+    if (!currentTournamentId) {
+      console.error('[useUnifiedWebSocket] No tournament ID available for sendWinnerBadgeUpdate');
+      return;
+    }
+
+    const finalData = {
+      ...badgeData,
+      tournamentId: currentTournamentId,
+      fieldId: currentFieldId || undefined,
+    };
+
+    console.log('[useUnifiedWebSocket] Calling unifiedWebSocketService.sendWinnerBadgeUpdate with:', finalData);
+    unifiedWebSocketService.sendWinnerBadgeUpdate(finalData);
+  }, [tournamentId, fieldId]);
+
   // Match updates
   const sendMatchUpdate = useCallback((matchData: Omit<MatchData, 'tournamentId' | 'fieldId'>) => {
     const currentTournamentId = currentTournamentRef.current || tournamentId;
     const currentFieldId = currentFieldRef.current || fieldId;
-    
+
     if (!currentTournamentId) {
       console.error('[useUnifiedWebSocket] No tournament ID available for sendMatchUpdate', {
         tournamentIdFromOptions: tournamentId,
@@ -191,7 +218,7 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
   const sendMatchStateChange = useCallback((stateData: Omit<MatchStateData, 'tournamentId' | 'fieldId'>) => {
     const currentTournamentId = currentTournamentRef.current || tournamentId;
     const currentFieldId = currentFieldRef.current || fieldId;
-    
+
     if (!currentTournamentId) {
       console.error('[useUnifiedWebSocket] No tournament ID available for sendMatchStateChange');
       return;
@@ -208,7 +235,7 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
   const changeDisplayMode = useCallback((settings: Omit<AudienceDisplaySettings, 'tournamentId' | 'fieldId'>) => {
     const currentTournamentId = currentTournamentRef.current || tournamentId;
     const currentFieldId = currentFieldRef.current || fieldId;
-    
+
     console.log('[useUnifiedWebSocket] changeDisplayMode called:', {
       tournamentIdFromOptions: tournamentId,
       fieldIdFromOptions: fieldId,
@@ -219,7 +246,7 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
       settings,
       timestamp: new Date().toISOString()
     });
-    
+
     if (!currentTournamentId) {
       console.error('[useUnifiedWebSocket] No tournament ID available for changeDisplayMode');
       return;
@@ -237,7 +264,7 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
   const sendAnnouncement = useCallback((announcementData: any) => {
     const currentTournamentId = currentTournamentRef.current || tournamentId;
     const currentFieldId = currentFieldRef.current || fieldId;
-    
+
     if (!currentTournamentId) {
       console.error('[useUnifiedWebSocket] No tournament ID available for sendAnnouncement');
       return;
@@ -304,7 +331,7 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
     setIsConnected(currentStatus.connected && currentStatus.state === 'CONNECTED');
     setIsReady(currentStatus.ready && currentStatus.connected && currentStatus.state === 'CONNECTED');
     setConnectionStatus(currentStatus.state || 'disconnected');
-    
+
     console.log(`[useUnifiedWebSocket] Initial connection status:`, currentStatus);
 
     return () => {
@@ -371,40 +398,41 @@ export function useUnifiedWebSocket(options: UseUnifiedWebSocketOptions = {}) {
     isConnected,
     isReady,
     connectionStatus,
-    
+
     // Connection management
     connect,
     disconnect,
-    
+
     // Room management
     joinTournament,
     leaveTournament,
     joinFieldRoom,
     leaveFieldRoom,
-    
+
     // Event subscription
     subscribe,
-    
+
     // Timer controls
     startTimer,
     pauseTimer,
     resetTimer,
-    
+
     // Data updates
     sendScoreUpdate,
     sendMatchUpdate,
     sendMatchStateChange,
+    sendWinnerBadgeUpdate,
     changeDisplayMode,
     sendAnnouncement,
-    
+
     // Collaborative features
     joinCollaborativeSession,
     leaveCollaborativeSession,
-    
+
     // Role management
     setUserRole,
     canAccess,
-    
+
     // Direct service access for advanced usage
     service: unifiedWebSocketService,
   };

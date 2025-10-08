@@ -5,7 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Send, Megaphone, Image, Video, Youtube, Type, Eye, AlertCircle, Clock } from "lucide-react";
-import { AnnouncementData, AnnouncementType, validateImageUrl, validateVideoUrl, validateYouTubeUrl } from "@/hooks/control-match/use-announcement";
+import {
+  AnnouncementData,
+  AnnouncementType,
+  validateImageUrl,
+  validateVideoUrl,
+  validateYouTubeUrl,
+} from "@/hooks/control-match/use-announcement";
+import type { Stage } from "@/types/types";
 
 interface AnnouncementPanelProps {
   announcement: AnnouncementData;
@@ -23,6 +30,10 @@ interface AnnouncementPanelProps {
   validateAnnouncement: () => { isValid: boolean; error?: string };
   isConnected: boolean;
   disabled?: boolean;
+  scheduleStageId: string | null;
+  onScheduleStageChange: (stageId: string | null) => void;
+  stages?: Stage[];
+  isStagesLoading?: boolean;
 }
 
 export function AnnouncementPanel({
@@ -41,6 +52,10 @@ export function AnnouncementPanel({
   validateAnnouncement,
   isConnected,
   disabled = false,
+  scheduleStageId,
+  onScheduleStageChange,
+  stages = [],
+  isStagesLoading = false,
 }: AnnouncementPanelProps) {
   const isDisabled = disabled || !isConnected;
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -139,6 +154,43 @@ export function AnnouncementPanel({
             </SelectContent>
           </Select>
         </div>
+
+        {displayMode === "schedule" && (
+          <div>
+            <label className="block text-sm font-semibold mb-2 text-gray-800">
+              Schedule Stage
+            </label>
+            <Select
+              value={scheduleStageId ?? "__all__"}
+              onValueChange={(value) =>
+                onScheduleStageChange(value === "__all__" ? null : value)
+              }
+              disabled={isDisabled || isStagesLoading || stages.length === 0}
+            >
+              <SelectTrigger className="bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-lg focus:ring-2 focus:ring-blue-300">
+                <SelectValue placeholder="Select stage to display" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Stages</SelectItem>
+                {isStagesLoading && (
+                  <SelectItem value="__loading" disabled>
+                    Loading stages...
+                  </SelectItem>
+                )}
+                {!isStagesLoading && stages.length === 0 && (
+                  <SelectItem value="__none" disabled>
+                    No stages available
+                  </SelectItem>
+                )}
+                {stages.map((stage) => (
+                  <SelectItem key={stage.id} value={stage.id}>
+                    {stage.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Display Options */}
         <div>

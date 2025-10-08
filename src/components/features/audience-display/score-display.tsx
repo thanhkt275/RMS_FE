@@ -221,7 +221,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
             )}
 
             {/* Debug Information */}
-            {showDetails && (
+            {/* {showDetails && (
                 <div className="bg-gray-100 rounded-lg p-2 sm:p-3 lg:p-4 text-xs sm:text-sm">
                     <h3 className="font-bold mb-1 sm:mb-2">Score Details</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
@@ -237,7 +237,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
                         </div>
                     </div>
                 </div>
-            )}
+            )} */}
         </div>
     );
 };

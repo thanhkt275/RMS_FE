@@ -1,0 +1,218 @@
+/* Playoff Bracket Display Styles */
+/* Exact Figma design specifications */
+
+.match-card {
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.match-card:focus {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+}
+
+.team-area {
+  position: relative;
+  box-sizing: border-box;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.team-area .team-text {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Winner highlighting */
+.team-area--winner {
+  background-color: rgba(34, 197, 94, 0.05);
+}
+
+.team-area--winner .team-text {
+  font-weight: 600 !important;
+}
+
+/* TBD state styling */
+.team-area--tbd .team-text {
+  font-style: italic;
+  opacity: 0.7;
+}
+
+/* Final match specific styles */
+.match-card--final {
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
+}
+
+.match-card--final .team-area--winner {
+  background-color: rgba(220, 38, 38, 0.05);
+}
+
+/* Responsive text handling */
+@media (max-width: 768px) {
+  .team-area .team-text {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .team-area .team-text {
+    font-size: 12px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .match-card {
+    border-width: 3px;
+  }
+  
+  .team-area--winner {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .match-card,
+  .team-area {
+    transition: none;
+  }
+}
+
+/* Error handling styles */
+.match-card--corrupted {
+  position: relative;
+  border-style: dashed !important;
+}
+
+.match-card--corrupted::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(245, 158, 11, 0.05) 10px,
+    rgba(245, 158, 11, 0.05) 20px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.match-card--corrupted .team-area {
+  position: relative;
+  z-index: 2;
+}
+
+/* Error boundary fallback styles */
+.bracket-error-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 20px;
+  text-align: center;
+}
+
+.bracket-error-fallback .error-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  color: #EF4444;
+}
+
+.bracket-error-fallback .error-message {
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.bracket-error-fallback .error-details {
+  font-size: 14px;
+  color: #6B7280;
+  margin-bottom: 16px;
+}
+
+.bracket-error-fallback .retry-button {
+  background-color: #3B82F6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.bracket-error-fallback .retry-button:hover {
+  background-color: #2563EB;
+}
+
+.bracket-error-fallback .retry-button:focus {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+}
+
+/* Loading state styles */
+.bracket-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.bracket-loading .spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #E5E7EB;
+  border-top: 3px solid #3B82F6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Accessibility improvements for error states */
+.bracket-error-indicator {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 12px;
+  height: 12px;
+  background-color: #F59E0B;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bracket-error-indicator svg {
+  width: 8px;
+  height: 8px;
+  fill: white;
+}
+
+/* Screen reader only text for error states */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

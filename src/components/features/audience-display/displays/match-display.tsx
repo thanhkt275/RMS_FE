@@ -1,6 +1,6 @@
 import React from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatTimeMsPad } from '@/lib/utils';
 
 // Types should ideally be in a central file
@@ -18,6 +18,7 @@ interface AudienceMatchState {
   currentPeriod: 'auto' | 'teleop' | 'endgame' | null;
   redTeams: Array<Team>;
   blueTeams: Array<Team>;
+  fieldName?: string | null;
 }
 
 interface TimerData {
@@ -29,147 +30,177 @@ interface TimerData {
 interface ScoreData {
   redTotalScore: number;
   blueTotalScore: number;
+  redBreakdown?: {
+    flagsPoints?: number;
+    flagHitsPoints?: number;
+    fieldControlPoints?: number;
+    totalPoints?: number;
+  };
+  blueBreakdown?: {
+    flagsPoints?: number;
+    flagHitsPoints?: number;
+    fieldControlPoints?: number;
+    totalPoints?: number;
+  };
+}
+
+interface ScoreBreakdown {
+  flagsPoints?: number;
+  flagHitsPoints?: number;
+  fieldControlPoints?: number;
+  totalPoints?: number;
 }
 
 interface MatchDisplayProps {
   matchState: AudienceMatchState | null;
   timer: TimerData | null;
   score: ScoreData | null;
+  showWinnerBadge?: boolean;
 }
 
-const AllianceCard = ({
+const TeamCard = ({
   alliance,
   teams,
   score,
+  isWinner,
+  side,
 }: {
   alliance: 'Red' | 'Blue';
   teams: Team[];
   score: number;
+  isWinner?: boolean;
+  side: 'left' | 'right';
 }) => {
   const isRed = alliance === 'Red';
-  return (
-    <Card
-      className={cn(
-        'flex-1 text-center border-4',
-        isRed ? 'border-red-500 bg-red-950/50' : 'border-blue-500 bg-blue-950/50'
-      )}
-    >
-      <CardHeader className="pb-2 sm:pb-4">
-        <CardTitle
-          className={cn(
-            'text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold',
-            isRed ? 'text-red-400' : 'text-blue-400'
-          )}
-        >
-          {alliance.toUpperCase()} ALLIANCE
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 sm:space-y-6 lg:space-y-8">
-        <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-6xl font-semibold text-white space-y-2 sm:space-y-3 lg:space-y-4 min-h-[8rem] sm:min-h-[12rem] lg:min-h-[16rem]">
-          {teams && teams.length > 0 ? (
-            teams.map((team, index) => {
-              // Handle different team data formats
-              const displayName = (() => {
-                if (team.teamNumber && team.name) {
-                  // If both teamNumber and name exist, show "number - name"
-                  return `${team.teamNumber} - ${team.name}`;
-                } else if (team.teamNumber) {
-                  // If only teamNumber exists, show just the number
-                  return team.teamNumber;
-                } else if (team.name) {
-                  // If only name exists, check if it looks like a team number or actual name
-                  const nameStr = String(team.name);
-                  
-                  // If name looks like a team identifier (starts with letters followed by numbers)
-                  // or is all numbers, treat it as a team number
-                  if (/^[A-Z]+\d+$/.test(nameStr) || /^\d+$/.test(nameStr)) {
-                    return nameStr; // Show as-is for team identifiers like "NIH00003"
-                  } else {
-                    return nameStr; // Show actual team names
-                  }
-                } else {
-                  return `Team ${index + 1}`; // Fallback
-                }
-              })();
+  const team = teams && teams.length > 0 ? teams[0] : null;
+  
+  const displayName = (() => {
+    if (!team) return 'TEAM';
+    if (team.teamNumber && team.name) {
+      return team.name;
+    } else if (team.teamNumber) {
+      return team.teamNumber;
+    } else if (team.name) {
+      const nameStr = String(team.name);
+      if (/^[A-Z]+\d+$/.test(nameStr) || /^\d+$/.test(nameStr)) {
+        return nameStr;
+      } else {
+        return nameStr;
+      }
+    } else {
+      return 'TEAM';
+    }
+  })();
 
-              return (
-                <div key={`${team.id || index}-${index}`} className="break-words px-1 sm:px-2">
-                  {displayName}
-                </div>
-              );
-            })
-          ) : (
-            <>
-              <div className="break-words px-1 sm:px-2">Team A</div>
-              <div className="break-words px-1 sm:px-2">Team B</div>
-            </>
-          )}
+  const teamNumber = team?.teamNumber || '#000';
+
+  return (
+    <div className="relative">
+      {/* Team card */}
+      <div
+        className={cn(
+          'relative w-[389px] h-[452px] rounded-lg border-4 flex flex-col items-center justify-start pt-10',
+          isRed 
+            ? 'bg-[#3E1A1A] border-[#FF3A3A]' 
+            : 'bg-[#1A1A3E] border-[#3A3AFF]'
+        )}
+      >
+        {/* Team Number */}
+        <div className={cn(
+          'text-5xl font-bold text-white text-center',
+          'mb-2'
+        )}>
+          {teamNumber}
         </div>
-        <div
-          className={cn(
-            'text-4xl sm:text-6xl lg:text-7xl xl:text-9xl font-bold tracking-tighter',
-            isRed ? 'text-red-500' : 'text-blue-500'
-          )}
-        >
+        
+        {/* Team Name */}
+        <div className="text-[42px] font-normal text-white text-center mb-4">
+          {displayName}
+        </div>
+        
+        {/* Score */}
+        <div className={cn(
+          'text-[140px] font-bold leading-tight',
+          isRed ? 'text-[#FF3A3A]' : 'text-[#3A3AFF]'
+        )}>
           {score}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
+  );
+};
+
+const ScoreBreakdownTable = ({
+  redScore,
+  blueScore,
+  redBreakdown,
+  blueBreakdown,
+}: {
+  redScore: number;
+  blueScore: number;
+  redBreakdown?: ScoreBreakdown;
+  blueBreakdown?: ScoreBreakdown;
+}) => {
+  // Scoring categories based on the actual score breakdown structure
+  const categories = [
+    { key: 'flagsPoints', label: 'Điểm giữ cờ' },
+    { key: 'flagHitsPoints', label: 'Điểm bắn phá căn cứ' },
+    { key: 'fieldControlPoints', label: 'Điểm kiểm soát sân' },
+    { key: 'total', label: 'Tổng điểm' },
+  ] as const;
+
+  const getScore = (
+    breakdown: ScoreBreakdown | undefined, 
+    key: typeof categories[number]['key'], 
+    total: number
+  ) => {
+    if (key === 'total') return total;
+    if (!breakdown) return 0;
+    return breakdown[key] || 0;
+  };
+
+  return (
+    <div className="w-[694px] h-[320px] bg-white rounded-lg flex flex-col">
+      {categories.map((category, index) => (
+        <div 
+          key={category.key}
+          className={cn(
+            "flex items-center justify-between px-8 flex-1",
+            index < categories.length - 1 && "border-b border-gray-200"
+          )}
+        >
+          {/* Blue Score */}
+          <div className="text-[#3A3AFF] text-4xl font-bold w-20 text-center">
+            {getScore(blueBreakdown, category.key, blueScore)}
+          </div>
+          
+          {/* Category Label */}
+          <div className="text-black text-4xl font-bold flex-1 text-center">
+            {category.label}
+          </div>
+          
+          {/* Red Score */}
+          <div className="text-[#FF3A3A] text-4xl font-bold w-20 text-center">
+            {getScore(redBreakdown, category.key, redScore)}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 };
 
 const TimerDisplay = ({
   timer,
   status,
-  period,
 }: {
   timer: TimerData | null;
   status: string | null;
-  period: string | null;
 }) => {
-  const getStatusColor = (status: string | null) => {
-    switch (status) {
-      case 'IN_PROGRESS':
-        return 'text-green-400';
-      case 'COMPLETED':
-        return 'text-yellow-400';
-      case 'PENDING':
-      default:
-        return 'text-gray-400';
-    }
-  };
-
-  const getPeriodColor = (period: string | null) => {
-    switch (period) {
-      case 'auto':
-        return 'bg-purple-500';
-      case 'teleop':
-        return 'bg-green-500';
-      case 'endgame':
-        return 'bg-yellow-500';
-      default:
-        return 'bg-gray-700';
-    }
-  };
-
   return (
-    <div className="flex flex-col items-center justify-center text-white w-full lg:w-1/3">
-      <div className="text-4xl sm:text-6xl lg:text-7xl xl:text-9xl font-mono font-bold tracking-tighter">
+    <div className="flex flex-col items-center justify-center text-[#FFFFFF] w-full">
+      <div className="text-[120px] font-bold leading-tight tracking-tight">
         {timer ? formatTimeMsPad(timer.remaining) : '00:00'}
       </div>
-      <div className={`text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold ${getStatusColor(status)} mt-2`}>
-        {status?.replace('_', ' ') || 'PENDING'}
-      </div>
-      {status === 'IN_PROGRESS' && period && (
-        <div
-          className={cn(
-            'mt-2 sm:mt-4 px-3 sm:px-4 lg:px-6 py-1 sm:py-2 rounded-full text-lg sm:text-2xl lg:text-3xl font-bold text-white',
-            getPeriodColor(period)
-          )}
-        >
-          {period.toUpperCase()}
-        </div>
-      )}
     </div>
   );
 };
@@ -178,31 +209,136 @@ export const MatchDisplay: React.FC<MatchDisplayProps> = ({
   matchState,
   timer,
   score,
+  showWinnerBadge = false,
 }) => {
+  const redScore = score?.redTotalScore || 0;
+  const blueScore = score?.blueTotalScore || 0;
+  const shouldShowWinnerBadge = Boolean(showWinnerBadge);
+  const isBlueWinner = shouldShowWinnerBadge && blueScore > redScore;
+  const isRedWinner = shouldShowWinnerBadge && redScore > blueScore;
+
   return (
-    <div className="bg-black text-white h-full w-full flex flex-col p-2 sm:p-4 lg:p-6 xl:p-8 space-y-3 sm:space-y-6 lg:space-y-8">
-      <header className="text-center">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-6xl font-bold">
-          {matchState?.name || `Match ${matchState?.matchNumber || 'TBD'}`}
+    <div className="bg-black text-white w-full h-full flex flex-col relative overflow-hidden" style={{ aspectRatio: '16/9' }}>
+      {/* Top White Bar */}
+      <div className="absolute top-0 left-0 right-0 h-[120px] bg-white z-30 flex items-center justify-center">
+        <h1 className="text-black text-5xl font-bold">
+          {`Trận đấu số ${matchState?.matchNumber || 'TBD'}`}
+          {matchState?.fieldName && ` - Sân ${matchState.fieldName.replace('Field ', '')}`}
         </h1>
-      </header>
-      <main className="flex flex-col lg:flex-row flex-1 space-y-4 lg:space-y-0 lg:space-x-4 xl:space-x-8">
-        <AllianceCard
-          alliance="Blue"
-          teams={matchState?.blueTeams || []}
-          score={score?.blueTotalScore || 0}
+      </div>
+
+      {/* Winner Badge - Blue (Left) */}
+      {isBlueWinner && (
+        <div className="absolute top-[85px] left-0 z-40 flex items-start" style={{ transform: 'translateY(-50%)' }}>
+          <div className="flex items-center">
+            {/* Rectangle part */}
+            <div className="bg-[#FFDE5C] h-[170px] w-[370px] flex items-center justify-center">
+              <span className="text-black text-6xl font-bold">WINNER</span>
+            </div>
+            {/* Arrow triangle pointing right */}
+            <div 
+              className="w-0 h-0"
+              style={{
+                borderTop: '85px solid transparent',
+                borderBottom: '85px solid transparent',
+                borderLeft: '146px solid #FFDE5C',
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Winner Badge - Red (Right) */}
+      {isRedWinner && (
+        <div className="absolute top-[85px] right-0 z-40 flex items-start" style={{ transform: 'translateY(-50%)' }}>
+          <div className="flex items-center">
+            {/* Arrow triangle pointing left */}
+            <div 
+              className="w-0 h-0"
+              style={{
+                borderTop: '85px solid transparent',
+                borderBottom: '85px solid transparent',
+                borderRight: '146px solid #FFDE5C',
+              }}
+            />
+            {/* Rectangle part */}
+            <div className="bg-[#FFDE5C] h-[170px] w-[300px] flex items-center justify-center">
+              <span className="text-black text-6xl font-bold">WINNER</span>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Main content area - Black section */}
+      <div className="relative z-10 flex-1 flex flex-col pt-[120px]">
+        {/* Timer */}
+        <div className="flex justify-center mb-8 mt-6">
+          <TimerDisplay
+            timer={timer}
+            status={matchState?.status || null}
+          />
+        </div>
+
+        {/* Main scoring area */}
+        <div className="flex items-center justify-center gap-12 px-8 mb-auto">
+          {/* Blue Team */}
+          <TeamCard
+            alliance="Blue"
+            teams={matchState?.blueTeams || []}
+            score={blueScore}
+            isWinner={isBlueWinner}
+            side="left"
+          />
+
+          {/* Score Breakdown Table */}
+          <div className="flex items-center">
+            <ScoreBreakdownTable
+              blueScore={blueScore}
+              redScore={redScore}
+              blueBreakdown={score?.blueBreakdown}
+              redBreakdown={score?.redBreakdown}
+            />
+          </div>
+
+          {/* Red Team */}
+          <TeamCard
+            alliance="Red"
+            teams={matchState?.redTeams || []}
+            score={redScore}
+            isWinner={isRedWinner}
+            side="right"
+          />
+        </div>
+      </div>
+
+      {/* Bottom White Bar - Footer */}
+      <footer className="bg-white h-[10%] w-full flex items-center px-8 relative z-20">
+        {/* Logos */}
+        <div className="flex items-center gap-4 h-full py-2 w-[400px]">
+          <div className="relative h-full aspect-square w-full">
+        <Image
+          src="/btc_trans.png"
+          alt="Logo STEAM For Vietnam, Đại học Bách khoa Hà Nội, UNICEF, Đại sứ quán Hoa Kỳ"
+          fill
+          className="object-contain"
+          sizes="400px"
         />
-        <TimerDisplay
-          timer={timer}
-          status={matchState?.status || null}
-          period={matchState?.currentPeriod || null}
-        />
-        <AllianceCard
-          alliance="Red"
-          teams={matchState?.redTeams || []}
-          score={score?.redTotalScore || 0}
-        />
-      </main>
+          </div>
+        </div>
+
+        {/* Event info */}
+        <div className="flex-1 text-center">
+          <p className="text-black text-3xl font-bold">
+        STEMESE Festival - 19/10 - Đại học Bách Khoa Hà Nội
+          </p>
+        </div>
+
+        {/* LIVE indicator */}
+        <div className="flex items-center justify-end gap-2 w-[320px]">
+          <div className="w-[18px] h-[18px] bg-[#00FF2F] rounded-full animate-pulse" />
+          <span className="text-[#00FF2F] text-[32px] font-bold">LIVE</span>
+        </div>
+      </footer>
     </div>
   );
 };

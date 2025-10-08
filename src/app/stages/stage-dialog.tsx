@@ -108,18 +108,6 @@ export default function StageDialog({
         }
       }, {
         message: `Start date must be within tournament dates (${format(tournamentStartDate, 'PPP')} - ${format(tournamentEndDate, 'PPP')})`
-      })
-      .refine((date) => {
-        try {
-          const parsedDate = new Date(date);
-          const now = new Date();
-          now.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
-          return parsedDate >= now;
-        } catch {
-          return false;
-        }
-      }, {
-        message: "Start date cannot be in the past"
       }),
     endDate: z.string()
       .refine((date) => {

@@ -123,7 +123,7 @@ export function RankingsTable({
         const teamNumber = row.getValue("teamNumber") as string;
         return (
           <div className="font-medium text-gray-900 text-center">
-            <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-semibold">
+            <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm font-semibold">
               {teamNumber}
             </span>
           </div>
@@ -138,7 +138,7 @@ export function RankingsTable({
       cell: ({ row }: { row: Row<TeamRanking> }) => {
         const teamName = row.original.teamName;
         return (
-          <div className="font-medium text-gray-900 text-center">
+          <div className="font-medium text-gray-900 text-left text-lg">
             <span className="truncate">{teamName}</span>
           </div>
         );
@@ -154,7 +154,7 @@ export function RankingsTable({
         const losses = row.original.losses;
         const ties = row.original.ties;
         return (
-          <div className="text-center font-medium text-gray-900">
+          <div className="text-center font-medium text-gray-900 text-lg">
             {wins}-{losses}-{ties}
           </div>
         );
@@ -168,7 +168,7 @@ export function RankingsTable({
       cell: ({ row }: { row: Row<TeamRanking> }) => {
         const value = row.getValue("pointsScored") as number;
         return (
-          <div className="text-center font-medium text-gray-900">
+          <div className="text-center font-medium text-gray-900 text-lg">
             {value}
           </div>
         );
@@ -182,7 +182,7 @@ export function RankingsTable({
       cell: ({ row }: { row: Row<TeamRanking> }) => {
         const value = row.getValue("rankingPoints") as number;
         return (
-          <div className="text-center font-medium text-gray-900">
+          <div className="text-center font-medium text-gray-900 text-lg">
             {value}
           </div>
         );
@@ -197,7 +197,7 @@ export function RankingsTable({
         // Always show a number, default to 0
         const value = row.original.opponentWinPercentage;
         return (
-          <div className="text-center font-medium text-blue-900">
+          <div className="text-center font-medium text-blue-900 text-lg">
             {((value ?? 0) * 100).toFixed(1)}%
           </div>
         );
@@ -211,7 +211,7 @@ export function RankingsTable({
       cell: ({ row }: { row: Row<TeamRanking> }) => {
         const value = row.getValue("pointDifferential") as number;
         return (
-          <div className={`text-center font-medium ${
+          <div className={`text-center font-medium text-lg ${
             value > 0 ? 'text-green-600' : 
             value < 0 ? 'text-red-600' : 'text-gray-600'
           }`}>
@@ -229,7 +229,7 @@ export function RankingsTable({
         // Always show a number, default to 0
         const value = row.original.matchesPlayed;
         return (
-          <div className="text-center font-medium text-gray-900">
+          <div className="text-center font-medium text-gray-900 text-lg">
             {value ?? 0}
           </div>
         );
@@ -291,17 +291,17 @@ export function RankingsTable({
               return (
                 <TableHead 
                   key={column.id}
-                  className={`text-gray-700 font-semibold text-center ${
-                    column.id === "rank" ? "w-16" :
-                    column.id === "teamNumber" ? "w-24" :
-                    column.id === "teamName" ? "min-w-[200px]" :
-                    column.id === "wins" ? "w-24" :
-                    column.id === "pointsScored" ? "w-24" :
-                    column.id === "rankingPoints" ? "w-20" :
-                    column.id === "pointDifferential" ? "w-24" :
-                    column.id === "opponentWinPercentage" ? "w-20" :
-                    column.id === "matchesPlayed" ? "w-24" :
-                    column.id === "status" ? "w-24" : ""
+                  className={`text-gray-700 font-semibold text-center text-lg ${
+                    column.id === "rank" ? "w-20" :
+                    column.id === "teamNumber" ? "w-32" :
+                    column.id === "teamName" ? "min-w-[150px] text-left" :
+                    column.id === "wins" ? "w-32" :
+                    column.id === "pointsScored" ? "w-32" :
+                    column.id === "rankingPoints" ? "w-32" :
+                    column.id === "pointDifferential" ? "w-36" :
+                    column.id === "opponentWinPercentage" ? "w-28" :
+                    column.id === "matchesPlayed" ? "w-32" :
+                    column.id === "status" ? "w-32" : ""
                   } ${
                     canSort ? "cursor-pointer select-none hover:bg-gray-100" : "cursor-default"
                   }`}
@@ -340,7 +340,7 @@ export function RankingsTable({
                 <TableRow 
                   key={row.id} 
                   className={`
-                    transition-colors border-b border-gray-100 h-12
+                    transition-colors border-b border-gray-100 h-14
                     ${isAdvancing ? 'bg-green-50 hover:bg-green-100' : index % 2 === 0 ? 'bg-gray-50 hover:bg-gray-100' : 'hover:bg-gray-50'}
                   `}
                 >

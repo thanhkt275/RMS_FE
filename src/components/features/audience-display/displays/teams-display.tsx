@@ -1,192 +1,293 @@
-import React from 'react';
-import { useReactTable, getCoreRowModel, getSortedRowModel, flexRender, ColumnDef, SortingState } from '@tanstack/react-table';
-
-// Define Team interface
-export interface Team {
-  id: string;
-  name: string;
-  teamNumber?: string;
-  organization?: string;
-  location?: string;
-}
+import React from "react";
+import { useMemo } from "react";
+import { Users } from "lucide-react";
+import { Team } from "@/types/team.types";
+import { format } from "date-fns";
+import DataTable, {
+  defaultTableState,
+} from "@/components/data-table/DataTable";
+import type { ColumnDef } from "@tanstack/react-table";
+import Image from "next/image";
 
 interface TeamsDisplayProps {
   teams: Team[];
   isLoading: boolean;
 }
 
-const columns: ColumnDef<Team>[] = [
-  {
-    accessorKey: 'teamNumber',
-    header: () => <span className="text-gray-900">Team #</span>,
-    cell: info => {
-      const value = info.getValue() as string | undefined;
-      return (
-        <div className="flex items-center">
-          <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full bg-blue-50 text-blue-800 font-bold text-sm border border-blue-200 shadow-sm">
-            {value || '—'}
-          </div>
-        </div>
-      );
-    },
-    size: 100,
-    meta: { responsiveClass: 'pl-6' }, // Add padding for the first cell
-  },
-  {
-    accessorKey: 'name',
-    header: () => <span className="text-gray-900">Team Name</span>,
-    cell: info => {
-      const value = info.getValue() as string | undefined;
-      return <div className="text-sm font-medium text-gray-900">{value}</div>;
-    },
-    size: 220,
-    meta: { responsiveClass: '' },
-  },
-  {
-    accessorKey: 'organization',
-    header: () => <span className="text-gray-900">Organization</span>,
-    cell: info => {
-      const value = info.getValue() as string | undefined;
-      return <div className="text-sm text-gray-600">{value || '—'}</div>;
-    },
-    size: 200,
-    meta: { responsiveClass: 'hidden md:table-cell' },
-  },
-  {
-    accessorKey: 'location',
-    header: () => <span className="text-gray-900">Location</span>,
-    cell: info => {
-      const value = info.getValue() as string | undefined;
-      return <div className="text-sm text-gray-600">{value || '—'}</div>;
-    },
-    size: 180,
-    meta: { responsiveClass: 'hidden lg:table-cell pr-6' }, // Add padding for the last cell
-  },
-];
+interface AudienceTeamData {
+  id: string;
+  name: string;
+  teamNumber: string;
+  memberCount: number;
+  organization: string;
+  location?: string;
+  createdAt: string;
+}
 
-export const TeamsDisplay: React.FC<TeamsDisplayProps> = ({ teams, isLoading }) => {
-  const [sorting, setSorting] = React.useState<SortingState>([{ id: 'teamNumber', desc: false }]);
-
-  const table = useReactTable({
-    data: teams,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    columnResizeMode: 'onChange',
-    debugTable: false,
-  });
+/**
+ * Empty state for when no teams are found
+ */
+const TeamsTableEmpty = React.memo(function TeamsTableEmpty() {
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      {/* Teams Page Header */}
-      <div className="bg-white border border-gray-200 shadow-lg p-3 sm:p-4 lg:p-6 xl:p-8 rounded-xl animate-fade-in mb-3 sm:mb-4 lg:mb-6">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <div className="text-center w-full">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mb-1 text-gray-900">Tournament Teams</h1>
-            <p className="text-xs sm:text-sm lg:text-base text-gray-600 animate-fade-in-slow">
-              <span className="text-blue-800 font-semibold">{teams.length}</span> {teams.length === 1 ? 'team' : 'teams'} registered
-            </p>
-            </div>
-          <div className="flex items-center space-x-1 sm:space-x-2 bg-green-50 px-2 sm:px-3 py-1 rounded-full border border-green-200">
-            <span className="inline-block w-2 sm:w-3 h-2 sm:h-3 rounded-full bg-green-500 animate-pulse shadow-md"></span>
-            <span className="text-2xs sm:text-xs text-green-800 font-semibold uppercase">Live</span>
-          </div>
-        </div>
-      </div>      
-      
-      {/* Teams List Table Area */}
-      <div className="flex-1 p-2 sm:p-3 lg:p-4 xl:p-6 overflow-auto">
-        {isLoading ? (
-          <div className="flex flex-col justify-center items-center h-full min-h-[200px] sm:min-h-[300px] bg-white border border-gray-200 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 animate-pulse">
-            <div className="text-base sm:text-lg lg:text-xl text-gray-600 font-semibold mb-2 sm:mb-3">Loading teams...</div>
-            {/* Simple spinner or loading bar */}
-            <div className="w-12 sm:w-16 h-12 sm:h-16 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
-          </div>
-        ) : teams.length > 0 ? (
-          <div className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden animate-fade-in">
-            {/* Mobile Card View - Hidden on desktop */}
-            <div className="block lg:hidden">
-              <div className="space-y-2 sm:space-y-3 p-3 sm:p-4">
-                {table.getRowModel().rows.map((row, rowIndex) => {
-                  const team = row.original;
-                  return (
-                    <div key={row.id} className={`p-3 sm:p-4 rounded-lg border ${rowIndex % 2 === 0 ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300'}`}>
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center space-x-3">
-                          <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center rounded-full bg-blue-50 text-blue-800 font-bold text-xs sm:text-sm border border-blue-200 shadow-sm">
-                            {team.teamNumber || '—'}
-                          </div>
-                          <div>
-                            <h3 className="text-sm sm:text-base font-medium text-gray-900">{team.name}</h3>
-                            {team.organization && (
-                              <p className="text-xs sm:text-sm text-gray-600 mt-1">{team.organization}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      {team.location && (
-                        <div className="text-xs sm:text-sm text-gray-500 mt-2">
-                          <span className="font-medium">Location:</span> {team.location}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <Users className="mx-auto h-16 w-16 md:h-20 md:w-20 text-muted-foreground mb-6" />
+      <h3 className="text-xl md:text-2xl font-bold text-foreground mb-3">
+        No teams found
+      </h3>
+      <p className="text-base md:text-lg text-muted-foreground">
+        No teams have been registered for this tournament yet.
+      </p>
+    </div>
+  );
+});
 
-            {/* Desktop Table View - Hidden on mobile */}
-            <div className="hidden lg:block">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  {table.getHeaderGroups().map(headerGroup => (
-                    <tr key={headerGroup.id}>
-                      {headerGroup.headers.map(header => (
-                        <th
-                          key={header.id}
-                          className={`px-3 sm:px-4 lg:px-5 py-2 sm:py-3 lg:py-3.5 text-left text-xs font-semibold uppercase tracking-wider ${(header.column.columnDef.meta as any)?.responsiveClass || ''} cursor-pointer select-none whitespace-nowrap text-gray-900`}
-                          onClick={header.column.getToggleSortingHandler()}
-                          style={{ width: header.getSize() }}
-                        >
-                          <div className="flex items-center">
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            <span className="ml-1.5 inline-block w-4 text-center text-gray-600">
-                              {header.column.getIsSorted() === 'asc' ? '▲' : header.column.getIsSorted() === 'desc' ? '▼' : <span className="opacity-30">▲</span>}
-                            </span>
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {table.getRowModel().rows.map((row, rowIndex) => (
-                    <tr key={row.id} className={`${rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors duration-150`}>
-                      {row.getVisibleCells().map(cell => (
-                        <td
-                          key={cell.id}
-                          className={`px-3 sm:px-4 lg:px-5 py-3 sm:py-4 whitespace-nowrap ${(cell.column.columnDef.meta as any)?.responsiveClass || ''}`}
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+export const TeamsDisplay: React.FC<TeamsDisplayProps> = ({
+  teams,
+  isLoading,
+}) => {
+  // Process teams data for the table
+  const tableData = useMemo((): AudienceTeamData[] => {
+    return teams.map((team) => {
+      const memberCount =
+        team.teamMemberCount ??
+        team._count?.teamMembers ??
+        team.teamMembers?.length ??
+        0;
+      const organization =
+        team.teamMembers?.[0]?.organization || team.user?.email || "N/A";
+      const location = undefined;
+      const createdDate = new Date(team.createdAt);
+
+      return {
+        id: team.id,
+        name: team.name,
+        teamNumber: team.teamNumber || "N/A",
+        memberCount,
+        organization,
+        location,
+        createdAt: format(createdDate, "MMM d, yyyy"),
+      };
+    });
+  }, [teams]);
+
+  // Define table columns optimized for audience display
+  const columns = useMemo(() => {
+    const cols: ColumnDef<any>[] = [
+      {
+        id: "index",
+        header: "STT",
+        cell: ({ row }: any) => (
+          <div className="text-base md:text-lg text-foreground font-bold text-center">
+            {row.index + 1}
+          </div>
+        ),
+        enableSorting: false,
+        size: 80,
+      },
+      {
+        accessorKey: "teamNumber",
+        header: "Mã đội thi #",
+        cell: ({ getValue }: any) => (
+          <div className="text-base md:text-lg text-foreground font-mono font-semibold">
+            {getValue() as string}
+          </div>
+        ),
+        enableSorting: true,
+        size: 140,
+      },
+      {
+        accessorKey: "name",
+        header: "Tên đội thi",
+        cell: ({ getValue }: any) => (
+          <div className="text-lg md:text-lg font-bold text-foreground">
+            {getValue() as string}
+          </div>
+        ),
+        enableSorting: true,
+        size: 300,
+      },
+      {
+        accessorKey: "memberCount",
+        header: "Số lượng thành viên",
+        cell: ({ getValue }: any) => (
+          <div className="flex items-center">
+            <Users className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground mr-2" />
+            <span className="text-lg md:text-lg font-semibold text-foreground">
+              {getValue() as number}
+            </span>
+          </div>
+        ),
+        enableSorting: true,
+        size: 140,
+      },
+      {
+        accessorKey: "organization",
+        header: "Trường / Tổ chức",
+        cell: ({ getValue }: any) => (
+          <div className="text-lg md:text-lg text-foreground max-w-xs truncate font-medium">
+            {getValue() as string}
+          </div>
+        ),
+        enableSorting: true,
+        size: 250,
+      },
+      {
+        accessorKey: "location",
+        header: "Khu vực",
+        cell: ({ row }: any) => {
+          const team = row.original as AudienceTeamData;
+          if (!team.location)
+            return (
+              <span className="text-muted-foreground text-base md:text-lg">
+                —
+              </span>
+            );
+          return (
+            <span className="text-lg md:text-lg text-foreground font-medium">
+              {team.location}
+            </span>
+          );
+        },
+        enableSorting: true,
+        size: 200,
+      },
+    ];
+    return cols;
+  }, []);
+
+  return (
+    <div className="bg-black text-white w-screen h-screen flex flex-col relative overflow-hidden">
+      {/* Top White Bar */}
+      <div className="absolute top-0 left-0 right-0 h-[110px] bg-white z-30 flex items-center justify-center">
+        <div className="text-center w-full">
+          <h1 className="text-black text-5xl font-bold tracking-tight mb-2">
+            Danh sách đội thi tham gia giải đấu Motion In Fire
+          </h1>
+          <p className="text-black text-lg md:text-xl animate-fade-in-slow">
+            Danh sách gồm có tổng cộng{" "}
+            <span className="text-primary font-bold text-3xl">
+              {teams.length}
+            </span>{" "}
+            đội thi
+          </p>
+        </div>
+      </div>
+
+      {/* Teams List Table Area */}
+      <div className="flex-1 p-1 overflow-auto pt-[120px] flex items-center justify-center">
+        {isLoading ? (
+          <div className="flex flex-col justify-center items-center h-full min-h-[300px] bg-white rounded-xl shadow-lg p-8 animate-pulse">
+            <div className="text-xl text-slate-500 font-semibold mb-4">
+              Loading teams...
+            </div>
+          </div>
+        ) : tableData.length > 0 ? (
+          <div
+            className="bg-white rounded-xl shadow-lg overflow-hidden animate-fade-in"
+            style={{ width: "80%", maxWidth: "1440px" }}
+          >
+            <style jsx global>{`
+              .audience-teams-table .bg-card {
+                background-color: white !important;
+                border: none !important;
+                box-shadow: none !important;
+              }
+              .audience-teams-table .bg-muted {
+                background-color: #f3f4f6 !important;
+              }
+              .audience-teams-table .hover\:bg-muted\/50:hover {
+                background-color: #f9fafb !important;
+              }
+              .audience-teams-table .text-foreground {
+                color: #111827 !important;
+              }
+              .audience-teams-table .text-muted-foreground {
+                color: #6b7280 !important;
+              }
+              .audience-teams-table .border-border {
+                border-color: #e5e7eb !important;
+              }
+              .audience-teams-table th {
+                background-color: #f3f4f6 !important;
+                color: #111827 !important;
+                font-weight: 700 !important;
+                font-size: 1.125rem !important;
+                padding: 0.75rem !important;
+              }
+              .audience-teams-table td {
+                padding: 0.75rem !important;
+                border-bottom: 1px solid #e5e7eb !important;
+              }
+              .audience-teams-table tbody tr:last-child td {
+                border-bottom: none !important;
+              }
+            `}</style>
+            <div className="audience-teams-table">
+              <DataTable
+                data={tableData}
+                columns={columns as any}
+                totalCount={tableData.length}
+                isLoading={isLoading}
+                showPagination={false}
+                tableState={{ ...defaultTableState, pageSize: 20 }}
+                setTableState={() => {}} // Read-only for audience display
+                emptyState={<TeamsTableEmpty />}
+              />
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full min-h-[200px] sm:min-h-[300px] bg-white border border-gray-200 rounded-xl shadow-lg p-6 sm:p-8 lg:p-12 text-center animate-fade-in">
-            <svg className="w-12 sm:w-16 h-12 sm:h-16 text-gray-400 mb-3 sm:mb-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zM12 12.75a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+          <div className="flex flex-col items-center justify-center h-full min-h-[300px] bg-white rounded-xl shadow-lg p-12 text-center animate-fade-in">
+            <svg
+              className="w-16 h-16 text-slate-300 mb-6"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zM12 12.75a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
+              />
             </svg>
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-700 mb-1 sm:mb-2">No Teams Available</h3>
-            <p className="text-xs sm:text-sm text-gray-600">Teams registered for the tournament will appear here.</p>
+            <h3 className="text-xl font-semibold text-slate-700 mb-3">
+              No Teams Available
+            </h3>
+            <p className="text-base text-slate-500">
+              Teams for this tournament will appear here.
+            </p>
           </div>
         )}
       </div>
+      {/* Bottom White Bar - Footer */}
+      <footer className="bg-white h-[10%] w-full flex items-center px-8 relative z-20">
+        {/* Logos */}
+        <div className="flex items-center gap-4 h-full py-2 w-[400px]">
+          <div className="relative h-full aspect-square w-full">
+            <Image
+              src="/btc_trans.png"
+              alt="Logo STEAM For Vietnam, Đại học Bách khoa Hà Nội, UNICEF, Đại sứ quán Hoa Kỳ"
+              fill
+              sizes="400px"
+              className="object-contain"
+            />
+          </div>
+        </div>
+
+        {/* Event info */}
+        <div className="flex-1 text-center">
+          <p className="text-black text-3xl font-bold">
+            STEMESE Festival - 19/10 - Đại học Bách Khoa Hà Nội
+          </p>
+        </div>
+
+        {/* Rankings indicator */}
+        <div className="flex items-center justify-end gap-2 w-[320px]">
+          <div className="w-[18px] h-[18px] bg-[#00FF2F] rounded-full animate-pulse" />
+          <span className="text-[#00FF2F] text-[32px] font-bold">LIVE</span>
+        </div>
+      </footer>
     </div>
   );
 };

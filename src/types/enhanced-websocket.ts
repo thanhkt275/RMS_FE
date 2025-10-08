@@ -176,6 +176,7 @@ export interface AudienceDisplaySettings {
   updatedAt: number;
   theme?: DisplayTheme;
   layout?: DisplayLayout;
+  scheduleStageId?: string | null;
 }
 
 export interface DisplayTheme {

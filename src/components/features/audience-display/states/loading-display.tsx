@@ -5,7 +5,7 @@ interface LoadingDisplayProps {
 }
 
 export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({ connectionError }) => (
-  <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
+  <div className="flex items-center justify-center h-screen w-screen bg-gray-50 px-4">
     <div className="text-center bg-white border border-gray-200 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 max-w-md w-full">
       <div className="w-12 sm:w-16 h-12 sm:h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3 sm:mb-4"></div>
       <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Loading display...</h2>

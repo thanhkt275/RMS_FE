@@ -31,6 +31,10 @@ interface DisplayControlReturn {
   // Tournament selection
   selectedTournamentId: string;
   setSelectedTournamentId: (tournamentId: string) => void;
+
+  // Schedule stage selection
+  scheduleStageId: string | null;
+  setScheduleStageId: (stageId: string | null) => void;
 }
 
 export function useDisplayControl({
@@ -48,6 +52,7 @@ export function useDisplayControl({
   // Selection state
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>("all");
+  const [scheduleStageId, setScheduleStageId] = useState<string | null>(null);
 
   return {
     // Display mode
@@ -73,5 +78,9 @@ export function useDisplayControl({
     // Tournament selection
     selectedTournamentId,
     setSelectedTournamentId,
+
+    // Schedule stage selection
+    scheduleStageId,
+    setScheduleStageId,
   };
 }

@@ -339,6 +339,23 @@ export class UnifiedWebSocketService implements IUnifiedWebSocketService {
         });
     }
 
+    sendWinnerBadgeUpdate(data: { matchId: string; tournamentId: string; fieldId?: string; showWinnerBadge: boolean }): void {
+        console.log('[UnifiedWebSocketService] sendWinnerBadgeUpdate called with:', data);
+        console.log('[UnifiedWebSocketService] Current user role:', this.roleManager.getCurrentRole());
+        console.log('[UnifiedWebSocketService] Can access display_control:', this.canAccess('display_control'));
+        
+        if (!this.canAccess('display_control')) {
+            console.warn('[UnifiedWebSocketService] Access denied for winner badge control');
+            return;
+        }
+
+        console.log('[UnifiedWebSocketService] Emitting winner_badge_update event');
+        this.emit('winner_badge_update', data as any as WebSocketEventData, {
+            fieldId: data.fieldId,
+            tournamentId: data.tournamentId
+        });
+    }
+
     sendMatchUpdate(data: MatchData): void {
         console.log('🎠 [UnifiedWebSocketService] sendMatchUpdate called with data:', data);
         console.log('🎠 [UnifiedWebSocketService] Data redTeams:', data.redTeams);

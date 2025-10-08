@@ -50,7 +50,9 @@ export interface AuthContextType {
   register: (
     username: string,
     password: string,
-    email?: string
+    email: string,
+    name: string,
+    phoneNumber?: string
   ) => Promise<void>;
 }
 
@@ -65,6 +67,7 @@ export interface AudienceDisplaySettings {
   updatedAt: number;
   tournamentId: string;
   fieldId?: string | null;
+  scheduleStageId?: string | null;
 }
 
 // --- Field ---

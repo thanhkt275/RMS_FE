@@ -6,7 +6,7 @@ interface FieldNotFoundProps {
 }
 
 export const FieldNotFound: React.FC<FieldNotFoundProps> = ({ fieldError, onBack }) => (
-  <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
+  <div className="flex items-center justify-center h-screen w-screen bg-gray-50 px-4">
     <div className="text-center bg-red-50 border border-red-200 p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg max-w-xl w-full">
       <svg
         xmlns="http://www.w3.org/2000/svg"

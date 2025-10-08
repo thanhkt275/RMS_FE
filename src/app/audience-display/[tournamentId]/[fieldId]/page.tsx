@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTournament } from "@/hooks/tournaments/use-tournaments";
 import { useTournamentFields } from "@/components/features/fields/FieldSelectDropdown";
@@ -52,7 +52,9 @@ export default function LiveFieldDisplayPage() {
     currentPeriod: null,
     redTeams: [],
     blueTeams: [],
+    fieldName: null,
   });
+  const [showWinnerBadge, setShowWinnerBadge] = useState<boolean>(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   // Enhanced timer state for drift correction and smooth updates
@@ -71,8 +73,8 @@ export default function LiveFieldDisplayPage() {
     lastSyncTime: null,
     localStartTime: null,
   }); // Enhanced real-time scores with fallback support (Steps 10-12)
-  const currentMatchId = matchState.matchId || "";
-  console.log("useRealtimeScores called with matchId:", currentMatchId);
+  const currentMatchId = useMemo(() => matchState.matchId || "", [matchState.matchId]);
+  // console.log("useRealtimeScores called with matchId:", currentMatchId);
 
   const {
     realtimeScores,
@@ -81,6 +83,16 @@ export default function LiveFieldDisplayPage() {
     fallbackMode,
     source,
   } = useRealtimeScores(currentMatchId);
+
+  // Remove the useAudienceScores hook call that's causing infinite loops
+  // const { scores: audienceScores } = useAudienceScores(currentMatchId, {
+  //   tournamentId,
+  //   fieldId,
+  // });
+
+  // Extract breakdown data from the score state instead
+  const redBreakdown = score?.scoreDetails?.breakdown?.red;
+  const blueBreakdown = score?.scoreDetails?.breakdown?.blue;
 
   // Display mode and announcement state
   const [displaySettings, setDisplaySettings] =
@@ -128,14 +140,70 @@ export default function LiveFieldDisplayPage() {
   const [isLoadingRankings, setIsLoadingRankings] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!tournamentId) return;
+    if (!tournamentId || !teams.length) return;
     setIsLoadingRankings(true);
+
+    // Fetch rankings and merge with all teams (showing 0 for teams without rankings)
     apiClient
       .get(`/team-stats/leaderboard/${tournamentId}`)
-      .then((data) => setRankings(data.rankings || []))
-      .catch(() => setRankings([]))
+      .then((data) => {
+        const existingRankings = data.rankings || [];
+        
+        // Create a map of existing rankings by teamId for quick lookup
+        const rankingsMap = new Map(
+          existingRankings.map((ranking: any) => [ranking.teamId, ranking])
+        );
+
+        // Merge all teams with rankings, using default 0 values for teams without rankings
+        const mergedRankings = teams.map((team) => {
+          const existingRanking = rankingsMap.get(team.id);
+          if (existingRanking) {
+            return existingRanking;
+          } else {
+            // Return default ranking with 0 values for teams without matches
+            return {
+              teamId: team.id,
+              teamNumber: team.teamNumber,
+              teamName: team.name,
+              wins: 0,
+              losses: 0,
+              ties: 0,
+              totalScore: 0,
+              pointsScored: 0,
+              pointsConceded: 0,
+              pointDifferential: 0,
+              rankingPoints: 0,
+              opponentWinPercentage: 0,
+              matchesPlayed: 0,
+              highestScore: 0,
+            };
+          }
+        });
+
+        setRankings(mergedRankings);
+      })
+      .catch(() => {
+        // On error, still show all teams with 0 values
+        const defaultRankings = teams.map((team) => ({
+          teamId: team.id,
+          teamNumber: team.teamNumber,
+          teamName: team.name,
+          wins: 0,
+          losses: 0,
+          ties: 0,
+          totalScore: 0,
+          pointsScored: 0,
+          pointsConceded: 0,
+          pointDifferential: 0,
+          rankingPoints: 0,
+          opponentWinPercentage: 0,
+          matchesPlayed: 0,
+          highestScore: 0,
+        }));
+        setRankings(defaultRankings);
+      })
       .finally(() => setIsLoadingRankings(false));
-  }, [tournamentId]);
+  }, [tournamentId, teams]);
 
   // Unified WebSocket connection and state
   const {
@@ -159,6 +227,17 @@ export default function LiveFieldDisplayPage() {
     autoConnect: true,
     userRole: UserRole.COMMON, // Audience display is read-only
   });
+
+  // Debug WebSocket connection and room joining
+  useEffect(() => {
+    console.log('[Audience Display] WebSocket connection status:', {
+      unifiedConnected,
+      connectionStatus,
+      tournamentId,
+      fieldId,
+      userRole: UserRole.COMMON,
+    });
+  }, [unifiedConnected, connectionStatus, tournamentId, fieldId]);
 
   // Unified audience display hook for match handling
   const {
@@ -251,10 +330,10 @@ export default function LiveFieldDisplayPage() {
             title: title,
             duration: seconds,
           };
-          console.log(
-            "🧪 [Test] Creating test announcement:",
-            announcementData
-          );
+          // console.log(
+          //   "🧪 [Test] Creating test announcement:",
+          //   announcementData
+          // );
           setAnnouncement(announcementData);
           setShowAnnouncement(true);
           setAnnouncementCountdown(seconds); // Use the actual seconds parameter
@@ -283,10 +362,10 @@ export default function LiveFieldDisplayPage() {
             title: title || "Test Image",
             duration: duration,
           };
-          console.log(
-            "🖼️ [Test] Testing image announcement:",
-            announcementData
-          );
+          // console.log(
+          //   "🖼️ [Test] Testing image announcement:",
+          //   announcementData
+          // );
           setAnnouncement(announcementData);
           setShowAnnouncement(true);
           setAnnouncementCountdown(duration);
@@ -314,10 +393,10 @@ export default function LiveFieldDisplayPage() {
             title: title || "Test Video",
             duration: duration,
           };
-          console.log(
-            "🎥 [Test] Testing video announcement:",
-            announcementData
-          );
+          // console.log(
+          //   "🎥 [Test] Testing video announcement:",
+          //   announcementData
+          // );
           setAnnouncement(announcementData);
           setShowAnnouncement(true);
           setAnnouncementCountdown(duration);
@@ -344,10 +423,10 @@ export default function LiveFieldDisplayPage() {
             title: title || "Test YouTube Video",
             duration: duration,
           };
-          console.log(
-            "🎥 [Test] Testing YouTube announcement:",
-            announcementData
-          );
+          // console.log(
+          //   "🎥 [Test] Testing YouTube announcement:",
+          //   announcementData
+          // );
           setAnnouncement(announcementData);
           setShowAnnouncement(true);
           setAnnouncementCountdown(duration);
@@ -375,7 +454,7 @@ export default function LiveFieldDisplayPage() {
             title: title || "Test Announcement",
             duration: duration,
           };
-          console.log("📝 [Test] Testing text announcement:", announcementData);
+          // console.log("📝 [Test] Testing text announcement:", announcementData);
           setAnnouncement(announcementData);
           setShowAnnouncement(true);
           setAnnouncementCountdown(duration);
@@ -391,9 +470,9 @@ export default function LiveFieldDisplayPage() {
 
         // Quick test suite
         runTestSuite: () => {
-          console.log(
-            "🧪 [Test Suite] Starting multimedia announcement test suite..."
-          );
+          // console.log(
+          //   "🧪 [Test Suite] Starting multimedia announcement test suite..."
+          // );
 
           // Test text first
           setTimeout(() => {
@@ -431,9 +510,9 @@ export default function LiveFieldDisplayPage() {
             );
           }, 14000);
 
-          console.log(
-            "🧪 [Test Suite] Test suite scheduled. Watch for announcements!"
-          );
+          // console.log(
+          //   "🧪 [Test Suite] Test suite scheduled. Watch for announcements!"
+          // );
         },
 
         // Debug current announcement state
@@ -477,7 +556,7 @@ export default function LiveFieldDisplayPage() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && showAnnouncement) {
-        console.log("🔑 [ESC] Manually closing announcement");
+        // console.log("🔑 [ESC] Manually closing announcement");
         setShowAnnouncement(false);
         setAnnouncementCountdown(null);
       }
@@ -510,27 +589,27 @@ export default function LiveFieldDisplayPage() {
 
   // Sync local state with reactive data from the unified audience display hook
   useEffect(() => {
-    console.log(
-      "📺 [AudienceDisplay] Syncing unified match state:",
-      unifiedMatchState
-    );
-    console.log(
-      "📺 [AudienceDisplay] Unified match state teams - Red:",
-      unifiedMatchState?.redTeams?.length || 0,
-      "Blue:",
-      unifiedMatchState?.blueTeams?.length || 0
-    );
+    // console.log(
+    //   "📺 [AudienceDisplay] Syncing unified match state:",
+    //   unifiedMatchState
+    // );
+    // console.log(
+    //   "📺 [AudienceDisplay] Unified match state teams - Red:",
+    //   unifiedMatchState?.redTeams?.length || 0,
+    //   "Blue:",
+    //   unifiedMatchState?.blueTeams?.length || 0
+    // );
 
     if (unifiedMatchState?.matchId) {
       const isNewMatch = unifiedMatchState.matchId !== matchState.matchId;
-      console.log(
-        "📺 [AudienceDisplay] Is new match?:",
-        isNewMatch,
-        "Current:",
-        matchState.matchId,
-        "New:",
-        unifiedMatchState.matchId
-      );
+      // console.log(
+      //   "📺 [AudienceDisplay] Is new match?:",
+      //   isNewMatch,
+      //   "Current:",
+      //   matchState.matchId,
+      //   "New:",
+      //   unifiedMatchState.matchId
+      // );
 
       // Check if we have complete team data
       const hasRedTeams =
@@ -538,19 +617,19 @@ export default function LiveFieldDisplayPage() {
       const hasBlueTeams =
         unifiedMatchState.blueTeams && unifiedMatchState.blueTeams.length > 0;
 
-      console.log(
-        "📺 [AudienceDisplay] Team data check - hasRedTeams:",
-        hasRedTeams,
-        "hasBlueTeams:",
-        hasBlueTeams
-      );
+      // console.log(
+      //   "📺 [AudienceDisplay] Team data check - hasRedTeams:",
+      //   hasRedTeams,
+      //   "hasBlueTeams:",
+      //   hasBlueTeams
+      // );
 
       // For new matches, reset team data and update with new data if available
       // For same match, preserve existing team data when new data is not provided
       if (isNewMatch) {
-        console.log(
-          "📺 [AudienceDisplay] NEW MATCH - Resetting and updating state"
-        );
+        // console.log(
+        //   "📺 [AudienceDisplay] NEW MATCH - Resetting and updating state"
+        // );
         setMatchState({
           matchId: unifiedMatchState.matchId,
           matchNumber: unifiedMatchState.matchNumber,
@@ -559,20 +638,21 @@ export default function LiveFieldDisplayPage() {
           currentPeriod: unifiedMatchState.currentPeriod,
           redTeams: hasRedTeams ? unifiedMatchState.redTeams : [],
           blueTeams: hasBlueTeams ? unifiedMatchState.blueTeams : [],
+          fieldName: field?.name || null,
         });
 
         // For new matches, if team data is missing, fetch immediately
         if (!hasRedTeams || !hasBlueTeams) {
-          console.log(
-            "📺 [AudienceDisplay] NEW MATCH with missing team data, fetching complete match details for:",
-            unifiedMatchState.matchId
-          );
+          // console.log(
+          //   "📺 [AudienceDisplay] NEW MATCH with missing team data, fetching complete match details for:",
+          //   unifiedMatchState.matchId
+          // );
           fetchAndSyncMatch(unifiedMatchState.matchId);
         }
       } else {
-        console.log(
-          "📺 [AudienceDisplay] SAME MATCH - Preserving existing data where appropriate"
-        );
+        // console.log(
+        //   "📺 [AudienceDisplay] SAME MATCH - Preserving existing data where appropriate"
+        // );
         setMatchState((prev: any) => ({
           ...prev,
           matchId: unifiedMatchState.matchId,
@@ -585,6 +665,7 @@ export default function LiveFieldDisplayPage() {
           blueTeams: hasBlueTeams
             ? unifiedMatchState.blueTeams
             : prev.blueTeams,
+          fieldName: field?.name || prev.fieldName || null,
         }));
 
         // For same match, only fetch if we still don't have team data
@@ -594,10 +675,10 @@ export default function LiveFieldDisplayPage() {
           (!hasBlueTeams &&
             (!matchState.blueTeams || matchState.blueTeams.length === 0))
         ) {
-          console.log(
-            "📺 [AudienceDisplay] SAME MATCH still missing team data, fetching complete match details for:",
-            unifiedMatchState.matchId
-          );
+          // console.log(
+          //   "📺 [AudienceDisplay] SAME MATCH still missing team data, fetching complete match details for:",
+          //   unifiedMatchState.matchId
+          // );
           fetchAndSyncMatch(unifiedMatchState.matchId);
         }
       }
@@ -634,15 +715,15 @@ export default function LiveFieldDisplayPage() {
   // Helper to fetch and sync full match details and score
   async function fetchAndSyncMatch(matchId: string) {
     try {
-      console.log("🤼 [API Fallback] Fetching match details for:", matchId);
+      // console.log("🤼 [API Fallback] Fetching match details for:", matchId);
 
       // Fetch match metadata (teams, period, status, etc.)
       const matchDetails = await apiClient.get<any>(`/matches/${matchId}`);
-      console.log(
-        "🤼 [API Fallback] Raw match details received:",
-        matchDetails
-      );
-      console.log("🤼 [API Fallback] Match alliances:", matchDetails.alliances);
+      // console.log(
+      //   "🤼 [API Fallback] Raw match details received:",
+      //   matchDetails
+      // );
+      // console.log("🤼 [API Fallback] Match alliances:", matchDetails.alliances);
 
       // Extract team data from alliances
       let redTeams = [];
@@ -656,8 +737,8 @@ export default function LiveFieldDisplayPage() {
           (alliance: any) => alliance.color === "BLUE"
         );
 
-        console.log("🤼 [API Fallback] Red alliance:", redAlliance);
-        console.log("🤼 [API Fallback] Blue alliance:", blueAlliance);
+        // console.log("🤼 [API Fallback] Red alliance:", redAlliance);
+        // console.log("🤼 [API Fallback] Blue alliance:", blueAlliance);
 
         // Extract team numbers and format them like the WebSocket data
         if (redAlliance?.teamAlliances) {
@@ -759,9 +840,6 @@ export default function LiveFieldDisplayPage() {
         }
       }
 
-      console.log("🤼 [API Fallback] Extracted red teams:", redTeams);
-      console.log("🤼 [API Fallback] Extracted blue teams:", blueTeams);
-
       setMatchState((prev: any) => ({
         ...prev,
         matchId: matchDetails.id,
@@ -779,24 +857,41 @@ export default function LiveFieldDisplayPage() {
       );
       setScore(scoreDetails);
 
-      console.log(
-        "🤼 [API Fallback] Successfully updated match state with team counts - Red:",
-        redTeams.length,
-        "Blue:",
-        blueTeams.length
-      );
+      // console.log(
+      //   "🤼 [API Fallback] Successfully updated match state with team counts - Red:",
+      //   redTeams.length,
+      //   "Blue:",
+      //   blueTeams.length
+      // );
     } catch (error) {
-      console.error("🤼 [API Fallback] Error syncing match data:", error);
+      // console.error("🤼 [API Fallback] Error syncing match data:", error);
     }
   }
 
   // Subscribe to unified WebSocket events for audience display
   useEffect(() => {
-    if (!unifiedConnected) return;
+    if (!unifiedConnected) {
+      console.log("🔔 [Debug] WebSocket not connected, skipping subscriptions");
+      return;
+    }
 
     console.log(
-      "🔔 [Unified WebSocket] Setting up audience display subscriptions"
+      "🔔 [Unified WebSocket] Setting up audience display subscriptions for tournament:",
+      tournamentId,
+      "field:",
+      fieldId
     );
+
+    // Test subscription to see if WebSocket events work at all
+    const unsubTest = unifiedSubscribe<any>("test_event", (data) => {
+      console.log("🧪 [Test] Received test event:", data);
+    });
+    
+    // Send a test event to see if it works
+    setTimeout(() => {
+      console.log("🧪 [Test] Sending test event from audience display");
+      // This won't work since audience display is read-only, but it's just for testing
+    }, 1000);
 
     // Subscribe to display mode changes
     const unsubDisplayMode = unifiedSubscribe<AudienceDisplaySettings>(
@@ -804,10 +899,10 @@ export default function LiveFieldDisplayPage() {
       (data) => {
         // Apply if global tournament update (no fieldId) or specific to this field
         if (!data.fieldId || data.fieldId === fieldId) {
-          console.log(
-            "✅ [Unified WebSocket] Received display mode change:",
-            data
-          );
+          // console.log(
+          //   "✅ [Unified WebSocket] Received display mode change:",
+          //   data
+          // );
 
           // Ensure we're using the full data object with all required properties
           const updatedSettings = {
@@ -835,11 +930,11 @@ export default function LiveFieldDisplayPage() {
     const unsubTimer = unifiedSubscribe<any>("timer_update", (data) => {
       // Process timer updates for this specific field OR tournament-wide updates (no fieldId specified)
       if (data.fieldId === fieldId || !data.fieldId) {
-        console.log(
-          "✅ [Unified WebSocket] Applying timer update for field:",
-          fieldId,
-          data
-        );
+        // console.log(
+        //   "✅ [Unified WebSocket] Applying timer update for field:",
+        //   fieldId,
+        //   data
+        // );
         setTimer(data);
       }
     });
@@ -847,11 +942,11 @@ export default function LiveFieldDisplayPage() {
     // Subscribe to timer start events
     const unsubStartTimer = unifiedSubscribe<any>("start_timer", (data) => {
       if (data.fieldId === fieldId || !data.fieldId) {
-        console.log(
-          "✅ [Unified WebSocket] Timer started for field:",
-          fieldId,
-          data
-        );
+        // console.log(
+        //   "✅ [Unified WebSocket] Timer started for field:",
+        //   fieldId,
+        //   data
+        // );
 
         // Ensure the timer data has the correct structure for local countdown
         const timerData = {
@@ -862,18 +957,18 @@ export default function LiveFieldDisplayPage() {
         };
 
         setTimer(timerData);
-        console.log("🟢 [Timer Start] Set timer state:", timerData);
+        // console.log("🟢 [Timer Start] Set timer state:", timerData);
       }
     });
 
     // Subscribe to timer pause events
     const unsubPauseTimer = unifiedSubscribe<any>("pause_timer", (data) => {
       if (data.fieldId === fieldId || !data.fieldId) {
-        console.log(
-          "✅ [Unified WebSocket] Timer paused for field:",
-          fieldId,
-          data
-        );
+        // console.log(
+        //   "✅ [Unified WebSocket] Timer paused for field:",
+        //   fieldId,
+        //   data
+        // );
 
         // Ensure the timer is marked as NOT running for pause events
         const timerData = {
@@ -883,18 +978,18 @@ export default function LiveFieldDisplayPage() {
         };
 
         setTimer(timerData);
-        console.log("🟡 [Timer Pause] Set timer state:", timerData);
+        // console.log("🟡 [Timer Pause] Set timer state:", timerData);
       }
     });
 
     // Subscribe to timer reset events
     const unsubResetTimer = unifiedSubscribe<any>("reset_timer", (data) => {
       if (data.fieldId === fieldId || !data.fieldId) {
-        console.log(
-          "✅ [Unified WebSocket] Timer reset for field:",
-          fieldId,
-          data
-        );
+        // console.log(
+        //   "✅ [Unified WebSocket] Timer reset for field:",
+        //   fieldId,
+        //   data
+        // );
 
         // Ensure the timer is marked as NOT running for reset events
         const timerData = {
@@ -904,7 +999,7 @@ export default function LiveFieldDisplayPage() {
         };
 
         setTimer(timerData);
-        console.log("🔴 [Timer Reset] Set timer state:", timerData);
+        // console.log("🔴 [Timer Reset] Set timer state:", timerData);
       }
     });
 
@@ -912,21 +1007,21 @@ export default function LiveFieldDisplayPage() {
     const unsubRealtimeScore = unifiedSubscribe<any>(
       "scoreUpdateRealtime",
       (data) => {
-        console.log(
-          "✅ [Unified WebSocket] Real-time score update received:",
-          data,
-          "for field:",
-          fieldId,
-          "current match:",
-          matchState?.matchId
-        );
+        // console.log(
+        //   "✅ [Unified WebSocket] Real-time score update received:",
+        //   data,
+        //   "for field:",
+        //   fieldId,
+        //   "current match:",
+        //   matchState?.matchId
+        // );
 
         // Accept real-time score updates if they're for the current match
         if (data.matchId && data.matchId === matchState?.matchId) {
-          console.log(
-            "Applying real-time score update for match:",
-            data.matchId
-          );
+          // console.log(
+          //   "Applying real-time score update for match:",
+          //   data.matchId
+          // );
 
           // Convert real-time score format to display format
           const realtimeScoreData = {
@@ -981,31 +1076,31 @@ export default function LiveFieldDisplayPage() {
       content?: string;
       title?: string;
     }>("announcement", (data) => {
-      console.log("🔔 [Unified WebSocket] Announcement received:", data);
-      console.log(
-        "🔔 [Announcement Debug] Raw data stringified:",
-        JSON.stringify(data, null, 2)
-      );
-      console.log(
-        "🔔 [Announcement Debug] Data keys:",
-        Object.keys(data || {})
-      );
-      console.log("🔔 [Announcement Debug] Data.type:", data.type);
-      console.log("🔔 [Announcement Debug] Data.content:", data.content);
-      console.log(
-        "🔔 [Announcement Debug] Data.announcementData:",
-        data.announcementData
-      );
-      console.log("🔔 [Announcement Debug] Data.message:", data.message);
+      // console.log("🔔 [Unified WebSocket] Announcement received:", data);
+      // console.log(
+      //   "🔔 [Announcement Debug] Raw data stringified:",
+      //   JSON.stringify(data, null, 2)
+      // );
+      // console.log(
+      //   "🔔 [Announcement Debug] Data keys:",
+      //   Object.keys(data || {})
+      // );
+      // console.log("🔔 [Announcement Debug] Data.type:", data.type);
+      // console.log("🔔 [Announcement Debug] Data.content:", data.content);
+      // console.log(
+      //   "🔔 [Announcement Debug] Data.announcementData:",
+      //   data.announcementData
+      // );
+      // console.log("🔔 [Announcement Debug] Data.message:", data.message);
 
       // Show if it's a tournament-wide announcement or specific to this field
       if (!data.fieldId || data.fieldId === fieldId) {
-        console.log(
-          "✅ [Unified WebSocket] Processing announcement for field:",
-          fieldId,
-          "Tournament:",
-          data.tournamentId
-        );
+        // console.log(
+        //   "✅ [Unified WebSocket] Processing announcement for field:",
+        //   fieldId,
+        //   "Tournament:",
+        //   data.tournamentId
+        // );
 
         let announcementData;
 
@@ -1015,18 +1110,18 @@ export default function LiveFieldDisplayPage() {
           data.announcementData &&
           typeof data.announcementData === "object"
         ) {
-          console.log(
-            "📦 [Format Detection] Found nested announcementData property:",
-            data.announcementData
-          );
+          // console.log(
+          //   "📦 [Format Detection] Found nested announcementData property:",
+          //   data.announcementData
+          // );
           announcementData = data.announcementData;
         }
         // Priority 2: Check for root-level AnnouncementData format (type + content)
         // This handles the case where announcement fields are mixed with routing fields
         else if (data.type && data.content !== undefined) {
-          console.log(
-            "📄 [Format Detection] Found root-level AnnouncementData format (mixed with routing fields)"
-          );
+          // console.log(
+          //   "📄 [Format Detection] Found root-level AnnouncementData format (mixed with routing fields)"
+          // );
           // Extract only announcement-specific fields, ignore routing fields
           announcementData = {
             type: data.type,
@@ -1037,10 +1132,10 @@ export default function LiveFieldDisplayPage() {
         }
         // Priority 3: Check for legacy message format
         else if (data.message !== undefined) {
-          console.log(
-            "📜 [Format Detection] Found legacy message format:",
-            data.message
-          );
+          // console.log(
+          //   "📜 [Format Detection] Found legacy message format:",
+          //   data.message
+          // );
           announcementData = {
             type: "text" as const,
             content: data.message,
@@ -1056,34 +1151,34 @@ export default function LiveFieldDisplayPage() {
           !data.tournamentId &&
           Object.keys(data).length > 0
         ) {
-          console.log(
-            "🎯 [Format Detection] Data appears to be direct AnnouncementData object:",
-            data
-          );
+          // console.log(
+          //   "🎯 [Format Detection] Data appears to be direct AnnouncementData object:",
+          //   data
+          // );
           announcementData = data;
         } else {
-          console.error(
-            "❌ [Format Detection] Unknown announcement format, unable to process:",
-            {
-              dataType: typeof data,
-              hasType: "type" in data,
-              hasContent: "content" in data,
-              hasMessage: "message" in data,
-              hasAnnouncementData: "announcementData" in data,
-              hasTournamentId: "tournamentId" in data,
-              hasFieldId: "fieldId" in data,
-              keys: Object.keys(data || {}),
-            }
-          );
+          // console.error(
+          //   "❌ [Format Detection] Unknown announcement format, unable to process:",
+          //   {
+          //     dataType: typeof data,
+          //     hasType: "type" in data,
+          //     hasContent: "content" in data,
+          //     hasMessage: "message" in data,
+          //     hasAnnouncementData: "announcementData" in data,
+          //     hasTournamentId: "tournamentId" in data,
+          //     hasFieldId: "fieldId" in data,
+          //     keys: Object.keys(data || {}),
+          //   }
+          // );
           return;
         }
 
         // VALIDATION AND SANITIZATION
         if (!announcementData || typeof announcementData !== "object") {
-          console.error(
-            "❌ [Validation] Invalid announcement data structure:",
-            announcementData
-          );
+          // console.error(
+          //   "❌ [Validation] Invalid announcement data structure:",
+          //   announcementData
+          // );
           return;
         }
 
@@ -1093,19 +1188,19 @@ export default function LiveFieldDisplayPage() {
           !announcementData.type ||
           !validTypes.includes(announcementData.type)
         ) {
-          console.warn(
-            "⚠️ [Validation] Invalid or missing type, defaulting to 'text':",
-            announcementData.type
-          );
+          // console.warn(
+          //   "⚠️ [Validation] Invalid or missing type, defaulting to 'text':",
+          //   announcementData.type
+          // );
           announcementData.type = "text";
         }
 
         // Ensure content exists
         if (!announcementData.content && announcementData.content !== "") {
-          console.error(
-            "❌ [Validation] Missing content field:",
-            announcementData
-          );
+          // console.error(
+          //   "❌ [Validation] Missing content field:",
+          //   announcementData
+          // );
           return;
         }
 
@@ -1114,22 +1209,22 @@ export default function LiveFieldDisplayPage() {
           announcementData.duration &&
           typeof announcementData.duration !== "number"
         ) {
-          console.warn(
-            "⚠️ [Validation] Converting duration to number:",
-            announcementData.duration
-          );
+          // console.warn(
+          //   "⚠️ [Validation] Converting duration to number:",
+          //   announcementData.duration
+          // );
           announcementData.duration = parseInt(announcementData.duration) || 10;
         }
 
-        console.log("✅ [Final Processing] Processed announcement data:", {
-          type: announcementData.type,
-          content:
-            announcementData.content?.substring(0, 100) +
-            (announcementData.content?.length > 100 ? "..." : ""),
-          title: announcementData.title,
-          duration: announcementData.duration,
-          contentLength: announcementData.content?.length,
-        });
+        // console.log("✅ [Final Processing] Processed announcement data:", {
+        //   type: announcementData.type,
+        //   content:
+        //     announcementData.content?.substring(0, 100) +
+        //     (announcementData.content?.length > 100 ? "..." : ""),
+        //   title: announcementData.title,
+        //   duration: announcementData.duration,
+        //   contentLength: announcementData.content?.length,
+        // });
 
         // APPLY TO STATE
         setAnnouncement(announcementData);
@@ -1138,19 +1233,19 @@ export default function LiveFieldDisplayPage() {
         // Set the countdown to match the actual duration
         const actualDuration = announcementData.duration || 10;
         setAnnouncementCountdown(actualDuration);
-        console.log(
-          "⏰ [Duration] Using announcement duration:",
-          actualDuration,
-          "seconds"
-        );
+        // console.log(
+        //   "⏰ [Duration] Using announcement duration:",
+        //   actualDuration,
+        //   "seconds"
+        // );
 
         // Calculate display duration in milliseconds
         const displayDuration = actualDuration * 1000;
-        console.log(
-          "⏰ [Timer] Setting display duration:",
-          displayDuration,
-          "ms"
-        );
+        // console.log(
+        //   "⏰ [Timer] Setting display duration:",
+        //   displayDuration,
+        //   "ms"
+        // );
 
         // Auto-hide announcement after duration and switch to blank display
         const timerId = setTimeout(() => {
@@ -1174,15 +1269,50 @@ export default function LiveFieldDisplayPage() {
 
         // Clear timeout if component unmounts while announcement is showing
         return () => {
-          console.log("🧹 [Cleanup] Clearing announcement timer");
+          // console.log("🧹 [Cleanup] Clearing announcement timer");
           clearTimeout(timerId);
         };
       } else {
-        console.log("🚫 [Filter] Ignoring announcement - not for this field:", {
-          announcementFieldId: data.fieldId,
-          currentFieldId: fieldId,
-          match: data.fieldId === fieldId,
-        });
+        // console.log("🚫 [Filter] Ignoring announcement - not for this field:", {
+        //   announcementFieldId: data.fieldId,
+        //   currentFieldId: fieldId,
+        //   match: data.fieldId === fieldId,
+        // });
+      }
+    });
+
+    // Subscribe to winner badge updates
+    console.log("🏆 [Debug] Setting up winner badge subscription...");
+    const unsubWinnerBadge = unifiedSubscribe<{
+      matchId: string;
+      showWinnerBadge: boolean;
+      fieldId?: string;
+      tournamentId: string;
+    }>("winner_badge_update", (data) => {
+      console.log("🏆 [Unified WebSocket] Winner badge update received:", data);
+      console.log("🏆 [Debug] Current matchState.matchId:", matchState?.matchId);
+      console.log("🏆 [Debug] Received data.matchId:", data.matchId);
+      
+      // Accept updates if no field filtering or field matches
+      const shouldAccept = 
+        !data.fieldId || // Tournament-wide update
+        data.fieldId === fieldId; // Field-specific update
+      
+      if (!shouldAccept) {
+        console.log(`🏆 [Debug] Ignoring winner badge update for different field: ${data.fieldId} (expected: ${fieldId})`);
+        return;
+      }
+
+      // More flexible matching: accept if match IDs match OR if no current match is set
+      const shouldApplyUpdate = 
+        data.matchId === matchState?.matchId || // Exact match
+        !matchState?.matchId; // No current match, apply anyway
+      
+      if (shouldApplyUpdate) {
+        console.log("🏆 [Debug] Applying winner badge update for match:", data.matchId, "showWinnerBadge:", data.showWinnerBadge);
+        setShowWinnerBadge(data.showWinnerBadge);
+      } else {
+        console.log("🏆 [Debug] Ignoring winner badge update - match ID mismatch. Current:", matchState?.matchId, "Received:", data.matchId);
       }
     });
 
@@ -1197,6 +1327,8 @@ export default function LiveFieldDisplayPage() {
       unsubResetTimer();
       unsubRealtimeScore();
       unsubAnnouncement();
+      unsubWinnerBadge();
+      unsubTest();
     };
   }, [
     unifiedConnected,
@@ -1208,20 +1340,20 @@ export default function LiveFieldDisplayPage() {
 
   // Local countdown for smooth timer display on audience
   useEffect(() => {
-    console.log("🕒 [Timer State Monitor] Timer state changed:", {
-      isRunning: timer?.isRunning,
-      remaining: timer?.remaining,
-      timer: timer,
-    });
+    // console.log("🕒 [Timer State Monitor] Timer state changed:", {
+    //   isRunning: timer?.isRunning,
+    //   remaining: timer?.remaining,
+    //   timer: timer,
+    // });
 
     if (!timer?.isRunning) {
-      console.log("⏸️ [Timer State Monitor] Timer is stopped");
+      // console.log("⏸️ [Timer State Monitor] Timer is stopped");
       return;
     }
 
-    console.log(
-      "✅ [Timer State Monitor] Timer is running - starting local countdown"
-    );
+    // console.log(
+    //   "✅ [Timer State Monitor] Timer is running - starting local countdown"
+    // );
 
     // Create local countdown for smooth display
     const interval = setInterval(() => {
@@ -1232,15 +1364,15 @@ export default function LiveFieldDisplayPage() {
 
         const newRemaining = Math.max(0, prevTimer.remaining - 1000);
 
-        console.log("🕰️ [Local Countdown] Updated timer:", {
-          previous: prevTimer.remaining,
-          new: newRemaining,
-          formatted: `${Math.floor(newRemaining / 60000)}:${Math.floor(
-            (newRemaining % 60000) / 1000
-          )
-            .toString()
-            .padStart(2, "0")}`,
-        });
+        // console.log("🕰️ [Local Countdown] Updated timer:", {
+        //   previous: prevTimer.remaining,
+        //   new: newRemaining,
+        //   formatted: `${Math.floor(newRemaining / 60000)}:${Math.floor(
+        //     (newRemaining % 60000) / 1000
+        //   )
+        //     .toString()
+        //     .padStart(2, "0")}`,
+        // });
 
         return {
           ...prevTimer,
@@ -1251,9 +1383,9 @@ export default function LiveFieldDisplayPage() {
 
     return () => {
       clearInterval(interval);
-      console.log(
-        "🧹 [Timer State Monitor] Cleaned up local countdown interval"
-      );
+      // console.log(
+      //   "🧹 [Timer State Monitor] Cleaned up local countdown interval"
+      // );
     };
   }, [timer?.isRunning]);
 
@@ -1281,9 +1413,9 @@ export default function LiveFieldDisplayPage() {
 
       // Only update state if the calculated period is different from the current one.
       if (newPeriod && newPeriod !== matchState.currentPeriod) {
-        console.log(
-          `Timer-based period change: ${matchState.currentPeriod} -> ${newPeriod} (Remaining: ${remainingSeconds}s)`
-        );
+        // console.log(
+        //   `Timer-based period change: ${matchState.currentPeriod} -> ${newPeriod} (Remaining: ${remainingSeconds}s)`
+        // );
         setMatchState((prevMatchState: any) => ({
           ...prevMatchState,
           currentPeriod: newPeriod,
@@ -1303,159 +1435,45 @@ export default function LiveFieldDisplayPage() {
       return;
     }
 
-    console.log(
-      "🔢 [Countdown] Starting countdown from",
-      announcementCountdown,
-      "seconds"
-    );
+    // console.log(
+    //   "🔢 [Countdown] Starting countdown from",
+    //   announcementCountdown,
+    //   "seconds"
+    // );
 
     const intervalId = setInterval(() => {
       setAnnouncementCountdown((prev) => {
         if (prev === null || prev <= 1) {
-          console.log("🔢 [Countdown] Countdown finished");
+          // console.log("🔢 [Countdown] Countdown finished");
           return null;
         }
         const newValue = prev - 1;
-        console.log("🔢 [Countdown] Countdown:", newValue, "seconds remaining");
+        // console.log("🔢 [Countdown] Countdown:", newValue, "seconds remaining");
         return newValue;
       });
     }, 1000);
 
     return () => {
-      console.log("🧹 [Countdown] Cleaning up countdown interval");
+      // console.log("🧹 [Countdown] Cleaning up countdown interval");
       clearInterval(intervalId);
     };
   }, [showAnnouncement, announcement, announcementCountdown]);
 
-  // Debug component to show current display mode and other info
-  const DebugInfo = () => {
-    if (process.env.NODE_ENV !== "development") return null;
-    return (
-      <div className="text-xs bg-white border border-gray-200 text-gray-700 p-4 rounded-xl mt-4 shadow-sm">
-        <div className="font-semibold border-b border-gray-200 pb-2 mb-2 text-gray-900">
-          Debug Information
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <div>
-            Mode:{" "}
-            <span className="font-mono bg-blue-50 text-blue-800 px-2 py-1 rounded border border-blue-200">
-              {displaySettings.displayMode}
-            </span>
-          </div>
-          <div>
-            Field:{" "}
-            <span className="font-mono bg-gray-50 px-1 rounded">{fieldId}</span>
-          </div>
-          <div>
-            Tournament:{" "}
-            <span className="font-mono bg-gray-50 px-1 rounded">
-              {tournamentId.substring(0, 8)}...
-            </span>
-          </div>
-          <div>
-            Connection:{" "}
-            {unifiedConnected ? (
-              <span className="text-green-800 bg-green-50 px-2 py-1 rounded border border-green-200">
-                ✓ Connected
-              </span>
-            ) : (
-              <span className="text-red-800 bg-red-50 px-2 py-1 rounded border border-red-200">
-                ✗ Disconnected
-              </span>
-            )}
-          </div>{" "}
-          <div>
-            Last Update:{" "}
-            <span className="font-mono bg-gray-50 px-1 rounded">
-              {new Date(displaySettings.updatedAt).toLocaleTimeString()}
-            </span>
-          </div>
-          <div>
-            Match State:{" "}
-            <span className="font-mono bg-gray-50 px-1 rounded">
-              {matchState?.status || "none"}
-            </span>
-          </div>
-          <div>
-            Timer:{" "}
-            <span className="font-mono bg-gray-50 px-1 rounded">
-              {timer?.isRunning ? "running" : "stopped"}
-            </span>
-          </div>
-          <div>
-            Match ID:{" "}
-            <span className="font-mono bg-gray-50 px-1 rounded">
-              {matchState?.matchId || "none"}
-            </span>
-          </div>
-        </div>
-        <div className="mt-3 text-xs border-t border-gray-200 pt-2">
-          <div className="text-gray-900 font-medium">
-            Match Data: {matchState ? "Present" : "Missing"}
-          </div>
-          {matchState && (
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <div>
-                Number:{" "}
-                <span className="font-mono bg-gray-50 px-1 rounded">
-                  {matchState.matchNumber || "none"}
-                </span>
-              </div>
-              <div>
-                Name:{" "}
-                <span className="font-mono bg-gray-50 px-1 rounded">
-                  {matchState.name || "none"}
-                </span>
-              </div>
-              <div>
-                Period:{" "}
-                <span className="font-mono bg-gray-50 px-1 rounded">
-                  {matchState.currentPeriod || "none"}
-                </span>
-              </div>
-              <div>
-                Red Teams:{" "}
-                <span className="font-mono bg-gray-50 px-1 rounded">
-                  {Array.isArray(matchState.redTeams)
-                    ? matchState.redTeams.length
-                    : "none"}
-                </span>
-              </div>
-              <div>
-                Blue Teams:{" "}
-                <span className="font-mono bg-gray-50 px-1 rounded">
-                  {Array.isArray(matchState.blueTeams)
-                    ? matchState.blueTeams.length
-                    : "none"}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="text-right mt-2 pt-2 border-t border-gray-200">
-          <span className="text-blue-800 bg-blue-50 px-2 py-1 rounded border border-blue-200">
-            Test with window.audienceDisplayWS
-          </span>
-        </div>
-      </div>
-    );
-  };
-
   // Log match state changes for debugging
   useEffect(() => {
     if (matchState) {
-      console.log("Match state updated:", {
-        matchId: matchState.matchId,
-        matchNumber: matchState.matchNumber,
-        status: matchState.status,
-        currentPeriod: matchState.currentPeriod,
-        redTeams: Array.isArray(matchState.redTeams)
-          ? matchState.redTeams.length
-          : 0,
-        blueTeams: Array.isArray(matchState.blueTeams)
-          ? matchState.blueTeams.length
-          : 0,
-      });
+      // console.log("Match state updated:", {
+      //   matchId: matchState.matchId,
+      //   matchNumber: matchState.matchNumber,
+      //   status: matchState.status,
+      //   currentPeriod: matchState.currentPeriod,
+      //   redTeams: Array.isArray(matchState.redTeams)
+      //     ? matchState.redTeams.length
+      //     : 0,
+      //   blueTeams: Array.isArray(matchState.blueTeams)
+      //     ? matchState.blueTeams.length
+      //     : 0,
+      // });
     }
   }, [matchState]);
 
@@ -1469,43 +1487,48 @@ export default function LiveFieldDisplayPage() {
   const renderContent = () => {
     // Force a key update every time display mode changes to ensure full re-render
     const contentKey = `${displaySettings.displayMode}-${displaySettings.updatedAt}`;
-    console.log(
-      `Rendering content for display mode: ${displaySettings.displayMode} with key: ${contentKey}`
-    );
+    // console.log(
+    //   `Rendering content for display mode: ${displaySettings.displayMode} with key: ${contentKey}`
+    // );
 
     switch (displaySettings.displayMode) {
       case "teams":
         return (
           <div
             key={contentKey}
-            className="flex h-full w-full flex-1 flex-col min-h-0"
+            className="flex h-screen w-screen flex-1 flex-col min-h-0"
           >
             <div className="flex-1">
               <TeamsDisplay teams={teams} isLoading={isLoadingTeams} />
             </div>
-            <DebugInfo />
           </div>
         );
 
       case "schedule":
-        // Ensure scheduledTime is always a string for each match
-        const safeMatches = matches.map((m: any) => ({
-          ...m,
-          scheduledTime: m.scheduledTime ?? "",
-        }));
+        // Ensure scheduledTime is always a string for each match and extract scores from alliances
+        const safeMatches = matches.map((m: any) => {
+          const redAlliance = m.alliances?.find((a: any) => a.color === 'RED');
+          const blueAlliance = m.alliances?.find((a: any) => a.color === 'BLUE');
+          
+          return {
+            ...m,
+            scheduledTime: m.scheduledTime ?? "",
+            redScore: redAlliance?.score ?? 0,
+            blueScore: blueAlliance?.score ?? 0,
+          };
+        });
         return (
           <div
             key={contentKey}
-            className="flex h-full w-full flex-1 flex-col min-h-0"
+            className="flex h-screen w-screen flex-1 flex-col min-h-0"
           >
             <div className="flex-1 overflow-hidden">
               <ScheduleDisplay
-                tournamentId={tournamentId}
                 matches={safeMatches}
                 isLoading={isLoadingMatches}
+                selectedStageId={displaySettings.scheduleStageId ?? null}
               />
             </div>
-            <DebugInfo />
           </div>
         );
 
@@ -1513,15 +1536,14 @@ export default function LiveFieldDisplayPage() {
         return (
           <div
             key={contentKey}
-            className="flex h-full w-full flex-1 flex-col min-h-0"
+            className="flex h-screen w-screen flex-1 flex-col min-h-0"
           >
-            <div className="flex-1 overflow-hidden p-0 md:p-4">
+            <div className="flex-1 overflow-hidden">
               <SwissRankingsDisplay
                 rankings={Array.isArray(rankings) ? rankings : []}
                 isLoading={isLoadingRankings}
               />
             </div>
-            <DebugInfo />
           </div>
         );
 
@@ -1529,16 +1551,15 @@ export default function LiveFieldDisplayPage() {
         return (
           <div
             key={contentKey}
-            className="flex h-full w-full flex-1 flex-col min-h-0"
+            className="flex h-screen w-screen flex-1 flex-col min-h-0"
           >
-            <DebugInfo />
           </div>
         );
       case "announcement":
         return (
           <div
             key={contentKey}
-            className="flex flex-col items-center justify-center min-h-[50vh] sm:min-h-[60vh] lg:min-h-[70vh]"
+            className="flex flex-col items-center justify-center h-screen w-screen"
           >
             <div className="bg-blue-50 border border-blue-200 p-4 sm:p-6 lg:p-8 xl:p-10 rounded-xl max-w-4xl text-center shadow-lg mx-2">
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 lg:mb-6 text-blue-800">
@@ -1548,7 +1569,6 @@ export default function LiveFieldDisplayPage() {
                 {displaySettings.message || "No announcement message"}
               </p>
             </div>
-            <DebugInfo />
           </div>
         );
       case "match":
@@ -1564,8 +1584,14 @@ export default function LiveFieldDisplayPage() {
                 blueDriveScore: realtimeScores.blue.drive,
                 redPenalty: realtimeScores.red.penalty || 0,
                 bluePenalty: realtimeScores.blue.penalty || 0,
+                redBreakdown,
+                blueBreakdown,
               }
-            : score;
+            : {
+                ...score,
+                redBreakdown,
+                blueBreakdown,
+              };
         console.log("Displaying scores:", {
           unifiedConnected,
           lastUpdateTime,
@@ -1587,16 +1613,14 @@ export default function LiveFieldDisplayPage() {
         return (
           <div
             key={contentKey}
-            className="flex h-full w-full flex-1 flex-col min-h-0"
+            className="fixed inset-0 w-screen h-screen flex items-center justify-center bg-black"
           >
-            <div className="flex-1">
-              <MatchDisplay
-                matchState={matchState}
-                timer={timer}
-                score={displayScore}
-              />
-            </div>
-            {/* <DebugInfo /> */}
+            <MatchDisplay
+              matchState={matchState}
+              timer={timer}
+              score={displayScore}
+              showWinnerBadge={showWinnerBadge}
+            />
           </div>
         );
     }
@@ -1619,7 +1643,7 @@ export default function LiveFieldDisplayPage() {
 
   // --- UI Layout ---
   return (
-    <div className="audience-display-container flex min-h-screen w-full flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="audience-display-container w-screen h-screen flex flex-col bg-black">
       {/* Full-screen Announcement Overlay - Hides everything when active */}
       {showAnnouncement && (
         <AnnouncementOverlay
@@ -1632,22 +1656,21 @@ export default function LiveFieldDisplayPage() {
       {/* Main Layout - Hidden when announcement is showing for true full-screen experience */}
       {!showAnnouncement && (
         <>
-          {/* Enhanced Connection Status with Fallback Support (Steps 10-12) */}
-          <ConnectionStatus
-            isConnected={unifiedConnected}
-            wsConnected={unifiedConnected} // Use unified WebSocket connection status
-            lastUpdateTime={lastUpdateTime}
-            connectionError={connectionError}
-            fallbackMode={fallbackMode}
-            source={source}
-          />
+          {/* Show header/footer only for non-match display modes */}
+          {displaySettings.displayMode !== 'match' && (
+            <>
+              {/* Enhanced Connection Status with Fallback Support (Steps 10-12) */}
+              <ConnectionStatus
+                isConnected={unifiedConnected}
+                wsConnected={unifiedConnected} // Use unified WebSocket connection status
+                lastUpdateTime={lastUpdateTime}
+                connectionError={connectionError}
+                fallbackMode={fallbackMode}
+                source={source}
+              />
 
-          {/* Header with tournament and field info */}
-          <header className="mb-3 w-full px-3 pt-2 sm:mb-6 sm:px-6 sm:pt-4 lg:pt-8">
-            <div className="flex w-full flex-col items-center gap-2 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex min-w-0 flex-1 flex-col items-center text-center lg:items-start lg:text-left">
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-blue-900 drop-shadow-lg mb-1 truncate">
-                  {tournament?.name || "Tournament"}
+              {/* Header with tournament and field info
+              <header className="mb-3 w-full px-3 pt-2 sm:mb-6 sm:px-6 sm:pt-4 lg:pt-8">\n                <div className="flex w-full flex-col items-center gap-2 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">\n                  <div className="flex min-w-0 flex-1 flex-col items-center text-center lg:items-start lg:text-left">\n                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-blue-900 drop-shadow-lg mb-1 truncate">\n                      {tournament?.name || "Tournament"}
                 </h1>
                 <div className="text-sm sm:text-base lg:text-lg text-gray-700 font-semibold truncate">
                   Field:{" "}
@@ -1710,28 +1733,30 @@ export default function LiveFieldDisplayPage() {
                 )}
               </div>
             </div>
-          </header>
+          </header> */}
+            </>
+          )}
 
-          {/* Main content area */}
-          <main className="flex w-full flex-1 flex-col px-0 pb-4 sm:px-2 sm:pb-6 lg:px-4 lg:pb-8 min-h-0">
-            {connectionError ? (
-              <div className="text-center text-red-800 bg-red-50 border border-red-200 rounded-xl p-4 sm:p-6 lg:p-8 font-semibold text-sm sm:text-base lg:text-lg">
-                {connectionError}
-              </div>
-            ) : fieldError ? (
-              <FieldNotFound
-                fieldError={fieldError}
-                onBack={() => router.push(`/audience-display/${tournamentId}`)}
-              />
-            ) : (
-              renderContent()
-            )}
-          </main>
+          {/* Main content area - Always full screen */}
+          {connectionError ? (
+            <div className="flex items-center justify-center w-screen h-screen text-red-800 bg-red-50 border border-red-200 rounded-xl p-4 sm:p-6 lg:p-8 font-semibold text-sm sm:text-base lg:text-lg">
+              {connectionError}
+            </div>
+          ) : fieldError ? (
+            <FieldNotFound
+              fieldError={fieldError}
+              onBack={() => router.push(`/audience-display/${tournamentId}`)}
+            />
+          ) : (
+            renderContent()
+          )}
 
-          {/* Footer */}
-          <footer className="mt-4 w-full pb-3 text-center text-xs text-gray-600 sm:mt-8 sm:pb-6 sm:text-sm">
-            <p>© Robotics Tournament Management System</p>
-          </footer>
+          {/* Footer - only show for non-match modes */}
+          {/* {displaySettings.displayMode !== 'match' && (
+            <footer className="mt-4 w-full pb-3 text-center text-xs text-gray-600 sm:mt-8 sm:pb-6 sm:text-sm">
+              <p>© Robotics Tournament Management System</p>
+            </footer>
+          )} */}
         </>
       )}
     </div>

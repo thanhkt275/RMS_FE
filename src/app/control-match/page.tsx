@@ -9,6 +9,7 @@ import {
   useMatches,
 } from "@/hooks/matches/use-matches";
 import { useMatchesByTournament } from "@/hooks/matches/use-matches-by-tournament";
+import { useStagesByTournament } from "@/hooks/stages/use-stages";
 import { MatchStatus, UserRole } from "@/types/types";
 import { useTournaments } from "@/hooks/tournaments/use-tournaments";
 import { MatchData } from "@/types/types";
@@ -73,7 +74,19 @@ function ControlMatchContent() {
     setSelectedFieldId,
     selectedTournamentId,
     setSelectedTournamentId,
+    scheduleStageId,
+    setScheduleStageId,
   } = useDisplayControl();
+
+  // Load stages for the selected tournament (if a specific tournament is chosen)
+  const stagesTournamentId =
+    selectedTournamentId && selectedTournamentId !== "all"
+      ? selectedTournamentId
+      : "";
+  const {
+    data: tournamentStages = [],
+    isLoading: isLoadingStages,
+  } = useStagesByTournament(stagesTournamentId);
 
   // Initialize multimedia announcement system
   const {
@@ -89,6 +102,9 @@ function ControlMatchContent() {
 
   // State for selected match
   const [selectedMatchId, setSelectedMatchId] = useState<string>("");
+
+  // Winner badge control state
+  const [showWinnerBadge, setShowWinnerBadge] = useState<boolean>(false);
 
   // Initialize unified match control hook
   const unifiedMatchControl = useUnifiedMatchControl({
@@ -293,6 +309,7 @@ function ControlMatchContent() {
     sendAnnouncement,
     sendMatchUpdate: unifiedSendMatchUpdate,
     sendMatchStateChange: unifiedSendMatchStateChange,
+    sendWinnerBadgeUpdate,
     sendScoreUpdate: unifiedSendScoreUpdate,
     subscribe: unifiedSubscribe,
   } = useUnifiedWebSocket({
@@ -301,6 +318,68 @@ function ControlMatchContent() {
     autoConnect: true,
     userRole: roleAccess.currentRole, // Use actual user role from auth
   });
+
+const handleScheduleStageChange = useCallback(
+    (stageId: string | null) => {
+      if (scheduleStageId === stageId) {
+        return;
+      }
+
+      setScheduleStageId(stageId);
+
+      if (displayMode === "schedule") {
+        changeDisplayMode({
+          displayMode: "schedule",
+          matchId: selectedMatchId || null,
+          showTimer,
+          showScores,
+          showTeams,
+          updatedAt: Date.now(),
+          scheduleStageId: stageId,
+        });
+      }
+    },
+    [
+      scheduleStageId,
+      setScheduleStageId,
+      displayMode,
+      changeDisplayMode,
+      selectedMatchId,
+      showTimer,
+      showScores,
+      showTeams,
+    ]
+  );
+
+  // Reset schedule-stage selection if the stage list no longer includes it
+  useEffect(() => {
+    if (!scheduleStageId || isLoadingStages) {
+      return;
+    }
+
+    const stageExists = tournamentStages.some(
+      (stage: any) => stage.id === scheduleStageId
+    );
+
+    if (!stageExists) {
+      handleScheduleStageChange(null);
+    }
+  }, [
+    scheduleStageId,
+    isLoadingStages,
+    tournamentStages,
+    handleScheduleStageChange,
+  ]);
+
+  // Debug WebSocket connection status
+  useEffect(() => {
+    console.log('[Control Panel] WebSocket connection status:', {
+      isConnected,
+      tournamentId,
+      fieldId: selectedFieldId,
+      userRole: roleAccess.currentRole,
+    });
+  }, [isConnected, tournamentId, selectedFieldId, roleAccess.currentRole]);
 
   // Subscribe to WebSocket events through unified service
   useEffect(() => {
@@ -443,6 +522,7 @@ function ControlMatchContent() {
       showScores,
       showTeams,
       updatedAt: Date.now(),
+      scheduleStageId: null,
     });
 
     // Note: Match update is now handled by useEffect when selectedMatch data loads
@@ -457,7 +537,9 @@ function ControlMatchContent() {
       showTimer,
       showScores,
       showTeams,
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      scheduleStageId:
+        displayMode === "schedule" ? scheduleStageId ?? null : null,
     });
   };
 
@@ -489,6 +571,26 @@ function ControlMatchContent() {
     } catch (error) {
       toast.error("Failed to submit scores");
     }
+  };
+
+  // Handle toggling winner badge display
+  const handleToggleWinnerBadge = () => {
+    const newShowWinnerBadge = !showWinnerBadge;
+    setShowWinnerBadge(newShowWinnerBadge);
+    
+    console.log("🏆 [Control Panel] Sending winner badge update:", {
+      matchId: selectedMatchId,
+      showWinnerBadge: newShowWinnerBadge,
+      fieldId: selectedFieldId,
+    });
+    
+    // Send winner badge update via WebSocket
+    sendWinnerBadgeUpdate({
+      matchId: selectedMatchId,
+      showWinnerBadge: newShowWinnerBadge,
+    });
+    
+    toast.success(newShowWinnerBadge ? "Winner badge displayed" : "Winner badge hidden");
   };
 
   // Handle sending an announcement
@@ -729,6 +831,9 @@ function ControlMatchContent() {
                 onSubmitScores={handleSubmitScores}
                 isLoading={isLoadingScores}
                 disabled={!isConnected}
+                matchStatus={selectedMatch?.status}
+                showWinnerBadge={showWinnerBadge}
+                onToggleWinnerBadge={handleToggleWinnerBadge}
               />
             ) : (
               <AccessDenied
@@ -761,6 +866,10 @@ function ControlMatchContent() {
                 onDisplayModeChange={handleDisplayModeChange}
                 validateAnnouncement={validateAnnouncement}
                 isConnected={isConnected}
+                scheduleStageId={scheduleStageId}
+                onScheduleStageChange={handleScheduleStageChange}
+                stages={tournamentStages}
+                isStagesLoading={isLoadingStages}
               />
             ) : (
               <AccessDenied
