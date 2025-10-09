@@ -219,7 +219,7 @@ export function SwissRankingsDisplay({
   return (
     <div className="bg-black text-white w-screen h-screen flex flex-col relative overflow-hidden">
       {/* Top White Bar */}
-      {/* <div className="absolute top-0 left-0 right-0 h-[110px] bg-white z-30 flex items-center justify-center">
+      <div className="absolute top-0 left-0 right-0 h-[110px] bg-white z-30 flex items-center justify-center">
         <div className="text-center w-full">
           <h1 className="text-black text-5xl font-bold tracking-tight mb-2">
             Bảng xếp hạng vòng thể thức Thụy Sĩ
@@ -232,7 +232,7 @@ export function SwissRankingsDisplay({
             đội
           </p>
         </div>
-      </div> */}
+      </div>
 
       {/* Rankings Content Area */}
       <div className="flex-1 p-1 overflow-auto pt-[120px] flex items-center justify-center">

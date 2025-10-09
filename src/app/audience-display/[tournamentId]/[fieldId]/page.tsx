@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Image from "next/image";
 import { useTournament } from "@/hooks/tournaments/use-tournaments";
 import { useTournamentFields } from "@/components/features/fields/FieldSelectDropdown";
 import { useUnifiedWebSocket } from "@/hooks/websocket/use-unified-websocket";
@@ -90,9 +91,9 @@ export default function LiveFieldDisplayPage() {
   //   fieldId,
   // });
 
-  // Extract breakdown data from the score state instead
-  const redBreakdown = score?.scoreDetails?.breakdown?.red;
-  const blueBreakdown = score?.scoreDetails?.breakdown?.blue;
+  // Extract breakdown data from realtime scores (prioritized) or fallback to score state
+  const redBreakdown = realtimeScores.redBreakdown || score?.scoreDetails?.breakdown?.red;
+  const blueBreakdown = realtimeScores.blueBreakdown || score?.scoreDetails?.breakdown?.blue;
 
   // Display mode and announcement state
   const [displaySettings, setDisplaySettings] =
@@ -102,6 +103,10 @@ export default function LiveFieldDisplayPage() {
       fieldId,
       updatedAt: Date.now(),
     });
+
+  // Announcement text customization state
+  const [announcementTextSize, setAnnouncementTextSize] = useState<'small' | 'medium' | 'large' | 'xlarge'>('large');
+  const [announcementTextColor, setAnnouncementTextColor] = useState<string>('#ffffff');
 
   const {
     announcement,
@@ -1226,6 +1231,14 @@ export default function LiveFieldDisplayPage() {
         //   contentLength: announcementData.content?.length,
         // });
 
+        // Extract text customization settings if provided
+        if (announcementData.textSize) {
+          setAnnouncementTextSize(announcementData.textSize);
+        }
+        if (announcementData.textColor) {
+          setAnnouncementTextColor(announcementData.textColor);
+        }
+
         // APPLY TO STATE
         setAnnouncement(announcementData);
         setShowAnnouncement(true);
@@ -1238,40 +1251,6 @@ export default function LiveFieldDisplayPage() {
         //   actualDuration,
         //   "seconds"
         // );
-
-        // Calculate display duration in milliseconds
-        const displayDuration = actualDuration * 1000;
-        // console.log(
-        //   "⏰ [Timer] Setting display duration:",
-        //   displayDuration,
-        //   "ms"
-        // );
-
-        // Auto-hide announcement after duration and switch to blank display
-        const timerId = setTimeout(() => {
-          console.log(
-            "⏰ [Timer] Auto-hiding announcement after",
-            actualDuration,
-            "seconds"
-          );
-          setShowAnnouncement(false);
-
-          // Switch to blank display mode after announcement ends
-          console.log(
-            "📺 [Display] Switching to blank display after announcement"
-          );
-          setDisplaySettings((prev) => ({
-            ...prev,
-            displayMode: "blank",
-            updatedAt: Date.now(),
-          }));
-        }, displayDuration);
-
-        // Clear timeout if component unmounts while announcement is showing
-        return () => {
-          // console.log("🧹 [Cleanup] Clearing announcement timer");
-          clearTimeout(timerId);
-        };
       } else {
         // console.log("🚫 [Filter] Ignoring announcement - not for this field:", {
         //   announcementFieldId: data.fieldId,
@@ -1445,6 +1424,14 @@ export default function LiveFieldDisplayPage() {
       setAnnouncementCountdown((prev) => {
         if (prev === null || prev <= 1) {
           // console.log("🔢 [Countdown] Countdown finished");
+          // Hide the announcement overlay
+          setShowAnnouncement(false);
+          // Reset display mode to blank when countdown finishes
+          setDisplaySettings((prevSettings) => ({
+            ...prevSettings,
+            displayMode: "blank",
+            updatedAt: Date.now(),
+          }));
           return null;
         }
         const newValue = prev - 1;
@@ -1559,16 +1546,59 @@ export default function LiveFieldDisplayPage() {
         return (
           <div
             key={contentKey}
-            className="flex flex-col items-center justify-center h-screen w-screen"
+            className="flex h-screen w-screen flex-1 flex-col min-h-0 bg-black text-white"
+            style={{ aspectRatio: '16/9' }}
           >
-            <div className="bg-blue-50 border border-blue-200 p-4 sm:p-6 lg:p-8 xl:p-10 rounded-xl max-w-4xl text-center shadow-lg mx-2">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 lg:mb-6 text-blue-800">
-                ANNOUNCEMENT
-              </h2>
-              <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl text-gray-900">
-                {displaySettings.message || "No announcement message"}
-              </p>
+            {/* Top White Bar */}
+            <div className="absolute top-0 left-0 right-0 h-[120px] bg-white z-30 flex items-center justify-center">
+              <h1 className="text-black text-4xl md:text-5xl font-bold text-center">
+                Thông báo từ Ban Tổ Chức
+              </h1>
             </div>
+
+            {/* Main content area - Black section */}
+            <div className="relative z-10 flex-1 flex flex-col pt-[120px] pb-[10%]">
+              {/* Announcement Content */}
+              <div className="flex-1 flex items-center justify-center px-8">
+                <div className="text-center">
+                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-8 text-white uppercase tracking-wider">
+                    {displaySettings.message || "VUI LÒNG ĐỢI THÔNG BÁO TỪ BAN TỔ CHỨC"}
+                  </h2>
+                  <p className="text-xl md:text-2xl lg:text-3xl font-medium leading-relaxed whitespace-pre-wrap text-white">
+                    {displaySettings.message ? "" : "Ban tổ chức sẽ cung cấp các cập nhật và thông tin quan trọng tại đây."}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom White Bar - Footer */}
+            <footer className="bg-white h-[10%] w-full flex items-center px-8 relative z-20">
+              {/* Logos */}
+              <div className="flex items-center gap-4 h-full py-2 w-[400px]">
+                <div className="relative h-full aspect-square w-full">
+                  <Image
+                    src="/btc_trans.png"
+                    alt="Logo STEAM For Vietnam, Đại học Bách khoa Hà Nội, UNICEF, Đại sứ quán Hoa Kỳ"
+                    fill
+                    className="object-contain"
+                    sizes="400px"
+                  />
+                </div>
+              </div>
+
+              {/* Event info */}
+              <div className="flex-1 text-center">
+                <p className="text-black text-2xl md:text-3xl font-bold">
+                  STEMESE Festival - 19/10 - Đại học Bách Khoa Hà Nội
+                </p>
+              </div>
+
+              {/* LIVE indicator */}
+              <div className="flex items-center justify-end gap-2 w-[320px]">
+                <div className="w-[18px] h-[18px] bg-[#00FF2F] rounded-full animate-pulse" />
+                <span className="text-[#00FF2F] text-[32px] font-bold">LIVE</span>
+              </div>
+            </footer>
           </div>
         );
       case "match":
@@ -1650,6 +1680,8 @@ export default function LiveFieldDisplayPage() {
           announcement={announcement}
           showAnnouncement={showAnnouncement}
           announcementCountdown={announcementCountdown}
+          textSize={announcementTextSize}
+          textColor={announcementTextColor}
         />
       )}
 

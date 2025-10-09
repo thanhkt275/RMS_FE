@@ -1,5 +1,5 @@
 import { Match } from '@/types/match.types';
-import { MatchPosition, BracketDimensions, SVGPathData } from '../types/bracket.types';
+import { MatchPosition, BracketDimensions, ConnectionGraphics } from '../types/bracket.types';
 import { FIGMA_DESIGN, SCALING_CONSTANTS } from './constants';
 
 // Cache for expensive calculations to avoid repeated computations
@@ -260,7 +260,7 @@ export const generateConnectionPath = (
   source2: MatchPosition,
   target: MatchPosition,
   roundGap: number
-): SVGPathData => {
+): ConnectionGraphics => {
   // Calculate connection points on the right edge of source matches
   const source1Right = source1.x + source1.width;
   const source1CenterY = source1.y + source1.height / 2;
@@ -278,6 +278,14 @@ export const generateConnectionPath = (
   // Calculate the horizontal position for the vertical connector
   // This should be halfway between the source matches and the target match
   const horizontalMidX = source1Right + roundGap / 2;
+
+  const { ARROW_LENGTH, ARROW_WIDTH } = FIGMA_DESIGN.CONNECTION_LINES;
+  const arrowHalfHeight = ARROW_WIDTH / 2;
+  const arrowBaseX = targetLeft - ARROW_LENGTH;
+  const arrowTipX = targetLeft;
+  const arrowTopY = targetCenterY - arrowHalfHeight;
+  const arrowBottomY = targetCenterY + arrowHalfHeight;
+  const arrowPoints = `${arrowBaseX},${arrowTopY} ${arrowTipX},${targetCenterY} ${arrowBaseX},${arrowBottomY}`;
 
   // Create the bracket connection path:
   // 1. From source1 to vertical line
@@ -299,14 +307,20 @@ export const generateConnectionPath = (
     `M ${horizontalMidX} ${verticalMidY}`,
     
     // Line from vertical connector to target match
-    `L ${targetLeft} ${targetCenterY}`,
+    `L ${arrowBaseX} ${targetCenterY}`,
   ];
 
   return {
-    d: pathCommands.join(' '),
-    stroke: FIGMA_DESIGN.COLORS.CONNECTION_LINE,
-    strokeWidth: FIGMA_DESIGN.CONNECTION_LINES.STROKE_WIDTH,
-    fill: 'none',
+    path: {
+      d: pathCommands.join(' '),
+      stroke: FIGMA_DESIGN.COLORS.CONNECTION_LINE,
+      strokeWidth: FIGMA_DESIGN.CONNECTION_LINES.STROKE_WIDTH,
+      fill: 'none',
+    },
+    arrow: {
+      points: arrowPoints,
+      fill: FIGMA_DESIGN.COLORS.CONNECTION_LINE,
+    },
   };
 };
 

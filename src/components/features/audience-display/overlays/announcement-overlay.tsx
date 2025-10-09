@@ -1,57 +1,47 @@
 import React from "react";
 import { AnnouncementData, extractYouTubeId } from "@/hooks/control-match/use-announcement";
+import Image from "next/image";
 
 interface AnnouncementOverlayProps {
   announcement: AnnouncementData;
   showAnnouncement: boolean;
   announcementCountdown: number | null;
+  textSize?: 'small' | 'medium' | 'large' | 'xlarge';
+  textColor?: string;
 }
 
 export const AnnouncementOverlay: React.FC<AnnouncementOverlayProps> = ({
   announcement,
   showAnnouncement,
   announcementCountdown,
+  textSize = 'large',
+  textColor = '#ffffff',
 }) => {
-  // DEBUG: Log what props the overlay receives
-  console.log('🎭 [AnnouncementOverlay] Component rendered with props:', {
-    announcement,
-    showAnnouncement,
-    announcementCountdown,
-    hasContent: !!(announcement?.content),
-    contentLength: announcement?.content?.length || 0,
-    type: announcement?.type
-  });
-
   if (!showAnnouncement || !announcement?.content) {
-    console.log('🎭 [AnnouncementOverlay] Not rendering - showAnnouncement:', showAnnouncement, 'hasContent:', !!(announcement?.content));
     return null;
   }
-
-  console.log('🎭 [AnnouncementOverlay] Will render announcement type:', announcement.type, 'content:', announcement.content.substring(0, 50) + '...');
 
   // Render YouTube video
   const renderYouTubeVideo = () => {
     const videoId = extractYouTubeId(announcement.content);
-    console.log('🎥 [YouTube] Extracted video ID:', videoId, 'from URL:', announcement.content);
-    
+
     if (!videoId) {
-      console.error('🎥 [YouTube] Failed to extract video ID from URL:', announcement.content);
       return (
         <div className="w-full h-full flex items-center justify-center">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded max-w-md text-center">
-            <strong className="font-bold">YouTube Error:</strong>
-            <span className="block sm:inline"> Unable to extract video ID from URL</span>
-            <div className="text-sm mt-2 opacity-75">{announcement.content}</div>
+          <div className="text-center text-white p-8">
+            <div className="text-2xl font-bold mb-4">YouTube Error</div>
+            <div className="text-lg">Unable to extract video ID from URL</div>
+            <div className="text-sm mt-2 opacity-75 max-w-md">{announcement.content}</div>
           </div>
         </div>
       );
     }
-    
+
     return (
-      <div className="w-full h-full flex items-center justify-center">
+      <div className="w-full h-full">
         <iframe
           src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=1&rel=0&modestbranding=1`}
-          className="w-full h-full max-w-7xl max-h-[90vh] rounded-lg shadow-2xl"
+          className="w-full h-full"
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
@@ -64,28 +54,24 @@ export const AnnouncementOverlay: React.FC<AnnouncementOverlayProps> = ({
   // Render image
   const renderImage = () => {
     return (
-      <div className="w-full h-full flex items-center justify-center p-2 sm:p-4 lg:p-8">
-        <div className="relative max-w-7xl max-h-[90vh] bg-white rounded-lg shadow-2xl overflow-hidden mx-2">
-          {announcement.title && (
-            <div className="absolute top-0 left-0 right-0 bg-black/70 text-white p-2 sm:p-3 lg:p-4 z-10">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-center">{announcement.title}</h2>
-            </div>
-          )}
-          <img
-            src={announcement.content}
-            alt={announcement.title || "Announcement Image"}
-            className="w-full h-full object-contain rounded-lg"
-            onError={(e) => {
-              console.error('Failed to load image:', announcement.content);
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              const parent = target.parentElement;
-              if (parent) {
-                parent.innerHTML = '<div class="flex items-center justify-center h-96 text-red-600 text-base sm:text-lg lg:text-xl font-bold">Failed to load image</div>';
-              }
-            }}
-          />
-        </div>
+      <div className="w-full h-full">
+        <img
+          src={announcement.content}
+          alt={announcement.title || "Announcement Image"}
+          className="w-full h-full object-contain"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+            const parent = target.parentElement;
+            if (parent) {
+              parent.innerHTML = `
+                <div class="flex items-center justify-center h-full text-white text-xl md:text-2xl font-bold">
+                  Failed to load image
+                </div>
+              `;
+            }
+          }}
+        />
       </div>
     );
   };
@@ -93,51 +79,62 @@ export const AnnouncementOverlay: React.FC<AnnouncementOverlayProps> = ({
   // Render video
   const renderVideo = () => {
     return (
-      <div className="w-full h-full flex items-center justify-center p-2 sm:p-4 lg:p-8">
-        <div className="relative max-w-7xl max-h-[90vh] bg-black rounded-lg shadow-2xl overflow-hidden mx-2">
-          {announcement.title && (
-            <div className="absolute top-0 left-0 right-0 bg-black/70 text-white p-2 sm:p-3 lg:p-4 z-10">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-center">{announcement.title}</h2>
-            </div>
-          )}
-          <video
-            src={announcement.content}
-            className="w-full h-full object-contain rounded-lg"
-            autoPlay
-            muted
-            controls
-            onError={(e) => {
-              console.error('Failed to load video:', announcement.content);
-              const target = e.target as HTMLVideoElement;
-              target.style.display = 'none';
-              const parent = target.parentElement;
-              if (parent) {
-                parent.innerHTML = '<div class="flex items-center justify-center h-96 text-red-600 text-base sm:text-lg lg:text-xl font-bold">Failed to load video</div>';
-              }
-            }}
-          >
-            Your browser does not support the video element.
-          </video>
-        </div>
+      <div className="w-full h-full">
+        <video
+          src={announcement.content}
+          className="w-full h-full object-contain"
+          autoPlay
+          muted
+          controls
+          onError={(e) => {
+            const target = e.target as HTMLVideoElement;
+            target.style.display = 'none';
+            const parent = target.parentElement;
+            if (parent) {
+              parent.innerHTML = `
+                <div class="flex items-center justify-center h-full text-white text-xl md:text-2xl font-bold">
+                  Failed to load video
+                </div>
+              `;
+            }
+          }}
+        >
+          Your browser does not support the video element.
+        </video>
       </div>
     );
   };
 
+  // Get text size classes based on textSize prop
+  const getTextSizeClasses = (size: string) => {
+    switch (size) {
+      case 'small':
+        return 'text-xl md:text-2xl lg:text-3xl';
+      case 'medium':
+        return 'text-2xl md:text-3xl lg:text-4xl';
+      case 'large':
+        return 'text-3xl md:text-4xl lg:text-5xl';
+      case 'xlarge':
+        return 'text-9xl md:text-11xl lg:text-13xl';
+      default:
+        return 'text-3xl md:text-4xl lg:text-5xl';
+    }
+  };
+
   // Render text announcement
   const renderText = () => {
+    const titleClasses = `${getTextSizeClasses(textSize)} font-bold mb-8 uppercase tracking-wider`;
+    const contentClasses = `${getTextSizeClasses(textSize)} font-medium leading-relaxed whitespace-pre-wrap`;
+
     return (
-      <div className="w-full h-full flex items-center justify-center p-2 sm:p-4 lg:p-8">
-        <div className="bg-white p-4 sm:p-6 lg:p-8 xl:p-12 rounded-xl max-w-5xl text-center shadow-2xl border-4 border-yellow-400 mx-2">
-          <div className="uppercase text-yellow-600 font-semibold mb-2 sm:mb-3 lg:mb-4 text-sm sm:text-base lg:text-lg">Important</div>
+      <div className="w-full h-full flex items-center justify-center p-8">
+        <div className="text-center">
           {announcement.title && (
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold mb-3 sm:mb-4 lg:mb-6 xl:mb-8 text-blue-800 uppercase tracking-wider">
+            <h2 className={titleClasses} style={{ color: textColor }}>
               {announcement.title}
             </h2>
           )}
-          <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold mb-2 sm:mb-3 lg:mb-4 xl:mb-6 text-blue-800 uppercase tracking-wider">
-            {announcement.title ? "" : "ANNOUNCEMENT"}
-          </h2>
-          <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-medium leading-relaxed whitespace-pre-wrap">
+          <p className={contentClasses} style={{ color: textColor }}>
             {announcement.content}
           </p>
         </div>
@@ -147,43 +144,88 @@ export const AnnouncementOverlay: React.FC<AnnouncementOverlayProps> = ({
 
   // Get the appropriate content renderer based on announcement type
   const renderContent = () => {
-    console.log('🎭 [AnnouncementOverlay] Rendering content for type:', announcement.type);
-    
     switch (announcement.type) {
       case 'youtube':
-        console.log('🎥 [AnnouncementOverlay] Rendering YouTube video for:', announcement.content);
         return renderYouTubeVideo();
       case 'image':
-        console.log('🖼️ [AnnouncementOverlay] Rendering image for:', announcement.content);
         return renderImage();
       case 'video':
-        console.log('🎥 [AnnouncementOverlay] Rendering video for:', announcement.content);
         return renderVideo();
       case 'text':
       default:
-        console.log('📝 [AnnouncementOverlay] Rendering text content:', announcement.content.substring(0, 50) + '...');
         return renderText();
     }
   };
 
+  // Check if this is a media announcement (image, video, youtube)
+  const isMediaAnnouncement = announcement.type === 'image' || announcement.type === 'video' || announcement.type === 'youtube';
+
   return (
-    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 animate-in fade-in duration-500">
-      {renderContent()}
-      
-      {/* Countdown Timer (always visible) */}
-      {announcementCountdown !== null && (
-        <div className="absolute bottom-2 sm:bottom-4 lg:bottom-8 right-2 sm:right-4 lg:right-8 px-3 sm:px-4 lg:px-6 py-2 sm:py-2.5 lg:py-3 bg-black/70 backdrop-blur-sm rounded-full text-white border border-white/20">
-          <div className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base lg:text-lg font-semibold">
-            <div className="w-2 sm:w-2.5 lg:w-3 h-2 sm:h-2.5 lg:h-3 bg-red-500 rounded-full animate-pulse" />
-            <span>Closing in {announcementCountdown}s</span>
+    <div className="fixed inset-0 bg-black text-white w-full h-full flex flex-col relative overflow-hidden z-50 animate-in fade-in duration-500" style={{ aspectRatio: '16/9' }}>
+      {/* Top White Bar - Only show for text announcements */}
+      {!isMediaAnnouncement && (
+        <div className="absolute top-0 left-0 right-0 h-[120px] bg-white z-30 flex items-center justify-center">
+          <h1 className="text-black text-4xl md:text-5xl font-bold text-center">
+            Thông báo từ Ban Tổ Chức
+          </h1>
+        </div>
+      )}
+
+      {/* Main content area */}
+      <div className={`relative z-10 flex-1 flex flex-col ${isMediaAnnouncement ? '' : 'pt-[120px] pb-[10%]'}`}>
+        {/* Announcement Content */}
+        <div className={`flex-1 flex items-center justify-center ${isMediaAnnouncement ? '' : 'px-8'}`}>
+          {renderContent()}
+        </div>
+      </div>
+
+      {/* Bottom White Bar - Footer - Only show for text announcements */}
+      {!isMediaAnnouncement && (
+        <footer className="bg-white h-[10%] w-full flex items-center px-8 relative z-20">
+          {/* Logos */}
+          <div className="flex items-center gap-4 h-full py-2 w-[400px]">
+            <div className="relative h-full aspect-square w-full">
+              <Image
+                src="/btc_trans.png"
+                alt="Logo STEAM For Vietnam, Đại học Bách khoa Hà Nội, UNICEF, Đại sứ quán Hoa Kỳ"
+                fill
+                className="object-contain"
+                sizes="400px"
+              />
+            </div>
+          </div>
+
+          {/* Event info */}
+          <div className="flex-1 text-center">
+            <p className="text-black text-2xl md:text-3xl font-bold">
+              STEMESE Festival - 19/10 - Đại học Bách Khoa Hà Nội
+            </p>
+          </div>
+
+          {/* LIVE indicator */}
+          <div className="flex items-center justify-end gap-2 w-[320px]">
+            <div className="w-[18px] h-[18px] bg-[#00FF2F] rounded-full animate-pulse" />
+            <span className="text-[#00FF2F] text-[32px] font-bold">LIVE</span>
+          </div>
+        </footer>
+      )}
+
+      {/* Countdown Timer - Only show for text announcements */}
+      {!isMediaAnnouncement && announcementCountdown !== null && (
+        <div className="absolute bottom-[12%] right-8 px-6 py-3 bg-black/80 backdrop-blur-sm rounded-full text-white border-2 border-white/20 shadow-lg">
+          <div className="flex items-center gap-2 text-lg font-semibold">
+            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+            <span>{announcementCountdown}s</span>
           </div>
         </div>
       )}
-      
-      {/* ESC key hint */}
-      <div className="absolute top-2 sm:top-4 lg:top-8 right-2 sm:right-4 lg:right-8 px-2 sm:px-3 lg:px-4 py-1 sm:py-1.5 lg:py-2 bg-black/50 backdrop-blur-sm rounded-lg text-white text-xs sm:text-sm border border-white/20">
-        Press ESC to close
-      </div>
+
+      {/* ESC key hint - Only show for text announcements */}
+      {!isMediaAnnouncement && (
+        <div className="absolute top-[130px] right-8 px-4 py-2 bg-black/60 backdrop-blur-sm rounded-lg text-white text-sm border border-white/20 shadow-lg">
+          Press ESC to close
+        </div>
+      )}
     </div>
   );
 };

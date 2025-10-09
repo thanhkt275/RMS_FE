@@ -43,7 +43,7 @@ export default function MatchSchedulerDialog({
   
   // Basic state
   const [activeView, setActiveView] = useState<"config" | "teams" | "results">("config");
-  const [schedulerType, setSchedulerType] = useState<string>(stageType === "SWISS" ? "swiss" : stageType === "QUALIFICATION" ? "frc" : "playoff");
+  const [schedulerType, setSchedulerType] = useState<string>(stageType === "SWISS" ? "swiss" : "playoff");
   const [currentRoundNumber, setCurrentRoundNumber] = useState<number>(0);
   const [numberOfRounds, setNumberOfRounds] = useState<number>(3);
   const [teamsPerAlliance, setTeamsPerAlliance] = useState<number>(2);
@@ -73,7 +73,7 @@ export default function MatchSchedulerDialog({
   useEffect(() => {
     if (isOpen) {
       setActiveView("config");
-      setSchedulerType(stageType === "SWISS" ? "swiss" : stageType === "QUALIFICATION" ? "frc" : "playoff");
+      setSchedulerType(stageType === "SWISS" ? "swiss" : "playoff");
       setCurrentRoundNumber(0);
       setNumberOfRounds(3);
       setTeamsPerAlliance(2);
@@ -314,12 +314,12 @@ export default function MatchSchedulerDialog({
                   className={`border rounded-lg p-3 cursor-pointer transition-colors ${
                     schedulerType === "frc" 
                       ? "bg-blue-50 border-blue-200 text-blue-900" 
-                      : stageType !== "QUALIFICATION"
+                      : stageType !== "SWISS"
                         ? "opacity-50 cursor-not-allowed bg-gray-50 border-gray-200 text-gray-400"
                         : "hover:bg-gray-50 border-gray-300 text-gray-900"
                   }`}
                   onClick={() => {
-                    if (stageType === "QUALIFICATION") setSchedulerType("frc");
+                    if (stageType === "SWISS") setSchedulerType("frc");
                   }}
                 >
                   <div className="font-medium">FRC Qualification</div>

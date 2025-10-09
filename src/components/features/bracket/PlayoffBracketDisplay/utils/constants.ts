@@ -49,6 +49,8 @@ export const FIGMA_DESIGN = {
   CONNECTION_LINES: {
     STROKE_WIDTH: 2,
     COLOR: '#94A3B8',
+    ARROW_LENGTH: 12,
+    ARROW_WIDTH: 8,
   },
 } as const;
 

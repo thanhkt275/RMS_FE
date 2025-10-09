@@ -34,6 +34,10 @@ interface AnnouncementPanelProps {
   onScheduleStageChange: (stageId: string | null) => void;
   stages?: Stage[];
   isStagesLoading?: boolean;
+  textSize?: 'small' | 'medium' | 'large' | 'xlarge';
+  textColor?: string;
+  onTextSizeChange?: (size: 'small' | 'medium' | 'large' | 'xlarge') => void;
+  onTextColorChange?: (color: string) => void;
 }
 
 export function AnnouncementPanel({
@@ -56,6 +60,10 @@ export function AnnouncementPanel({
   onScheduleStageChange,
   stages = [],
   isStagesLoading = false,
+  textSize = 'large',
+  textColor = '#ffffff',
+  onTextSizeChange,
+  onTextColorChange,
 }: AnnouncementPanelProps) {
   const isDisabled = disabled || !isConnected;
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -295,6 +303,56 @@ export function AnnouncementPanel({
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Text Size Control - Only show for text announcements */}
+            {announcement.type === 'text' && onTextSizeChange && (
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Text Size
+                </label>
+                <Select
+                  value={textSize}
+                  onValueChange={onTextSizeChange}
+                  disabled={isDisabled}
+                >
+                  <SelectTrigger className="bg-white border border-orange-300 rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="small">Small</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="large">Large</SelectItem>
+                    <SelectItem value="xlarge">Extra Large</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Text Color Control - Only show for text announcements */}
+            {announcement.type === 'text' && onTextColorChange && (
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Text Color
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={textColor}
+                    onChange={(e) => onTextColorChange(e.target.value)}
+                    disabled={isDisabled}
+                    className="w-12 h-10 border border-orange-300 rounded cursor-pointer"
+                  />
+                  <Input
+                    type="text"
+                    value={textColor}
+                    onChange={(e) => onTextColorChange(e.target.value)}
+                    placeholder="#ffffff"
+                    disabled={isDisabled}
+                    className="flex-1 bg-white border border-orange-300 rounded-lg"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Title Input (Optional) */}
             <div>

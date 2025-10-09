@@ -290,7 +290,7 @@ const generateConnections = (
         const sourcePosition2 = positionMap.get(sourceMatch2.id);
 
         if (sourcePosition1 && sourcePosition2) {
-          const connectionPath = generateConnectionPath(
+          const connectionGraphics = generateConnectionPath(
             sourcePosition1,
             sourcePosition2,
             targetPosition,
@@ -300,7 +300,8 @@ const generateConnections = (
           connections.push({
             fromMatches: [sourceMatch1.id, sourceMatch2.id],
             toMatch: targetMatch.id,
-            path: connectionPath,
+            path: connectionGraphics.path,
+            arrow: connectionGraphics.arrow,
           });
         }
       }

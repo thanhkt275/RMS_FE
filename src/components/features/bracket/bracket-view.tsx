@@ -1,12 +1,25 @@
 "use client";
 
+import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import BracketColumn from "@/components/features/bracket/bracket-column";
 import type { NormalizedBracket } from "@/utils/bracket-normalizer";
-import type { StageBracketResponse } from "@/types/match.types";
+import type { Match, StageBracketResponse } from "@/types/match.types";
+import type { Match as StageMatch } from "@/types/types";
+import type { PlayoffBracketDisplayProps } from "@/components/features/bracket/PlayoffBracketDisplay";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-const EnhancedEliminationBracket = dynamic<{ bracket: StageBracketResponse }>(
-  () => import("@/components/features/bracket/gloot-bracket-view").then((mod) => mod.GlootBracketView),
+// Import the simple bracket display from audience display that has working connection lines
+const SimplePlayoffBracketDisplay = dynamic(
+  () =>
+    import("@/components/features/audience-display/displays/playoff-bracket-display").then(
+      (mod) => mod.PlayoffBracketDisplay
+    ),
   {
     ssr: false,
     loading: () => (
@@ -16,12 +29,21 @@ const EnhancedEliminationBracket = dynamic<{ bracket: StageBracketResponse }>(
     ),
   }
 );
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+
+const DynamicPlayoffBracketDisplay = dynamic<PlayoffBracketDisplayProps>(
+  () =>
+    import("@/components/features/bracket/PlayoffBracketDisplay").then(
+      (mod) => mod.PlayoffBracketDisplay
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-[320px] items-center justify-center text-sm text-slate-500">
+        Preparing bracket view…
+      </div>
+    ),
+  }
+);
 
 interface BracketViewProps {
   normalizedBracket: NormalizedBracket;
@@ -30,6 +52,7 @@ interface BracketViewProps {
   generatedAt?: string;
   teamsPerAlliance?: number;
   rawBracket?: StageBracketResponse | null;
+  matches?: StageMatch[] | Match[] | null;
 }
 
 const BracketView = ({
@@ -39,9 +62,61 @@ const BracketView = ({
   generatedAt,
   teamsPerAlliance,
   rawBracket,
+  matches,
 }: BracketViewProps) => {
-  const canUseEnhancedElimination =
-    normalizedBracket.type === "elimination" && rawBracket && rawBracket.structure.type === "elimination";
+  const bracketMatchMap = useMemo(() => {
+    const map = new Map<string, any>();
+
+    // Add matches from props with proper type handling
+    matches?.forEach((match: any) => {
+      // Ensure scheduledTime is defined for compatibility
+      const normalizedMatch = {
+        ...match,
+        scheduledTime: match.scheduledTime || new Date().toISOString(),
+        matchNumber: match.matchNumber ?? 0,
+      };
+      map.set(normalizedMatch.id, normalizedMatch);
+    });
+
+    // Add matches from rawBracket if not already present
+    rawBracket?.matches.forEach((match) => {
+      if (!map.has(match.id)) {
+        map.set(match.id, match);
+      }
+    });
+
+    return map;
+  }, [matches, rawBracket]);
+
+  const playoffMatches = useMemo(() => {
+    if (!rawBracket || rawBracket.structure.type !== "elimination") {
+      return [];
+    }
+
+    const processedMatches: any[] = [];
+
+    rawBracket.structure.rounds.forEach((round, roundIndex) => {
+      round.matches.forEach((matchId, matchIndex) => {
+        const match = bracketMatchMap.get(matchId);
+        if (!match) {
+          return;
+        }
+
+        processedMatches.push({
+          ...match,
+          roundNumber: match.roundNumber ?? round.roundNumber ?? roundIndex + 1,
+          bracketSlot: match.bracketSlot ?? matchIndex + 1,
+        });
+      });
+    });
+
+    return processedMatches;
+  }, [bracketMatchMap, rawBracket]);
+
+  const canUsePlayoffBracket =
+    normalizedBracket.type === "elimination" &&
+    rawBracket?.structure.type === "elimination" &&
+    playoffMatches.length > 0;
 
   return (
     <div className="space-y-6">
@@ -97,16 +172,20 @@ const BracketView = ({
         </TooltipProvider>
       )}
 
-      {canUseEnhancedElimination ? (
-        <div className="w-full overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-lg relative">
+      {canUsePlayoffBracket ? (
+        <div className="relative w-full overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-lg">
           {/* Compact bracket info */}
           {typeof teamsPerAlliance === "number" && teamsPerAlliance > 2 && (
             <div className="absolute top-3 right-3 z-10 bg-blue-50/90 backdrop-blur-sm rounded px-2 py-1 text-xs font-semibold text-blue-700 border border-blue-200/50 shadow-sm">
               {teamsPerAlliance}v{teamsPerAlliance}
             </div>
           )}
-          <div className="w-full">
-            <EnhancedEliminationBracket bracket={rawBracket} />
+          <div className="w-full min-h-[480px]">
+            <SimplePlayoffBracketDisplay
+              matches={playoffMatches}
+              stageName={stageName}
+              stageType={stageType as "PLAYOFF" | "FINAL"}
+            />
           </div>
         </div>
       ) : (

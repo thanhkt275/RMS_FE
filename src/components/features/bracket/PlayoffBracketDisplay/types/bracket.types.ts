@@ -40,6 +40,7 @@ export interface ConnectionData {
   fromMatches: [string, string]; // Two source match IDs
   toMatch: string;
   path: SVGPathData;
+  arrow: ArrowData;
 }
 
 export interface SVGPathData {
@@ -47,6 +48,16 @@ export interface SVGPathData {
   stroke: string;
   strokeWidth: number;
   fill: string;
+}
+
+export interface ArrowData {
+  points: string;
+  fill: string;
+}
+
+export interface ConnectionGraphics {
+  path: SVGPathData;
+  arrow: ArrowData;
 }
 
 // Component-specific props
@@ -171,7 +182,7 @@ export interface PositionCalculator {
     sourceMatch2: MatchPosition,
     targetMatch: MatchPosition,
     dimensions: BracketDimensions
-  ): SVGPathData;
+  ): ConnectionGraphics;
 }
 
 export interface EdgeCaseHandlers {

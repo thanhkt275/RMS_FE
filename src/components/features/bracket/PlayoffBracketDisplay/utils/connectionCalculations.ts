@@ -1,4 +1,4 @@
-import { MatchPosition, ConnectionData, SVGPathData, BracketDimensions } from '../types/bracket.types';
+import { MatchPosition, ConnectionData, BracketDimensions, ConnectionGraphics } from '../types/bracket.types';
 import { FIGMA_DESIGN } from './constants';
 
 /**
@@ -10,7 +10,7 @@ export const calculateConnectionPath = (
   sourceMatch2: MatchPosition,
   targetMatch: MatchPosition,
   dimensions: BracketDimensions
-): SVGPathData => {
+): ConnectionGraphics => {
   // Calculate connection points on the right edge of source matches
   const source1ExitX = sourceMatch1.x + sourceMatch1.width;
   const source1ExitY = sourceMatch1.y + sourceMatch1.height / 2;
@@ -42,15 +42,26 @@ export const calculateConnectionPath = (
     `L ${midX} ${source2ExitY}`,
     // Vertical line to midpoint between sources
     `L ${midX} ${midY}`,
-    // Horizontal line to target match
-    `L ${targetEntryX} ${targetEntryY}`,
+  // Horizontal line to target match
+    `L ${targetEntryX - FIGMA_DESIGN.CONNECTION_LINES.ARROW_LENGTH} ${targetEntryY}`,
   ].join(' ');
+
+  const arrowHalfHeight = FIGMA_DESIGN.CONNECTION_LINES.ARROW_WIDTH / 2;
+  const arrowBaseX = targetEntryX - FIGMA_DESIGN.CONNECTION_LINES.ARROW_LENGTH;
+  const arrowTipX = targetEntryX;
+  const arrowPoints = `${arrowBaseX},${targetEntryY - arrowHalfHeight} ${arrowTipX},${targetEntryY} ${arrowBaseX},${targetEntryY + arrowHalfHeight}`;
   
   return {
-    d: pathData,
-    stroke: FIGMA_DESIGN.COLORS.CONNECTION_LINE,
-    strokeWidth: FIGMA_DESIGN.CONNECTION_LINES.STROKE_WIDTH,
-    fill: 'none',
+    path: {
+      d: pathData,
+      stroke: FIGMA_DESIGN.COLORS.CONNECTION_LINE,
+      strokeWidth: FIGMA_DESIGN.CONNECTION_LINES.STROKE_WIDTH,
+      fill: 'none',
+    },
+    arrow: {
+      points: arrowPoints,
+      fill: FIGMA_DESIGN.COLORS.CONNECTION_LINE,
+    },
   };
 };
 
@@ -93,7 +104,7 @@ export const generateBracketConnections = (
         
         if (sourcePosition1 && sourcePosition2) {
           // Calculate the connection path
-          const pathData = calculateConnectionPath(
+          const connectionGraphics = calculateConnectionPath(
             sourcePosition1,
             sourcePosition2,
             targetPosition,
@@ -110,7 +121,8 @@ export const generateBracketConnections = (
           connections.push({
             fromMatches: [sourceMatch1.id, sourceMatch2.id],
             toMatch: targetMatch.id,
-            path: pathData,
+            path: connectionGraphics.path,
+            arrow: connectionGraphics.arrow,
           });
         }
       }
@@ -226,7 +238,7 @@ export const handleBracketEdgeCases = (
           const source1 = currentRoundPositions[sourceIndex1];
           const source2 = currentRoundPositions[sourceIndex2];
           
-          const pathData = calculateConnectionPath(
+          const connectionGraphics = calculateConnectionPath(
             source1,
             source2,
             targetPos,
@@ -243,7 +255,8 @@ export const handleBracketEdgeCases = (
           connections.push({
             fromMatches: [source1.matchId, source2.matchId],
             toMatch: targetPos.matchId,
-            path: pathData,
+            path: connectionGraphics.path,
+            arrow: connectionGraphics.arrow,
           });
         }
       }

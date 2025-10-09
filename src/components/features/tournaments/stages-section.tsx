@@ -70,7 +70,7 @@ export function StagesSection({ tournamentId, stages, detailedStages }: StagesSe
         </div>
         <Button 
           onClick={() => setShowCreateStage(true)}
-          className="w-full sm:w-auto min-h-[44px] touch-target"
+          className="w-full sm:w-auto min-h-[44px] touch-target bg-blue-600 hover:bg-blue-700 text-white font-medium"
         >
           <Plus className="h-4 w-4 mr-2" />
           Create Stage
@@ -165,7 +165,7 @@ export function StagesSection({ tournamentId, stages, detailedStages }: StagesSe
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="flex-1 text-slate-300 border-slate-600 hover:bg-slate-700 hover:text-white min-h-[36px] touch-target"
+                      className="flex-1 text-slate-200 border-slate-500 hover:bg-slate-600 hover:text-white hover:border-slate-400 min-h-[36px] touch-target transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         // Handle view matches
@@ -177,7 +177,7 @@ export function StagesSection({ tournamentId, stages, detailedStages }: StagesSe
                     <Button 
                       size="sm" 
                       variant="outline"
-                      className="sm:flex-shrink-0 text-slate-300 border-slate-600 hover:bg-slate-700 hover:text-white min-h-[36px] touch-target"
+                      className="sm:flex-shrink-0 text-slate-200 border-slate-500 hover:bg-slate-600 hover:text-white hover:border-slate-400 min-h-[36px] touch-target transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         // Handle edit stage
@@ -204,7 +204,7 @@ export function StagesSection({ tournamentId, stages, detailedStages }: StagesSe
             </div>
             <Button 
               onClick={() => setShowCreateStage(true)}
-              className="w-full sm:w-auto min-h-[44px] touch-target"
+              className="w-full sm:w-auto min-h-[44px] touch-target bg-blue-600 hover:bg-blue-700 text-white font-medium"
             >
               <Plus className="h-4 w-4 mr-2" />
               Create First Stage

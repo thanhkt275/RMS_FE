@@ -251,6 +251,11 @@ export function useScoringControl({
     };
 
     console.log("📊 Sending real-time score update:", scoreData);
+    console.log("📊 Score breakdown details:", {
+      redBreakdown: latestState.scoreDetails?.breakdown?.red,
+      blueBreakdown: latestState.scoreDetails?.breakdown?.blue,
+      hasBreakdown: !!latestState.scoreDetails?.breakdown
+    });
 
     if (unifiedWebSocket.isConnected) {
       // Send immediately with automatic debouncing (200ms max latency)

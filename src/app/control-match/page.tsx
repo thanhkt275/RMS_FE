@@ -106,6 +106,10 @@ function ControlMatchContent() {
   // Winner badge control state
   const [showWinnerBadge, setShowWinnerBadge] = useState<boolean>(false);
 
+  // Announcement text customization state
+  const [announcementTextSize, setAnnouncementTextSize] = useState<'small' | 'medium' | 'large' | 'xlarge'>('large');
+  const [announcementTextColor, setAnnouncementTextColor] = useState<string>('#ffffff');
+
   // Initialize unified match control hook
   const unifiedMatchControl = useUnifiedMatchControl({
     tournamentId: selectedTournamentId || "all",
@@ -603,8 +607,13 @@ const handleScheduleStageChange = useCallback(
       return;
     }
 
-    // Send the multimedia announcement data
-    sendAnnouncement(announcement);
+    // Send the multimedia announcement data with text customization
+    const announcementData = {
+      ...announcement,
+      textSize: announcementTextSize,
+      textColor: announcementTextColor,
+    };
+    sendAnnouncement(announcementData);
 
     // DO NOT change display mode - let the announcement overlay handle display
     // The audience display will show the announcement overlay and then switch to blank
@@ -870,6 +879,10 @@ const handleScheduleStageChange = useCallback(
                 onScheduleStageChange={handleScheduleStageChange}
                 stages={tournamentStages}
                 isStagesLoading={isLoadingStages}
+                textSize={announcementTextSize}
+                textColor={announcementTextColor}
+                onTextSizeChange={setAnnouncementTextSize}
+                onTextColorChange={setAnnouncementTextColor}
               />
             ) : (
               <AccessDenied

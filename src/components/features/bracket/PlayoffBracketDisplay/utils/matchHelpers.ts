@@ -11,12 +11,21 @@ const teamExtractionCache = new Map<string, { red: string[]; blue: string[] }>()
  */
 export const extractTeamInformation = (match: Match): { red: string[]; blue: string[] } => {
   // Create cache key based on alliance data
-  const allianceKey = match.alliances 
-    ? match.alliances.map(alliance => 
-        `${alliance.color}-${alliance.teamAlliances?.map(ta => 
-          `${ta.team?.id || 'tbd'}-${ta.team?.teamNumber || ''}-${ta.team?.name || ''}`
-        ).join(',') || 'empty'}`
-      ).join('|')
+  const allianceKey = match.alliances
+    ? match.alliances
+        .map((alliance) => {
+          const teamKey = alliance.teamAlliances
+            ?.map((ta) => {
+              const team = ta.team;
+              const teamNumber = team?.teamNumber ?? ta.team?.teamNumber ?? '';
+              const teamName = team?.name ?? ta.team?.name ?? '';
+              return `${ta.teamId || 'tbd'}-${teamNumber}-${teamName}`;
+            })
+            .join(',') || 'empty';
+
+          return `${alliance.color}-${teamKey}`;
+        })
+        .join('|')
     : 'no-alliances';
   
   const cacheKey = `${match.id}-${allianceKey}`;
@@ -40,16 +49,18 @@ export const extractTeamInformation = (match: Match): { red: string[]; blue: str
     const teams: string[] = [];
     
     if (alliance.teamAlliances && alliance.teamAlliances.length > 0) {
-      alliance.teamAlliances.forEach(teamAlliance => {
-        if (teamAlliance.team) {
-          const displayName = formatTeamDisplayName(
-            teamAlliance.team.teamNumber || undefined,
-            teamAlliance.team.name
-          );
-          teams.push(displayName);
-        } else {
-          teams.push('TBD');
-        }
+      alliance.teamAlliances.forEach((teamAlliance) => {
+        const teamNumber =
+          teamAlliance.team?.teamNumber ?? teamAlliance.team?.teamNumber ?? undefined;
+        const teamName =
+          teamAlliance.team?.name ?? teamAlliance.team?.name ?? undefined;
+
+        const displayName = formatTeamDisplayName(teamNumber, teamName);
+        const resolvedName =
+          displayName === 'TBD' && teamAlliance.teamId
+            ? `Team ${teamAlliance.teamId}`
+            : displayName;
+        teams.push(resolvedName);
       });
     }
 
@@ -122,7 +133,10 @@ export const detectWinner = (match: Match): { red: boolean; blue: boolean } => {
  * Formats team display name combining team number and name
  * Handles various combinations of available data
  */
-export const formatTeamDisplayName = (teamNumber?: string, teamName?: string): string => {
+export const formatTeamDisplayName = (
+  teamNumber?: string,
+  teamName?: string
+): string => {
   // Handle empty or undefined inputs
   if (!teamNumber && !teamName) {
     return 'TBD';
@@ -133,13 +147,16 @@ export const formatTeamDisplayName = (teamNumber?: string, teamName?: string): s
   const cleanName = teamName?.trim();
 
   // If both are available, combine them
-  if (cleanNumber && cleanName) {
-    return `${cleanNumber} ${cleanName}`;
+  const normalizedNumber =
+    cleanNumber && !cleanNumber.startsWith('#') ? `#${cleanNumber}` : cleanNumber;
+
+  if (normalizedNumber && cleanName) {
+    return `${normalizedNumber} ${cleanName}`;
   }
 
   // Return whichever is available
-  if (cleanNumber) {
-    return cleanNumber;
+  if (normalizedNumber) {
+    return normalizedNumber;
   }
 
   if (cleanName) {
@@ -187,7 +204,10 @@ const matchProcessingCache = new Map<string, BracketMatchData>();
  * Processes a match for display in the bracket with memoization
  * Combines all match data processing into a single function
  */
-export const processMatchForDisplay = (match: Match, allMatches: Match[] = []): BracketMatchData => {
+export const processMatchForDisplay = (
+  match: Match,
+  allMatches: Match[] = []
+): BracketMatchData => {
   // Create cache key based on match data that affects display
   const cacheKey = `${match.id}-${match.status}-${match.winningAlliance}-${match.roundNumber}-${allMatches.length}`;
   

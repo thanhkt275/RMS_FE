@@ -37,7 +37,7 @@ export function FieldsSection({ tournamentId, fields }: FieldsSectionProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-100">Tournament Fields</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-black">Tournament Fields</h2>
           <p className="text-sm sm:text-base text-slate-400 mt-1">
             Manage fields and assign referees (3-4 referees per field, 1 head referee)
           </p>
@@ -47,14 +47,14 @@ export function FieldsSection({ tournamentId, fields }: FieldsSectionProps) {
             variant="outline"
             onClick={() => setShowBulkAssign(true)}
             disabled={!availableReferees?.length || isRefereesLoading}
-            className="text-slate-200 border-slate-600 hover:bg-slate-700 hover:text-white min-h-[44px] touch-target w-full sm:w-auto"
+            className="text-slate-100 border-slate-500 hover:bg-slate-700 hover:text-white hover:border-slate-400 disabled:text-slate-500 disabled:border-slate-600 disabled:hover:bg-transparent min-h-[44px] touch-target w-full sm:w-auto"
           >
             <Users className="h-4 w-4 mr-2" />
             Bulk Assign
           </Button>
           <Button 
             onClick={() => {/* TODO: Add field creation */}}
-            className="text-slate-200 bg-gray-800 hover:bg-slate-700 hover:text-white border-slate-600 min-h-[44px] touch-target w-full sm:w-auto"
+            className="text-white bg-blue-600 hover:bg-blue-700 hover:text-white border-blue-600 min-h-[44px] touch-target w-full sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Field
@@ -86,7 +86,7 @@ export function FieldsSection({ tournamentId, fields }: FieldsSectionProps) {
           <p className="text-sm sm:text-base text-slate-400 mb-4 max-w-md mx-auto">Get started by adding your first tournament field.</p>
           <Button 
             onClick={() => {/* TODO: Add field creation */}}
-            className="text-slate-200 bg-gray-800 hover:bg-slate-700 hover:text-white border-slate-600 min-h-[44px] touch-target w-full sm:w-auto"
+            className="text-white bg-blue-600 hover:bg-blue-700 hover:text-white border-blue-600 min-h-[44px] touch-target w-full sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
             Create First Field

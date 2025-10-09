@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { unifiedWebSocketService } from '@/lib/unified-websocket';
 
+interface IScoreBreakdown {
+  flagsPoints: number;
+  flagHitsPoints: number;
+  fieldControlPoints: number;
+  totalPoints: number;
+}
+
 interface IScoreState {
   red: {
     auto: number;
@@ -14,6 +21,8 @@ interface IScoreState {
     total: number;
     penalty: number;
   };
+  redBreakdown?: IScoreBreakdown;
+  blueBreakdown?: IScoreBreakdown;
 }
 
 interface IConnectionState {
@@ -31,7 +40,9 @@ export function useRealtimeScores(matchId: string) {
   // State management
   const [realtimeScores, setRealtimeScores] = useState<IScoreState>({
     red: { auto: 0, drive: 0, total: 0, penalty: 0 },
-    blue: { auto: 0, drive: 0, total: 0, penalty: 0 }
+    blue: { auto: 0, drive: 0, total: 0, penalty: 0 },
+    redBreakdown: undefined,
+    blueBreakdown: undefined
   });
 
   const [connectionState, setConnectionState] = useState<IConnectionState>({
@@ -80,6 +91,12 @@ export function useRealtimeScores(matchId: string) {
       if (data.matchId === matchId) {
         console.log("✅ Score update matches current matchId - applying update");
         
+        // Extract breakdown scores from scoreDetails if available
+        const redBreakdown = data.scoreDetails?.breakdown?.red;
+        const blueBreakdown = data.scoreDetails?.breakdown?.blue;
+        
+        console.log("📊 Extracted breakdown scores:", { redBreakdown, blueBreakdown });
+        
         // Update scores
         setRealtimeScores({
           red: {
@@ -93,7 +110,19 @@ export function useRealtimeScores(matchId: string) {
             drive: data.blueDriveScore || 0,
             total: data.blueTotalScore || 0,
             penalty: data.bluePenalty || 0
-          }
+          },
+          redBreakdown: redBreakdown ? {
+            flagsPoints: redBreakdown.flagsPoints || 0,
+            flagHitsPoints: redBreakdown.flagHitsPoints || 0,
+            fieldControlPoints: redBreakdown.fieldControlPoints || 0,
+            totalPoints: redBreakdown.totalPoints || 0
+          } : undefined,
+          blueBreakdown: blueBreakdown ? {
+            flagsPoints: blueBreakdown.flagsPoints || 0,
+            flagHitsPoints: blueBreakdown.flagHitsPoints || 0,
+            fieldControlPoints: blueBreakdown.fieldControlPoints || 0,
+            totalPoints: blueBreakdown.totalPoints || 0
+          } : undefined
         });
         
         setLastUpdateTime(Date.now());

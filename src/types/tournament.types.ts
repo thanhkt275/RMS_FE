@@ -39,7 +39,7 @@ export interface Stage {
   id: string;
   name: string;
   description?: string;
-  stageType: "QUALIFICATION" | "PLAYOFF" | "FINAL";
+  type: "SWISS" | "PLAYOFF" | "FINAL";
   status: StageStatus;
   startDate: Date;
   endDate?: Date;
@@ -124,7 +124,7 @@ export interface UpdateTournamentDto {
 
 export interface CreateStageDto {
   name: string;
-  stageType: "QUALIFICATION" | "PLAYOFF" | "FINAL";
+  type: "SWISS" | "PLAYOFF" | "FINAL";
   startDate: string;
   endDate?: string;
 }

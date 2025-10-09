@@ -54,6 +54,7 @@ const normaliseScoreDetails = (
 ): MatchScoreDetails => ({
   red: createAllianceDetails(details?.red),
   blue: createAllianceDetails(details?.blue),
+  breakdown: details?.breakdown, // Preserve existing breakdown if present
 });
 
 const mergeScoreDetails = (
@@ -67,6 +68,7 @@ const mergeScoreDetails = (
   return normaliseScoreDetails({
     red: { ...current.red, ...updates.red },
     blue: { ...current.blue, ...updates.blue },
+    breakdown: updates.breakdown || current.breakdown, // Preserve or update breakdown
   });
 };
 

@@ -20,7 +20,7 @@ interface StageQuickCreateProps {
 interface StageFormData {
   name: string;
   description: string;
-  stageType: 'QUALIFICATION' | 'PLAYOFF' | 'FINAL';
+  type: 'SWISS' | 'PLAYOFF' | 'FINAL';
   startDate: string;
   endDate: string;
   maxTeams: string;
@@ -31,7 +31,7 @@ interface StageFormData {
 const initialFormData: StageFormData = {
   name: '',
   description: '',
-  stageType: 'QUALIFICATION',
+  type: 'SWISS',
   startDate: '',
   endDate: '',
   maxTeams: '',
@@ -85,7 +85,7 @@ export function StageQuickCreate({ tournamentId, onClose }: StageQuickCreateProp
 
     const createData: CreateStageDto = {
       name: formData.name.trim(),
-      stageType: formData.stageType,
+      type: formData.type,
       startDate: formData.startDate,
       endDate: formData.endDate || undefined,
     };
@@ -98,12 +98,12 @@ export function StageQuickCreate({ tournamentId, onClose }: StageQuickCreateProp
     }
   };
 
-  const getStageTypeDescription = (type: string) => {
+  const getStageTypeDescription = (type: 'SWISS' | 'PLAYOFF' | 'FINAL') => {
     switch (type) {
-      case 'QUALIFICATION':
-        return 'Teams compete in round-robin or elimination rounds to qualify for playoffs';
+      case 'SWISS':
+        return 'Teams compete in a Swiss-system tournament with balanced matchups';
       case 'PLAYOFF':
-        return 'Elimination rounds with advancing teams from qualifications';
+        return 'Elimination rounds with advancing teams from previous stages';
       case 'FINAL':
         return 'Championship matches between top-performing teams';
       default:
@@ -147,7 +147,7 @@ export function StageQuickCreate({ tournamentId, onClose }: StageQuickCreateProp
                     id="name"
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
-                    placeholder="e.g., Qualification Round 1"
+                    placeholder="e.g., Swiss Round 1"
                     className={errors.name ? 'border-red-500' : ''}
                   />
                   {errors.name && (
@@ -158,22 +158,22 @@ export function StageQuickCreate({ tournamentId, onClose }: StageQuickCreateProp
                 <div className="space-y-2">
                   <Label htmlFor="stageType">Stage Type</Label>
                   <Select 
-                    value={formData.stageType} 
-                    onValueChange={(value: 'QUALIFICATION' | 'PLAYOFF' | 'FINAL') => 
-                      handleInputChange('stageType', value)
+                    value={formData.type} 
+                    onValueChange={(value: 'SWISS' | 'PLAYOFF' | 'FINAL') => 
+                      handleInputChange('type', value)
                     }
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="QUALIFICATION">Qualification</SelectItem>
+                      <SelectItem value="SWISS">Swiss</SelectItem>
                       <SelectItem value="PLAYOFF">Playoff</SelectItem>
                       <SelectItem value="FINAL">Final</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-gray-500">
-                    {getStageTypeDescription(formData.stageType)}
+                    {getStageTypeDescription(formData.type)}
                   </p>
                 </div>
               </div>

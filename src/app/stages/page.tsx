@@ -643,6 +643,7 @@ export default function StagesPage() {
                     generatedAt={bracketData?.generatedAt}
                     teamsPerAlliance={bracketData?.teamsPerAlliance}
                     rawBracket={bracketData}
+                    matches={filteredStageMatches}
                   />
                 )}
               </CardContent>

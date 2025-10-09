@@ -1,4 +1,5 @@
 import { Match } from '@/types/match.types';
+import { formatTeamDisplayName } from './matchHelpers';
 
 /**
  * Validation utilities for bracket data and edge case handling
@@ -192,19 +193,18 @@ export const extractSafeTeamInformation = (match: any): { red: string[]; blue: s
         alliance.teamAlliances.forEach((teamAlliance: any) => {
           if (!teamAlliance) return;
 
-          let teamName = 'TBD';
-          
-          // Try to get team name from various possible structures
-          if (teamAlliance.team?.name) {
-            const teamNumber = teamAlliance.team.teamNumber || '';
-            teamName = teamNumber ? `${teamNumber} ${teamAlliance.team.name}` : teamAlliance.team.name;
-          } else if (teamAlliance.team?.teamNumber) {
-            teamName = `Team ${teamAlliance.team.teamNumber}`;
-          } else if (teamAlliance.teamId) {
-            teamName = `Team ${teamAlliance.teamId}`;
-          }
+          const teamNumber =
+            teamAlliance.team?.teamNumber ?? teamAlliance.teamNumber ?? undefined;
+          const teamName =
+            teamAlliance.team?.name ?? teamAlliance.teamName ?? undefined;
 
-          teamList.push(teamName);
+          const displayName = formatTeamDisplayName(teamNumber, teamName);
+          const resolvedName =
+            displayName === 'TBD' && teamAlliance.teamId
+              ? `Team ${teamAlliance.teamId}`
+              : displayName;
+
+          teamList.push(resolvedName);
         });
       }
 

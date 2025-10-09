@@ -54,9 +54,9 @@ export function TournamentHeader({ tournament }: TournamentHeaderProps) {
   const isFuture = new Date() < new Date(tournament.startDate);
 
   const getStatusBadge = () => {
-    if (isPast) return <Badge variant="secondary">Completed</Badge>;
-    if (isActive) return <Badge variant="default" className="bg-green-600">Active</Badge>;
-    return <Badge variant="outline">Upcoming</Badge>;
+    if (isPast) return <Badge variant="secondary" className="bg-gray-100 text-gray-800 border-gray-300">Completed</Badge>;
+    if (isActive) return <Badge variant="default" className="bg-green-600 text-white hover:bg-green-700">Active</Badge>;
+    return <Badge variant="outline" className="text-gray-700 border-gray-400">Upcoming</Badge>;
   };
 
   const handleEditSuccess = () => {
@@ -169,7 +169,7 @@ export function TournamentHeader({ tournament }: TournamentHeaderProps) {
                 variant="outline" 
                 size="sm"
                 onClick={() => setIsEditing(true)}
-                className="flex-1 sm:flex-initial min-h-[40px] sm:min-h-[36px] touch-target"
+                className="flex-1 sm:flex-initial min-h-[40px] touch-target text-gray-900 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
               >
                 <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                 <span className="sm:inline">Edit</span>
@@ -179,7 +179,7 @@ export function TournamentHeader({ tournament }: TournamentHeaderProps) {
                 size="sm"
                 onClick={handleStartMatch}
                 disabled={isPast}
-                className="flex-1 sm:flex-initial min-h-[40px] sm:min-h-[36px] touch-target"
+                className="flex-1 sm:flex-initial min-h-[40px] touch-target bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400 disabled:text-gray-200"
               >
                 <Play className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                 <span className="sm:inline">{isActive ? 'Control' : 'Start'}</span>
@@ -190,7 +190,7 @@ export function TournamentHeader({ tournament }: TournamentHeaderProps) {
             <div className="flex gap-2 sm:hidden">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="flex-1 min-h-[40px] touch-target">
+                  <Button variant="outline" size="sm" className="flex-1 min-h-[40px] touch-target text-gray-900 border-gray-300 hover:bg-gray-50 hover:border-gray-400">
                     <Download className="h-4 w-4 mr-2" />
                     Export
                   </Button>
@@ -212,7 +212,7 @@ export function TournamentHeader({ tournament }: TournamentHeaderProps) {
                 variant="outline" 
                 size="sm"
                 onClick={handleTournamentSettings}
-                className="flex-1 min-h-[40px] touch-target"
+                className="flex-1 min-h-[40px] touch-target text-gray-900 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
@@ -223,7 +223,7 @@ export function TournamentHeader({ tournament }: TournamentHeaderProps) {
             <div className="hidden sm:flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="min-h-[40px] text-gray-900 border-gray-300 hover:bg-gray-50 hover:border-gray-400">
                     <Download className="h-4 w-4 mr-2" />
                     Export Data
                   </Button>
@@ -245,6 +245,7 @@ export function TournamentHeader({ tournament }: TournamentHeaderProps) {
                 variant="outline" 
                 size="sm"
                 onClick={handleTournamentSettings}
+                className="min-h-[40px] text-gray-900 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
@@ -253,7 +254,7 @@ export function TournamentHeader({ tournament }: TournamentHeaderProps) {
               {/* More Actions Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="min-h-[40px] text-gray-900 border-gray-300 hover:bg-gray-50 hover:border-gray-400">
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -278,7 +279,7 @@ export function TournamentHeader({ tournament }: TournamentHeaderProps) {
             <div className="sm:hidden">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full min-h-[40px] touch-target">
+                  <Button variant="outline" size="sm" className="w-full min-h-[40px] touch-target text-gray-900 border-gray-300 hover:bg-gray-50 hover:border-gray-400">
                     <MoreVertical className="h-4 w-4 mr-2" />
                     More Actions
                   </Button>

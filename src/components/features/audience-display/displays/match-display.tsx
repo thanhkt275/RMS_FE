@@ -198,7 +198,7 @@ const TimerDisplay = ({
 }) => {
   return (
     <div className="flex flex-col items-center justify-center text-[#FFFFFF] w-full">
-      <div className="text-[120px] font-bold leading-tight tracking-tight">
+      <div className="text-[160px] font-bold leading-tight tracking-tight">
         {timer ? formatTimeMsPad(timer.remaining) : '00:00'}
       </div>
     </div>
@@ -218,7 +218,7 @@ export const MatchDisplay: React.FC<MatchDisplayProps> = ({
   const isRedWinner = shouldShowWinnerBadge && redScore > blueScore;
 
   return (
-    <div className="bg-black text-white w-full h-full flex flex-col relative overflow-hidden" style={{ aspectRatio: '16/9' }}>
+    <div className="bg-[url('/AYOR2026_bg.avif')] bg-cover bg-no-repeat text-white w-full h-full flex flex-col relative overflow-hidden" style={{ aspectRatio: '16/9' }}>
       {/* Top White Bar */}
       <div className="absolute top-0 left-0 right-0 h-[120px] bg-white z-30 flex items-center justify-center">
         <h1 className="text-black text-5xl font-bold">
