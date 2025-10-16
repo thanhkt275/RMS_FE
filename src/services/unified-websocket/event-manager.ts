@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Socket } from 'socket.io-client';
+
 import { ConnectionManager } from './connection-manager';
 import { WebSocketEventData } from '@/types/websocket';
 
@@ -20,7 +20,6 @@ export class EventManager {
   private eventHandlers: Map<string, Set<EventCallback<unknown>>> = new Map();
   private masterHandlers: Map<string, EventCallback<unknown>> = new Map();
   private eventFilters: Map<string, EventFilter[]> = new Map();
-  private lastEventData: Map<string, WebSocketEventData> = new Map();
   private errorCallbacks: Set<(error: Error) => void> = new Set();
   private queuedEvents: Array<{ event: string; data: unknown; options?: EventOptions }> = [];
   private queuedHandlers: Set<string> = new Set();
@@ -117,7 +116,11 @@ export class EventManager {
       } as T;
     }
 
-    console.log(`[EventManager] Emitting event '${event}':`, eventData);
+    // Skip logging for routine events
+    const isRoutineEvent = ['session_heartbeat', 'ping', 'pong'].includes(event);
+    if (!isRoutineEvent) {
+      console.log(`[EventManager] Emitting event '${event}':`, eventData);
+    }
     socket.emit(event, eventData);
   }
 
@@ -129,13 +132,6 @@ export class EventManager {
     return () => {
       this.errorCallbacks.delete(callback);
     };
-  }
-
-  /**
-   * Get the last received data for an event (for deduplication)
-   */
-  getLastEventData(event: string): WebSocketEventData | undefined {
-    return this.lastEventData.get(event);
   }
 
   /**
@@ -154,15 +150,6 @@ export class EventManager {
     const masterHandler = (data: WebSocketEventData) => {
       try {
         console.log(`[EventManager] Received event '${event}':`, data);
-
-        // Check for event deduplication
-        if (this.isDuplicateEvent(event, data)) {
-          console.log(`[EventManager] Duplicate event '${event}' ignored`);
-          return;
-        }
-
-        // Store last event data
-        this.lastEventData.set(event, data);
 
         // Apply filters
         const filteredData = this.applyFilters(event, data);
@@ -217,23 +204,6 @@ export class EventManager {
     this.eventHandlers.delete(event);
     this.masterHandlers.delete(event);
     this.eventFilters.delete(event);
-    this.lastEventData.delete(event);
-  }
-
-  /**
-   * Check if event is a duplicate based on data comparison
-   */
-  private isDuplicateEvent(event: string, data: WebSocketEventData): boolean {
-    const lastData = this.lastEventData.get(event);
-    if (!lastData) return false;
-
-    // Simple deep comparison for deduplication
-    try {
-      return JSON.stringify(lastData) === JSON.stringify(data);
-    } catch (error) {
-      // If comparison fails, assume not duplicate
-      return false;
-    }
   }
 
   /**

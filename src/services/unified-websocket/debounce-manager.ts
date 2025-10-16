@@ -214,6 +214,7 @@ export class DebounceManager {
         fieldId: data.fieldId,
         status: (data as any).status,
         currentPeriod: (data as any).currentPeriod,
+        scope: (data as any).scope, // Include scope to differentiate referee vs audience broadcasts
         // Include score data if present
         redAutoScore: (data as any).redAutoScore,
         blueAutoScore: (data as any).blueAutoScore,

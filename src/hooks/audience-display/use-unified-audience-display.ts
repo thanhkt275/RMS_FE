@@ -188,6 +188,12 @@ export function useUnifiedAudienceDisplay({
     console.log('[useUnifiedAudienceDisplay] Data blueTeams:', data.blueTeams);
     console.log('[useUnifiedAudienceDisplay] Team counts - Red:', data.redTeams?.length || 0, 'Blue:', data.blueTeams?.length || 0);
 
+    const scope = data?.scope ?? 'all';
+    if (scope === 'referee') {
+      console.log('[useUnifiedAudienceDisplay] Ignoring referee-only match update');
+      return;
+    }
+
     // Apply field-specific filtering
     if (fieldId && data.fieldId && data.fieldId !== fieldId) {
       console.log('[useUnifiedAudienceDisplay] FILTERING OUT - different field:', data.fieldId, 'vs expected:', fieldId);
@@ -258,6 +264,12 @@ export function useUnifiedAudienceDisplay({
   const handleMatchStateChange = useCallback((data: MatchStateData) => {
     console.log('[useUnifiedAudienceDisplay] Received match state change:', data);
 
+    const scope = data?.scope ?? 'all';
+    if (scope === 'referee') {
+      console.log('[useUnifiedAudienceDisplay] Ignoring referee-only match state change');
+      return;
+    }
+
     // Apply field-specific filtering
     if (fieldId && data.fieldId && data.fieldId !== fieldId) {
       console.log('[useUnifiedAudienceDisplay] Ignoring match state change for different field:', data.fieldId);
@@ -281,6 +293,12 @@ export function useUnifiedAudienceDisplay({
   // Handle display mode changes with field-specific filtering
   const handleDisplayModeChange = useCallback((data: AudienceDisplaySettings) => {
     console.log('[useUnifiedAudienceDisplay] Received display mode change:', data);
+
+    const scope = data?.scope ?? 'all';
+    if (scope === 'referee') {
+      console.log('[useUnifiedAudienceDisplay] Ignoring referee-only display mode change');
+      return;
+    }
 
     // Apply field-specific filtering
     if (fieldId && data.fieldId && data.fieldId !== fieldId) {

@@ -86,6 +86,7 @@ export function useRealtime({ selectedMatchId, selectedFieldId, tournamentId, is
     webSocketService.emit('scoreUpdateRealtime', realtimeData as any, {
       fieldId: selectedFieldId || undefined,
       tournamentId,
+      skipChangeDetection: true, // Allow multiple users to send real-time score updates
     });
   }, [selectedMatchId, selectedFieldId, tournamentId, webSocketService, transformationService]);
 
@@ -108,6 +109,7 @@ export function useRealtime({ selectedMatchId, selectedFieldId, tournamentId, is
     webSocketService.emit('scoreUpdateRealtime', realtimeData as any, {
       fieldId: selectedFieldId || undefined,
       tournamentId,
+      skipChangeDetection: true, // Allow broadcasting scores for new matches
     });
   }, [selectedMatchId, selectedFieldId, tournamentId, webSocketService, transformationService]);
 

@@ -109,8 +109,14 @@ export function useScoringControl({
     if (!selectedMatchId) return;
 
     const handleScoreUpdate = (data: ScoreData) => {
-      console.log("Score update received in control-match:", data, "selectedFieldId:", selectedFieldId);
-      
+      console.log('📥 [use-scoring-control] Received score_update:', {
+        matchId: data.matchId,
+        selectedMatchId,
+        fieldId: data.fieldId,
+        selectedFieldId,
+        isUserActive: userActivityService.isUserActive()
+      });
+
       // Accept updates if no field filtering or field matches
       const shouldAccept = 
         !selectedFieldId || // No field selected in control
@@ -118,29 +124,32 @@ export function useScoringControl({
         data.fieldId === selectedFieldId; // Exact field match
       
       if (!shouldAccept) {
-        console.log(`Ignoring score update for different field: ${data.fieldId} (expected: ${selectedFieldId})`);
+        console.log('⏭️ [use-scoring-control] Skipping update - field mismatch');
         return;
       }
 
       if (data.matchId === selectedMatchId) {
-        console.log("Score update received for selected match:", data);
-        
-        // Only update cache if user is not actively typing
+        // Only update if user is not actively typing
         if (!userActivityService.isUserActive()) {
-          // Update query cache with real-time data
+          console.log('✅ [use-scoring-control] Updating scoring panel state from WebSocket');
+          
+          // Update the scoring panel state (this is what displays in the UI)
+          stateService.syncWithApiData(data);
+          
+          // Also update query cache for consistency
           queryClient.setQueryData(['match-scores', selectedMatchId], (oldData: any) => ({
             ...oldData,
             ...data,
           }));
         } else {
-          console.log("🚫 Skipping cache update (user actively typing)");
+          console.log('⏸️ [use-scoring-control] User is typing - deferring update');
         }
       }
     };
 
     const unsubscribe = unifiedWebSocket.subscribe('score_update', handleScoreUpdate);
     return unsubscribe;
-  }, [selectedMatchId, selectedFieldId, userActivityService, queryClient, unifiedWebSocket]);
+  }, [selectedMatchId, selectedFieldId, userActivityService, queryClient, unifiedWebSocket, stateService]);
 
   // Process queued score updates when connection is restored
   useEffect(() => {

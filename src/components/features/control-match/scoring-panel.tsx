@@ -45,6 +45,8 @@ interface ScoringPanelProps {
   matchStatus?: string;
   showWinnerBadge?: boolean;
   onToggleWinnerBadge?: () => void;
+  // Role-based layout control
+  userRole?: string;
 }
 
 interface ScoreBreakdownRowProps {
@@ -128,7 +130,7 @@ const AllianceSection: React.FC<AllianceSectionProps> = ({
         </div>
       </div>
 
-      <div className="space-y-2 rounded-xl border border-dashed border-gray-200 bg-white/80 p-4 shadow-sm">
+      {/* <div className="space-y-2 rounded-xl border border-dashed border-gray-200 bg-white/80 p-4 shadow-sm">
         <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
           Score Breakdown
         </h4>
@@ -153,7 +155,7 @@ const AllianceSection: React.FC<AllianceSectionProps> = ({
           points={breakdown?.fieldControlPoints ?? opponentFieldAmmo * 5}
           accentColor={accent}
         />
-      </div>
+      </div> */}
 
       <div className="space-y-4">
         <div>
@@ -312,12 +314,22 @@ export function ScoringPanel({
   matchStatus,
   showWinnerBadge = false,
   onToggleWinnerBadge,
+  userRole,
 }: ScoringPanelProps) {
   const isDisabled = disabled || !selectedMatchId || isLoading;
+  
+  // Hide save scores and winner badge buttons for ALLIANCE_REFEREE
+  const isAllianceReferee = userRole === 'ALLIANCE_REFEREE';
+  const canSaveScores = !isAllianceReferee;
+  const canControlWinnerBadge = !isAllianceReferee;
 
   return (
-    <Card className="bg-white border border-gray-200 shadow-lg rounded-xl p-8 text-gray-700">
-      <h2 className="text-2xl font-bold mb-6 text-gray-900 text-center">Ghi Điểm Trận Đấu</h2>
+    <Card className={`bg-white border border-gray-200 shadow-lg rounded-xl p-4 sm:p-8 text-gray-700 ${
+      userRole === 'ALLIANCE_REFEREE' ? 'max-w-full' : ''
+    }`}>
+      <h2 className={`font-bold mb-4 sm:mb-6 text-gray-900 text-center ${
+        userRole === 'ALLIANCE_REFEREE' ? 'text-lg sm:text-2xl' : 'text-2xl'
+      }`}>Ghi Điểm Trận Đấu</h2>
 
       {!selectedMatchId ? (
         <div className="text-center text-gray-600 py-8 bg-gray-50 rounded-lg">
@@ -327,35 +339,77 @@ export function ScoringPanel({
           </div>
         </div>
       ) : (
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <AllianceSection
-              allianceLabel="Liên minh ĐỎ"
-              accentColor="red"
-              flagsSecured={redFlagsSecured}
-              successfulFlagHits={redSuccessfulFlagHits}
-              opponentFieldAmmo={redOpponentFieldAmmo}
-              breakdown={redBreakdown}
-              totalScore={redTotalScore}
-              disabled={isDisabled}
-              onFlagsSecuredChange={setRedFlagsSecured}
-              onSuccessfulFlagHitsChange={setRedSuccessfulFlagHits}
-              onOpponentFieldAmmoChange={setRedOpponentFieldAmmo}
-            />
+        <div className={`space-y-4 sm:space-y-8 ${
+          userRole === 'ALLIANCE_REFEREE' ? 'space-y-4' : ''
+        }`}>
+          <div className={`grid gap-4 sm:gap-8 ${
+            userRole === 'ALLIANCE_REFEREE' 
+              ? 'grid-cols-2' 
+              : 'grid-cols-1 lg:grid-cols-2'
+          }`}>
+            {userRole === 'ALLIANCE_REFEREE' ? (
+              // For REFEREE: BLUE on left, RED on right
+              <>
+                <AllianceSection
+                  allianceLabel="Liên minh XANH"
+                  accentColor="blue"
+                  flagsSecured={blueFlagsSecured}
+                  successfulFlagHits={blueSuccessfulFlagHits}
+                  opponentFieldAmmo={blueOpponentFieldAmmo}
+                  breakdown={blueBreakdown}
+                  totalScore={blueTotalScore}
+                  disabled={isDisabled}
+                  onFlagsSecuredChange={setBlueFlagsSecured}
+                  onSuccessfulFlagHitsChange={setBlueSuccessfulFlagHits}
+                  onOpponentFieldAmmoChange={setBlueOpponentFieldAmmo}
+                />
 
-            <AllianceSection
-              allianceLabel="Liên minh XANH"
-              accentColor="blue"
-              flagsSecured={blueFlagsSecured}
-              successfulFlagHits={blueSuccessfulFlagHits}
-              opponentFieldAmmo={blueOpponentFieldAmmo}
-              breakdown={blueBreakdown}
-              totalScore={blueTotalScore}
-              disabled={isDisabled}
-              onFlagsSecuredChange={setBlueFlagsSecured}
-              onSuccessfulFlagHitsChange={setBlueSuccessfulFlagHits}
-              onOpponentFieldAmmoChange={setBlueOpponentFieldAmmo}
-            />
+                <AllianceSection
+                  allianceLabel="Liên minh ĐỎ"
+                  accentColor="red"
+                  flagsSecured={redFlagsSecured}
+                  successfulFlagHits={redSuccessfulFlagHits}
+                  opponentFieldAmmo={redOpponentFieldAmmo}
+                  breakdown={redBreakdown}
+                  totalScore={redTotalScore}
+                  disabled={isDisabled}
+                  onFlagsSecuredChange={setRedFlagsSecured}
+                  onSuccessfulFlagHitsChange={setRedSuccessfulFlagHits}
+                  onOpponentFieldAmmoChange={setRedOpponentFieldAmmo}
+                />
+              </>
+            ) : (
+              // Default layout: RED first, then BLUE
+              <>
+                <AllianceSection
+                  allianceLabel="Liên minh ĐỎ"
+                  accentColor="red"
+                  flagsSecured={redFlagsSecured}
+                  successfulFlagHits={redSuccessfulFlagHits}
+                  opponentFieldAmmo={redOpponentFieldAmmo}
+                  breakdown={redBreakdown}
+                  totalScore={redTotalScore}
+                  disabled={isDisabled}
+                  onFlagsSecuredChange={setRedFlagsSecured}
+                  onSuccessfulFlagHitsChange={setRedSuccessfulFlagHits}
+                  onOpponentFieldAmmoChange={setRedOpponentFieldAmmo}
+                />
+
+                <AllianceSection
+                  allianceLabel="Liên minh XANH"
+                  accentColor="blue"
+                  flagsSecured={blueFlagsSecured}
+                  successfulFlagHits={blueSuccessfulFlagHits}
+                  opponentFieldAmmo={blueOpponentFieldAmmo}
+                  breakdown={blueBreakdown}
+                  totalScore={blueTotalScore}
+                  disabled={isDisabled}
+                  onFlagsSecuredChange={setBlueFlagsSecured}
+                  onSuccessfulFlagHitsChange={setBlueSuccessfulFlagHits}
+                  onOpponentFieldAmmoChange={setBlueOpponentFieldAmmo}
+                />
+              </>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -368,15 +422,17 @@ export function ScoringPanel({
               <CheckCircle className="w-4 h-4 mr-2" />
               Cập nhật thời gian thực
             </Button>
-            <Button
-              onClick={onSubmitScores}
-              disabled={isDisabled}
-              className="w-full sm:w-auto"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Lưu điểm trận đấu
-            </Button>
-            {matchStatus === 'COMPLETED' && onToggleWinnerBadge && (
+            {canSaveScores && (
+              <Button
+                onClick={onSubmitScores}
+                disabled={isDisabled}
+                className="w-full sm:w-auto"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Lưu điểm trận đấu
+              </Button>
+            )}
+            {canControlWinnerBadge && matchStatus === 'COMPLETED' && onToggleWinnerBadge && (
               <Button
                 variant={showWinnerBadge ? "default" : "outline"}
                 onClick={onToggleWinnerBadge}

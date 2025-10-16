@@ -1,4 +1,4 @@
-// "use client";
+"use client";
 
 // import { useState } from "react";
 // import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@
 // import { apiClient } from "@/lib/api-client";
 // import Link from "next/link";
 
-// export default function AdminSetupPage() {
+export default function AdminSetupPage() {
 //   const [isLoading, setIsLoading] = useState(false);
 //   const [setupResult, setSetupResult] = useState<string | null>(null);
 //   const [setupError, setSetupError] = useState<string | null>(null);
@@ -73,4 +73,4 @@
 //       </Card>
 //     </div>
 //   );
-// }
+}

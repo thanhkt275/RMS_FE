@@ -902,6 +902,12 @@ export default function LiveFieldDisplayPage() {
     const unsubDisplayMode = unifiedSubscribe<AudienceDisplaySettings>(
       "display_mode_change",
       (data) => {
+        const scope = data?.scope ?? "all";
+        if (scope === "referee") {
+          // Ignore referee-only display mode events on audience screens
+          return;
+        }
+
         // Apply if global tournament update (no fieldId) or specific to this field
         if (!data.fieldId || data.fieldId === fieldId) {
           // console.log(

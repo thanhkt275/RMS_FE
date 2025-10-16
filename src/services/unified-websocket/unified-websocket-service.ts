@@ -246,10 +246,25 @@ export class UnifiedWebSocketService implements IUnifiedWebSocketService {
 
     emit(event: string, data: WebSocketEventData, options?: EmitOptions): void {
         const skipChangeDetection = options?.skipChangeDetection || this.bypassChangeDetectionEvents.has(event);
+        
+        // Skip logging for routine events
+        const isRoutineEvent = ['session_heartbeat', 'ping', 'pong'].includes(event);
+
+        if (!isRoutineEvent) {
+            console.log(`[UnifiedWebSocketService] emit() called for event: ${event}`, {
+                skipChangeDetection,
+                hasSkipOption: !!options?.skipChangeDetection,
+                isBypassEvent: this.bypassChangeDetectionEvents.has(event),
+                scope: (data as any).scope,
+                matchId: (data as any).id
+            });
+        }
 
         // Check if there's an actual change in data (unless skipChangeDetection is true)
         if (!skipChangeDetection && this.isDataUnchanged(event, data)) {
-            console.log(`[UnifiedWebSocketService] No changes detected for event: ${event}`);
+            if (!isRoutineEvent) {
+                console.log(`[UnifiedWebSocketService] No changes detected for event: ${event}`);
+            }
             return;
         }
         // Check if user can emit this event
@@ -268,7 +283,17 @@ export class UnifiedWebSocketService implements IUnifiedWebSocketService {
         };
 
         // Check if debouncing should be applied
-        const shouldDebounce = options?.debounce !== false && this.debounceManager.shouldDebounce(event);
+        // Skip debouncing if skipChangeDetection is true (for forced broadcasts like referee updates)
+        const shouldDebounce = !skipChangeDetection && options?.debounce !== false && this.debounceManager.shouldDebounce(event);
+
+        if (!isRoutineEvent) {
+            console.log(`[UnifiedWebSocketService] Debounce decision:`, {
+                skipChangeDetection,
+                shouldDebounce,
+                debounceOption: options?.debounce,
+                managerSaysDebounce: this.debounceManager.shouldDebounce(event)
+            });
+        }
 
         if (shouldDebounce) {
             // Use debouncing for high-frequency events
@@ -284,7 +309,7 @@ export class UnifiedWebSocketService implements IUnifiedWebSocketService {
                 config
             );
         } else {
-            // Emit immediately for non-debounced events
+            // Emit immediately for non-debounced events or forced sends
             this.eventManager.emit(event, enrichedData, options);
         }
     }
@@ -330,10 +355,11 @@ export class UnifiedWebSocketService implements IUnifiedWebSocketService {
         this.emit('score_update', data as any as WebSocketEventData, {
             fieldId: data.fieldId,
             tournamentId: data.tournamentId,
+            skipChangeDetection: true, // Allow multiple users to send score updates for the same match
             debounce: true,
             debounceConfig: {
-                delay: 200,
-                maxCalls: 10,
+                delay: 100, // Reduced delay for more responsive collaborative updates
+                maxCalls: 20, // Increased max calls for collaborative scenarios
                 windowMs: 1000
             }
         });
@@ -373,7 +399,8 @@ export class UnifiedWebSocketService implements IUnifiedWebSocketService {
         console.log('🎠 [UnifiedWebSocketService] EMITTING match_update event at:', new Date().toISOString());
         
         this.emit('match_update', data as any as WebSocketEventData, {
-            tournamentId: data.tournamentId
+            tournamentId: data.tournamentId,
+            skipChangeDetection: true // Force send for referee broadcasts
         });
         
         console.log('🎠 [UnifiedWebSocketService] sendMatchUpdate COMPLETED');
@@ -526,6 +553,8 @@ export class UnifiedWebSocketService implements IUnifiedWebSocketService {
             matchId: update.matchId,
             state: newState,
             update: enrichedUpdate
+        }, {
+            skipChangeDetection: true // Allow collaborative state updates
         });
 
         return newState;

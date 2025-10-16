@@ -34,6 +34,8 @@ export type DisplayMode =
   | "announcement"
   | "intro";
 
+export type BroadcastScope = "audience" | "referee" | "all";
+
 export interface User {
   id: string;
   username: string;
@@ -68,6 +70,7 @@ export interface AudienceDisplaySettings {
   tournamentId: string;
   fieldId?: string | null;
   scheduleStageId?: string | null;
+  scope?: BroadcastScope;
 }
 
 // --- Field ---
@@ -206,9 +209,11 @@ export interface MatchData {
   status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
   tournamentId: string;
   fieldId?: string;
+  scheduledTime?: string;
   redTeams?: Array<{ id: string; name: string; teamNumber?: string }>;
   blueTeams?: Array<{ id: string; name: string; teamNumber?: string }>;
   // Add other match properties as needed
+  scope?: BroadcastScope;
 }
 
 export interface ScoreData {
@@ -254,6 +259,7 @@ export interface MatchStateData {
   currentPeriod?: "auto" | "teleop" | "endgame" | null;
   tournamentId: string;
   fieldId?: string;
+  scope?: BroadcastScope;
 }
 
 export interface AnnouncementData {

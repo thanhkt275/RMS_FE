@@ -50,7 +50,7 @@ export function useRoleBasedAccess() {
   const getAccessDeniedMessage = (feature: string): string => {
     const roleDescriptions: Record<UserRole, string> = {
       [UserRole.ADMIN]: 'Full system access',
-      [UserRole.HEAD_REFEREE]: 'Full match control access',
+      [UserRole.HEAD_REFEREE]: 'Timer, scoring, and display access',
       [UserRole.ALLIANCE_REFEREE]: 'Scoring access only',
       [UserRole.TEAM_LEADER]: 'View-only access',
       [UserRole.TEAM_MEMBER]: 'View-only access',
@@ -64,7 +64,7 @@ export function useRoleBasedAccess() {
       case 'timer':
         return `Access Denied: Timer controls require HEAD_REFEREE or ADMIN role. Current role: ${currentRole} (${roleDescription})`;
       case 'match':
-        return `Access Denied: Match controls require HEAD_REFEREE, ADMIN, or ALLIANCE_REFEREE role. Current role: ${currentRole} (${roleDescription})`;
+        return `Access Denied: Only administrators can change match selection. This screen will follow the match chosen by an administrator. Current role: ${currentRole} (${roleDescription})`;
       case 'display':
         return `Access Denied: Display controls require HEAD_REFEREE or ADMIN role. Current role: ${currentRole} (${roleDescription})`;
       default:

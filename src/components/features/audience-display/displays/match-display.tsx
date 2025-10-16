@@ -143,9 +143,9 @@ const ScoreBreakdownTable = ({
 }) => {
   // Scoring categories based on the actual score breakdown structure
   const categories = [
-    { key: 'flagsPoints', label: 'Điểm giữ cờ' },
-    { key: 'flagHitsPoints', label: 'Điểm bắn phá căn cứ' },
-    { key: 'fieldControlPoints', label: 'Điểm kiểm soát sân' },
+    { key: 'flagsPoints', label: 'Điểm bảo vệ cờ' },
+    { key: 'flagHitsPoints', label: 'Điểm bắn phá cờ' },
+    { key: 'fieldControlPoints', label: 'Đạn trên sân đối phương' },
     { key: 'total', label: 'Tổng điểm' },
   ] as const;
 
@@ -229,28 +229,28 @@ export const MatchDisplay: React.FC<MatchDisplayProps> = ({
 
       {/* Winner Badge - Blue (Left) */}
       {isBlueWinner && (
-        <div className="absolute top-[85px] left-0 z-40 flex items-start" style={{ transform: 'translateY(-50%)' }}>
+        <div className="absolute top-[60px] left-0 z-40 flex items-start">
           <div className="flex items-center">
             {/* Rectangle part */}
             <div className="bg-[#FFDE5C] h-[170px] w-[370px] flex items-center justify-center">
               <span className="text-black text-6xl font-bold">WINNER</span>
             </div>
             {/* Arrow triangle pointing right */}
-            <div 
+            {/* <div 
               className="w-0 h-0"
               style={{
                 borderTop: '85px solid transparent',
                 borderBottom: '85px solid transparent',
                 borderLeft: '146px solid #FFDE5C',
               }}
-            />
+            /> */}
           </div>
         </div>
       )}
 
       {/* Winner Badge - Red (Right) */}
       {isRedWinner && (
-        <div className="absolute top-[85px] right-0 z-40 flex items-start" style={{ transform: 'translateY(-50%)' }}>
+        <div className="absolute top-[60px] right-0 z-40 flex items-start">
           <div className="flex items-center">
             {/* Arrow triangle pointing left */}
             <div 

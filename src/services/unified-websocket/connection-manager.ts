@@ -66,6 +66,10 @@ export class ConnectionManager {
 
         this.socket!.on('connect', () => {
           clearTimeout(timeout);
+          console.log('[ConnectionManager] ✅ Connected to WebSocket server');
+          // Join the 'all' room for global broadcasts
+          console.log('[ConnectionManager] 📢 Joining "all" room for global broadcasts');
+          this.socket!.emit('join_room', { room: 'all' });
           resolve();
         });
 

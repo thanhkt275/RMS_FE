@@ -162,6 +162,9 @@ export function useUnifiedMatchControl({
       console.warn('🎯 [useUnifiedMatchControl] No alliances data in selectedMatch:', selectedMatch);
     }
 
+    const { scope: matchScope, ...restMatchData } = matchData;
+    const resolvedScope = matchScope ?? 'all';
+
     const updateData: MatchData = {
       id: selectedMatchId,
       matchNumber: selectedMatch?.matchNumber || 0,
@@ -170,7 +173,8 @@ export function useUnifiedMatchControl({
       fieldId,
       redTeams,
       blueTeams,
-      ...matchData
+      scope: resolvedScope,
+      ...restMatchData
     };
 
     console.log('🎯 [useUnifiedMatchControl] Final updateData before send:', updateData);

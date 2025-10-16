@@ -61,18 +61,16 @@ export class RoleManager {
       'field_management'
     ]));
 
-    // HEAD_REFEREE - Full match control access
+    // HEAD_REFEREE - Timer/display/scoring control access (no match selection)
     permissions.set(UserRole.HEAD_REFEREE, new Set([
       'timer_control',
-      'match_control',
       'score_update',
       'display_control'
     ]));
 
-    // ALLIANCE_REFEREE - Scoring access and limited match control (can select matches for scoring)
+    // ALLIANCE_REFEREE - Scoring access only
     permissions.set(UserRole.ALLIANCE_REFEREE, new Set([
-      'score_update',
-      'match_control' // Allow match selection for scoring purposes
+      'score_update'
     ]));
 
     // TEAM_LEADER - No control access
@@ -270,7 +268,7 @@ export class RoleManager {
       case UserRole.ADMIN:
         return 'Full system access including user management and tournament administration';
       case UserRole.HEAD_REFEREE:
-        return 'Full match control access including timer, scoring, and match management';
+        return 'Timer, scoring, and display control access';
       case UserRole.ALLIANCE_REFEREE:
         return 'Scoring access only - can update alliance scores during matches';
       case UserRole.TEAM_LEADER:

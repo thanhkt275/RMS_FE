@@ -3,18 +3,14 @@
 import React, { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
-import {
-  useMatch,
-  useUpdateMatchStatus,
-  useMatches,
-} from "@/hooks/matches/use-matches";
+import { useMatch, useUpdateMatchStatus, useMatches } from "@/hooks/matches/use-matches";
 import { useMatchesByTournament } from "@/hooks/matches/use-matches-by-tournament";
 import { useStagesByTournament } from "@/hooks/stages/use-stages";
-import { MatchStatus, UserRole } from "@/types/types";
+import { MatchStatus, UserRole, MatchData, BroadcastScope } from "@/types/types";
 import { useTournaments } from "@/hooks/tournaments/use-tournaments";
-import { MatchData } from "@/types/types";
-import { unifiedWebSocketService } from "@/lib/unified-websocket";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { unifiedWebSocketService } from "@/lib/unified-websocket";
 
 import {
   Select,
@@ -163,9 +159,17 @@ function ControlMatchContent() {
   // Filter matches by selected field
   const matchesData = useMemo(() => {
     if (!selectedFieldId) return allMatchesData;
-    return allMatchesData.filter(
-      (match: any) => match.fieldId === selectedFieldId
-    );
+
+    const targetFieldId = String(selectedFieldId);
+    return allMatchesData.filter((match: any) => {
+      const matchFieldId =
+        match.fieldId ??
+        match.field?.id ??
+        (typeof match.field === "string" ? match.field : undefined);
+
+      if (!matchFieldId) return false;
+      return String(matchFieldId) === targetFieldId;
+    });
   }, [allMatchesData, selectedFieldId]);
 
   // Fetch all match scores at once for the matches list
@@ -209,73 +213,67 @@ function ControlMatchContent() {
     selectedMatchId || ""
   );
 
-  // Send match update to audience display when selected match data loads using unified service
-  useEffect(() => {
-    if (!selectedMatch || !selectedMatchId || isLoadingMatchDetails) return;
-
-    console.log(
-      "📡 Broadcasting match update for selected match:",
-      selectedMatchId,
-      selectedMatch
-    );
-
-    const redTeams = getRedTeams(selectedMatch).map(
-      (teamNumber: string | number) => ({
-        name: teamNumber,
-      })
-    );
-
-    const blueTeams = getBlueTeams(selectedMatch).map(
-      (teamNumber: string | number) => ({
-        name: teamNumber,
-      })
-    );
-
-    // Send match update through unified service with field-specific filtering
-    unifiedMatchControl.sendMatchUpdate({
-      id: selectedMatchId,
-      matchNumber:
-        typeof selectedMatch.matchNumber === "string"
-          ? parseInt(selectedMatch.matchNumber, 10)
-          : selectedMatch.matchNumber,
-      status: selectedMatch.status,
-      tournamentId: selectedTournamentId || "all",
-      fieldId: selectedFieldId,
-      redTeams,
-      blueTeams,
-      scheduledTime: selectedMatch.scheduledTime,
-    } as any);
-  }, [
-    selectedMatch,
-    selectedMatchId,
-    isLoadingMatchDetails,
-    selectedFieldId,
-    selectedTournamentId,
-    unifiedMatchControl,
-  ]);
-
   // Helper function to extract red teams from alliances
+  const mapAllianceTeams = (teams: any[] | undefined): string[] => {
+    if (!Array.isArray(teams)) return [];
+    return teams
+      .map((team: any) => {
+        if (!team) return null;
+        const identifiers = [
+          team.teamNumber,
+          team.name,
+          team.originalTeamNumber,
+          team.number,
+        ].filter(Boolean);
+        if (identifiers.length === 0) return null;
+        return String(identifiers[0]);
+      })
+      .filter((value): value is string => Boolean(value));
+  };
+
   const getRedTeams = (match?: any): string[] => {
-    if (!match?.alliances) return [];
+    if (!match) return [];
+
+    // Prefer broadcast payload structure
+    const broadcastTeams = mapAllianceTeams(match.redTeams);
+    if (broadcastTeams.length > 0) {
+      return broadcastTeams;
+    }
+
+    // Fallback to API alliance structure
+    if (!match.alliances) return [];
     const redAlliance = match.alliances.find(
       (alliance: any) => alliance.color === "RED"
     );
     if (!redAlliance?.teamAlliances) return [];
-    return redAlliance.teamAlliances.map(
-      (ta: any) => ta.team?.teamNumber || ta.team?.name || "Unknown"
-    );
+    return redAlliance.teamAlliances
+      .map(
+        (ta: any) => ta.team?.teamNumber || ta.team?.name || "Unknown"
+      )
+      .map((value: any) => String(value));
   };
 
   // Helper function to extract blue teams from alliances
   const getBlueTeams = (match?: any): string[] => {
-    if (!match?.alliances) return [];
+    if (!match) return [];
+
+    // Prefer broadcast payload structure
+    const broadcastTeams = mapAllianceTeams(match.blueTeams);
+    if (broadcastTeams.length > 0) {
+      return broadcastTeams;
+    }
+
+    // Fallback to API alliance structure
+    if (!match.alliances) return [];
     const blueAlliance = match.alliances.find(
       (alliance: any) => alliance.color === "BLUE"
     );
     if (!blueAlliance?.teamAlliances) return [];
-    return blueAlliance.teamAlliances.map(
-      (ta: any) => ta.team?.teamNumber || ta.team?.name || "Unknown"
-    );
+    return blueAlliance.teamAlliances
+      .map(
+        (ta: any) => ta.team?.teamNumber || ta.team?.name || "Unknown"
+      )
+      .map((value: any) => String(value));
   };
 
   // State for tracking active match and match state from WebSocket
@@ -293,28 +291,168 @@ function ControlMatchContent() {
 
   const handleMatchUpdate = useCallback(
     (data: any) => {
+      console.log("[ControlMatch] 🔔 Received match_update event:", {
+        scope: data?.scope,
+        matchId: data?.id,
+        currentRole: roleAccess.currentRole,
+        isReferee: [UserRole.ALLIANCE_REFEREE, UserRole.HEAD_REFEREE].includes(roleAccess.currentRole),
+        showMatchControls: roleAccess.showMatchControls,
+        timestamp: new Date().toISOString()
+      });
+
+      const scope = data?.scope ?? "all";
+      const isRefereeRole = [UserRole.ALLIANCE_REFEREE, UserRole.HEAD_REFEREE].includes(roleAccess.currentRole);
+
+      // Handle scope-based filtering
+      if (scope === "referee") {
+        // Only referees should process referee broadcasts
+        if (!isRefereeRole) {
+          console.log("[ControlMatch] Ignoring referee broadcast for non-referee role");
+          return;
+        }
+        console.log("[ControlMatch] ✅ Processing REFEREE broadcast");
+      } else if (scope === "audience") {
+        // Referees should ignore audience broadcasts (they have their own scoring panel)
+        if (isRefereeRole) {
+          console.log("[ControlMatch] Ignoring audience broadcast for referee role");
+          return;
+        }
+        console.log("[ControlMatch] ✅ Processing AUDIENCE broadcast");
+      } else {
+        // scope === "all" - everyone processes these
+        console.log("[ControlMatch] ✅ Processing GENERAL broadcast");
+      }
+
+      console.log("[ControlMatch] ✅ Updating match display for role:", roleAccess.currentRole);
+
       setActiveMatch(data);
-      // Auto-select this match if we don't have one selected yet
-      if (!selectedMatchId && data.id) {
-        setSelectedMatchId(data.id);
+
+      const broadcastMatchId = data?.id ? String(data.id) : undefined;
+      const broadcastFieldId = data?.fieldId
+        ? String(data.fieldId)
+        : data?.field?.id
+        ? String(data.field.id)
+        : undefined;
+      const broadcastTournamentId = data?.tournamentId
+        ? String(data.tournamentId)
+        : undefined;
+
+      if (broadcastMatchId && selectedMatchId !== broadcastMatchId) {
+        setSelectedMatchId(broadcastMatchId);
+      } else if (!selectedMatchId && broadcastMatchId) {
+        setSelectedMatchId(broadcastMatchId);
+      }
+
+      if (!roleAccess.showMatchControls) {
+        setDisplayMode("match");
+
+        if (broadcastFieldId) {
+          const currentFieldId = selectedFieldId
+            ? String(selectedFieldId)
+            : null;
+          if (currentFieldId !== broadcastFieldId) {
+            setSelectedFieldId(broadcastFieldId);
+          }
+        }
+
+        if (broadcastTournamentId) {
+          const currentTournamentId = selectedTournamentId
+            ? String(selectedTournamentId)
+            : null;
+          if (currentTournamentId !== broadcastTournamentId) {
+            setSelectedTournamentId(broadcastTournamentId);
+          }
+        }
       }
     },
-    [selectedMatchId]
+    [
+      roleAccess.showMatchControls,
+      selectedMatchId,
+      selectedFieldId,
+      selectedTournamentId,
+      setSelectedFieldId,
+      setSelectedTournamentId,
+      setDisplayMode,
+    ]
   );
 
   const handleMatchStateChange = useCallback((data: any) => {
     setMatchState(data);
   }, []);
 
+  const extractAllianceTeams = useCallback(
+    (color: "RED" | "BLUE") => {
+      const alliance = selectedMatch?.alliances?.find(
+        (a: any) => a.color === color
+      );
+      if (!alliance?.teamAlliances || !Array.isArray(alliance.teamAlliances)) {
+        return [];
+      }
+
+      return alliance.teamAlliances.map((ta: any, index: number) => {
+        const team = ta.team || {};
+        const rawIdentifier =
+          team.teamNumber || team.number || team.name || `Unknown-${index}`;
+        const normalizedIdentifier = String(rawIdentifier);
+
+        return {
+          id: team.id || ta.teamId || `${color}-${normalizedIdentifier}-${index}`,
+          name: team.name || normalizedIdentifier,
+          teamNumber: normalizedIdentifier,
+        };
+      });
+    },
+    [selectedMatch]
+  );
+
+  const assembleBroadcastData = useCallback(
+    (scope: BroadcastScope): Partial<MatchData> | null => {
+      if (!selectedMatch || !selectedMatchId) {
+        return null;
+      }
+
+      const rawMatchNumber = selectedMatch.matchNumber;
+      const numericMatchNumber =
+        typeof rawMatchNumber === "string"
+          ? parseInt(rawMatchNumber, 10)
+          : rawMatchNumber ?? 0;
+      const matchNumber = Number.isFinite(numericMatchNumber)
+        ? numericMatchNumber
+        : 0;
+
+      const redTeamsData = extractAllianceTeams("RED");
+      const blueTeamsData = extractAllianceTeams("BLUE");
+
+      return {
+        id: selectedMatchId,
+        matchNumber,
+        status:
+          matchState?.status || selectedMatch.status || MatchStatus.PENDING,
+        tournamentId: selectedTournamentId || "all",
+        fieldId: selectedFieldId || undefined,
+        scheduledTime: selectedMatch.scheduledTime,
+        redTeams: redTeamsData,
+        blueTeams: blueTeamsData,
+        scope,
+      };
+    },
+    [
+      selectedMatch,
+      selectedMatchId,
+      selectedTournamentId,
+      selectedFieldId,
+      matchState?.status,
+      extractAllianceTeams,
+    ]
+  );
+
   // Initialize unified WebSocket connection with actual user role
   const {
     isConnected,
     changeDisplayMode,
     sendAnnouncement,
-    sendMatchUpdate: unifiedSendMatchUpdate,
     sendMatchStateChange: unifiedSendMatchStateChange,
     sendWinnerBadgeUpdate,
-    sendScoreUpdate: unifiedSendScoreUpdate,
     subscribe: unifiedSubscribe,
   } = useUnifiedWebSocket({
     tournamentId,
@@ -323,7 +461,80 @@ function ControlMatchContent() {
     userRole: roleAccess.currentRole, // Use actual user role from auth
   });
 
-const handleScheduleStageChange = useCallback(
+  const broadcastToReferees = useCallback(() => {
+    if (!isConnected) {
+      toast.error("WebSocket is not connected. Please reconnect before broadcasting.");
+      return;
+    }
+
+    const payload = assembleBroadcastData("referee");
+    if (!payload) {
+      toast.error("Select a match before broadcasting to referee panels.");
+      return;
+    }
+
+    console.log("[ControlMatch] Broadcasting match to referees:", payload);
+    setDisplayMode("match");
+
+    unifiedMatchControl.sendMatchUpdate(payload);
+
+    // Ensure referees who are still connected to the global control channel
+    // receive the initial broadcast before they switch to the specific tournament.
+    if (payload.tournamentId && payload.tournamentId !== "all") {
+      unifiedWebSocketService.emit(
+        "match_update",
+        payload as any,
+        {
+          tournamentId: "all",
+          fieldId: payload.fieldId,
+        }
+      );
+    }
+
+    toast.success("Match broadcast to referee scoring panels.");
+  }, [assembleBroadcastData, isConnected, unifiedMatchControl, setDisplayMode]);
+
+  const broadcastToAudience = useCallback(() => {
+    if (!isConnected) {
+      toast.error("WebSocket is not connected. Please reconnect before broadcasting.");
+      return;
+    }
+
+    const payload = assembleBroadcastData("audience");
+    if (!payload) {
+      toast.error("Select a match before broadcasting to the audience display.");
+      return;
+    }
+
+    console.log("[ControlMatch] Broadcasting match to audience display:", payload);
+    unifiedMatchControl.sendMatchUpdate(payload);
+    setDisplayMode("match");
+
+    changeDisplayMode({
+      displayMode: "match",
+      matchId: selectedMatchId || null,
+      showTimer,
+      showScores,
+      showTeams,
+      scheduleStageId: null,
+      scope: "audience",
+      updatedAt: Date.now(),
+    });
+
+    toast.success("Audience display updated with the selected match.");
+  }, [
+    assembleBroadcastData,
+    changeDisplayMode,
+    isConnected,
+    selectedMatchId,
+    showTimer,
+    showScores,
+    showTeams,
+    unifiedMatchControl,
+    setDisplayMode,
+  ]);
+
+  const handleScheduleStageChange = useCallback(
     (stageId: string | null) => {
       if (scheduleStageId === stageId) {
         return;
@@ -354,6 +565,8 @@ const handleScheduleStageChange = useCallback(
       showTeams,
     ]
   );
+
+  const isAdminUser = roleAccess.currentRole === UserRole.ADMIN;
 
   // Reset schedule-stage selection if the stage list no longer includes it
   useEffect(() => {
@@ -506,32 +719,47 @@ const handleScheduleStageChange = useCallback(
     saveScores,
     isLoadingScores,
     matchScores,
+    hasScoringPermission,
   } = scoringControl;
-  const handleSelectMatch = (match: {
-    id: string;
-    matchNumber: string | number;
-    fieldId?: string;
-  }) => {
-    setSelectedMatchId(match.id);
-    // If match has a fieldId, use it
-    if (match.fieldId) {
-      setSelectedFieldId(match.fieldId);
-    }
+  const handleSelectMatch = useCallback(
+    (match: {
+      id: string;
+      matchNumber: string | number;
+      fieldId?: string;
+      field?: { id?: string } | string;
+    }) => {
+      if (!roleAccess.showMatchControls) {
+        toast.error(
+          "Only administrators can select or change the active match."
+        );
+        console.warn(
+          `[ControlMatch] Unauthorized match selection attempt by role ${roleAccess.currentRole}`
+        );
+        return;
+      }
 
-    // Automatically update display settings to show the selected match
-    changeDisplayMode({
-      displayMode: "match",
-      matchId: match.id,
-      showTimer,
-      showScores,
-      showTeams,
-      updatedAt: Date.now(),
-      scheduleStageId: null,
-    });
+      setSelectedMatchId(match.id);
 
-    // Note: Match update is now handled by useEffect when selectedMatch data loads
-    // This prevents sending stale match data
-  };
+      const inferredFieldId =
+        match.fieldId ??
+        (typeof match.field === "string"
+          ? match.field
+          : match.field?.id ?? null);
+
+      if (inferredFieldId) {
+        setSelectedFieldId(String(inferredFieldId));
+      }
+
+      setDisplayMode("match");
+    },
+    [
+      roleAccess.showMatchControls,
+      roleAccess.currentRole,
+      setSelectedMatchId,
+      setSelectedFieldId,
+      setDisplayMode,
+    ]
+  );
 
   // Handle display mode change
   const handleDisplayModeChange = () => {
@@ -650,9 +878,9 @@ const handleScheduleStageChange = useCallback(
   // Legacy helpers removed in new scoring system
   return (
     <div className="min-h-screen bg-gray-50 p-0 w-full">
-      <div className="w-full">
-        <div className="flex justify-between items-center mb-6 px-6 pt-6">
-          <h1 className="text-3xl font-bold text-gray-900">
+      <div className="w-full max-w-full pb-4 md:pb-6">
+        <div className="flex justify-between items-center mb-6 px-4 sm:px-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
             Match Control Center
           </h1>
 
@@ -695,7 +923,7 @@ const handleScheduleStageChange = useCallback(
         </div>
 
         {/* Tournament and Field Selection */}
-        <Card className="p-6 mb-6 mx-6">
+        <Card className="p-4 sm:p-6 mb-6 mx-4 sm:mx-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -739,11 +967,48 @@ const handleScheduleStageChange = useCallback(
           </div>
         </Card>
 
+        {(roleAccess.showMatchControls || isAdminUser) && (
+          <Card className="mx-4 sm:mx-6 mb-6 p-4 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-white">
+                  Broadcast Controls
+                </h2>
+                <p className="text-sm text-white">
+                  Sync the selected match with referee scoring stations or the
+                  public audience display when you&apos;re ready.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <Button
+                  onClick={broadcastToReferees}
+                  disabled={
+                    !selectedMatchId || isLoadingMatchDetails || !isConnected
+                  }
+                  className="w-full sm:w-auto"
+                >
+                  Broadcast to Referees
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={broadcastToAudience}
+                  disabled={
+                    !selectedMatchId || isLoadingMatchDetails || !isConnected
+                  }
+                  className="w-full sm:w-auto"
+                >
+                  Broadcast to Audience
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Main Control Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 px-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 px-4 sm:px-6">
           {/* Match Selection */}
           <div className="xl:col-span-1">
-            {roleAccess.showMatchControls || roleAccess.hasScoringAccess ? (
+            {roleAccess.showMatchControls ? (
               <MatchSelector
                 matches={matchesData}
                 selectedMatchId={selectedMatchId}
@@ -760,11 +1025,7 @@ const handleScheduleStageChange = useCallback(
                 feature="Match Selection"
                 message={roleAccess.getAccessDeniedMessage("match")}
                 currentRole={roleAccess.currentRole}
-                requiredRoles={[
-                  UserRole.ADMIN,
-                  UserRole.HEAD_REFEREE,
-                  UserRole.ALLIANCE_REFEREE,
-                ]}
+                requiredRoles={[UserRole.ADMIN]}
               />
             )}
           </div>
@@ -786,9 +1047,9 @@ const handleScheduleStageChange = useCallback(
             />
           </div>
 
-          {/* Timer Control */}
-          <div className="xl:col-span-1">
-            {roleAccess.showTimerControls ? (
+          {/* Timer Control - Hidden for REFEREE role */}
+          {roleAccess.showTimerControls && (
+            <div className="xl:col-span-1">
               <TimerControlPanel
                 timerDuration={timerDuration}
                 timerRemaining={timerRemaining}
@@ -802,64 +1063,73 @@ const handleScheduleStageChange = useCallback(
                 formatTime={formatTime}
                 disabled={!isConnected || !selectedMatchId || !hasTimerPermission}
               />
-            ) : (
-              <AccessDenied
-                feature="Timer Control"
-                message={roleAccess.getAccessDeniedMessage("timer")}
-                currentRole={roleAccess.currentRole}
-                requiredRoles={[UserRole.ADMIN, UserRole.HEAD_REFEREE]}
-              />
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
-        {/* Secondary Control Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6 px-6">
-          {/* Scoring Panel */}
-          <div className="lg:col-span-2">
+        {/* Secondary Control Grid - Optimized for REFEREE role */}
+        <div className={`grid gap-4 sm:gap-6 mt-4 sm:mt-6 px-4 sm:px-6 ${
+          roleAccess.showDisplayControls 
+            ? 'grid-cols-1 md:grid-cols-3' 
+            : 'grid-cols-1'
+        }`}>
+          {/* Scoring Panel - Full width for REFEREE, spans 2 columns for others */}
+          <div className={`${roleAccess.showDisplayControls ? 'md:col-span-2' : 'col-span-1'} ${
+            roleAccess.isAllianceReferee ? 'min-h-[600px] md:min-h-[500px]' : ''
+          }`}>
             {roleAccess.showScoringPanel ? (
-              <ScoringPanel
-                selectedMatchId={selectedMatchId}
-                redFlagsSecured={redFlagsSecured}
-                redSuccessfulFlagHits={redSuccessfulFlagHits}
-                redOpponentFieldAmmo={redOpponentFieldAmmo}
-                blueFlagsSecured={blueFlagsSecured}
-                blueSuccessfulFlagHits={blueSuccessfulFlagHits}
-                blueOpponentFieldAmmo={blueOpponentFieldAmmo}
-                redBreakdown={redBreakdown}
-                blueBreakdown={blueBreakdown}
-                redTotalScore={redTotalScore}
-                blueTotalScore={blueTotalScore}
-                setRedFlagsSecured={setRedFlagsSecured}
-                setRedSuccessfulFlagHits={setRedSuccessfulFlagHits}
-                setRedOpponentFieldAmmo={setRedOpponentFieldAmmo}
-                setBlueFlagsSecured={setBlueFlagsSecured}
-                setBlueSuccessfulFlagHits={setBlueSuccessfulFlagHits}
-                setBlueOpponentFieldAmmo={setBlueOpponentFieldAmmo}
-                onUpdateScores={sendRealtimeUpdate}
-                onSubmitScores={handleSubmitScores}
-                isLoading={isLoadingScores}
-                disabled={!isConnected}
-                matchStatus={selectedMatch?.status}
-                showWinnerBadge={showWinnerBadge}
-                onToggleWinnerBadge={handleToggleWinnerBadge}
-              />
+              selectedMatchId ? (
+                <ScoringPanel
+                  selectedMatchId={selectedMatchId}
+                  redFlagsSecured={redFlagsSecured}
+                  redSuccessfulFlagHits={redSuccessfulFlagHits}
+                  redOpponentFieldAmmo={redOpponentFieldAmmo}
+                  blueFlagsSecured={blueFlagsSecured}
+                  blueSuccessfulFlagHits={blueSuccessfulFlagHits}
+                  blueOpponentFieldAmmo={blueOpponentFieldAmmo}
+                  redBreakdown={redBreakdown}
+                  blueBreakdown={blueBreakdown}
+                  redTotalScore={redTotalScore}
+                  blueTotalScore={blueTotalScore}
+                  setRedFlagsSecured={setRedFlagsSecured}
+                  setRedSuccessfulFlagHits={setRedSuccessfulFlagHits}
+                  setRedOpponentFieldAmmo={setRedOpponentFieldAmmo}
+                  setBlueFlagsSecured={setBlueFlagsSecured}
+                  setBlueSuccessfulFlagHits={setBlueSuccessfulFlagHits}
+                  setBlueOpponentFieldAmmo={setBlueOpponentFieldAmmo}
+                  onUpdateScores={sendRealtimeUpdate}
+                  onSubmitScores={handleSubmitScores}
+                  isLoading={isLoadingScores}
+                  disabled={
+                    !isConnected ||
+                    !selectedMatchId ||
+                    !hasScoringPermission
+                  }
+                  matchStatus={selectedMatch?.status}
+                  showWinnerBadge={showWinnerBadge}
+                  onToggleWinnerBadge={handleToggleWinnerBadge}
+                  userRole={roleAccess.currentRole}
+                />
+              ) : (
+                <Card className="p-6 border-dashed border-2 border-gray-200 bg-gray-50 text-center text-gray-600">
+                  Waiting for an administrator to broadcast a match to this
+                  panel. When a match is assigned, scoring controls will unlock
+                  automatically.
+                </Card>
+              )
             ) : (
               <AccessDenied
                 feature="Scoring Panel"
                 message={roleAccess.getAccessDeniedMessage("scoring")}
                 currentRole={roleAccess.currentRole}
-                requiredRoles={[
-                  UserRole.ADMIN,
-                  UserRole.HEAD_REFEREE,
-                  UserRole.ALLIANCE_REFEREE,
-                ]}
+                requiredRoles={[UserRole.ADMIN]}
               />
             )}
           </div>
-          {/* Announcement Panel */}
-          <div className="lg:col-span-1">
-            {roleAccess.showDisplayControls ? (
+
+          {/* Announcement Panel - Hidden for REFEREE role */}
+          {roleAccess.showDisplayControls && (
+            <div className="md:col-span-1">
               <AnnouncementPanel
                 announcement={announcement}
                 updateAnnouncement={updateAnnouncement}
@@ -884,15 +1154,8 @@ const handleScheduleStageChange = useCallback(
                 onTextSizeChange={setAnnouncementTextSize}
                 onTextColorChange={setAnnouncementTextColor}
               />
-            ) : (
-              <AccessDenied
-                feature="Display Control"
-                message={roleAccess.getAccessDeniedMessage("display")}
-                currentRole={roleAccess.currentRole}
-                requiredRoles={[UserRole.ADMIN, UserRole.HEAD_REFEREE]}
-              />
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

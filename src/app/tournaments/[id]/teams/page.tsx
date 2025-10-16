@@ -8,10 +8,16 @@ import {
   Plus, 
   UserPlus,
   Eye,
-  Settings
+  Settings,
+  Upload,
+  FileText,
+  X
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useTournament } from "@/hooks/tournaments/use-tournaments";
 import { AdminRoute } from "@/components/admin/admin-route";
@@ -26,6 +32,10 @@ export default function TournamentTeamsPage() {
   const router = useRouter();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  // Dialog states
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [csvContent, setCsvContent] = useState("");
 
   // Fetch tournament data
   const { data: tournament, isLoading: tournamentLoading } = useTournament(tournamentId);
@@ -71,6 +81,29 @@ export default function TournamentTeamsPage() {
     },
   });
 
+  // Import teams mutation
+  const importTeamsMutation = useMutation({
+    mutationFn: async (csvData: string) => {
+      return await apiClient.post('/teams/import', {
+        content: csvData,
+        format: 'csv',
+        hasHeader: true,
+        delimiter: ',',
+        tournamentId: tournamentId,
+      });
+    },
+    onSuccess: (result) => {
+      toast.success(`Successfully imported ${result.totalCreated} teams`);
+      setImportDialogOpen(false);
+      setCsvContent("");
+      refetchTeams();
+    },
+    onError: (error: any) => {
+      toast.error("Failed to import teams");
+      console.error("Import teams error:", error);
+    },
+  });
+
   // Event handlers for TeamsTable
   const handleViewTeam = (teamId: string) => {
     router.push(`/teams/${teamId}`);
@@ -82,6 +115,32 @@ export default function TournamentTeamsPage() {
 
   const handleDeleteTeam = (teamId: string) => {
     deleteTeamMutation.mutate(teamId);
+  };
+
+  // Import handlers
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        setCsvContent(content);
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleImportTeams = () => {
+    if (!csvContent.trim()) {
+      toast.error("Please provide CSV content");
+      return;
+    }
+    importTeamsMutation.mutate(csvContent);
+  };
+
+  const handleCloseImportDialog = () => {
+    setImportDialogOpen(false);
+    setCsvContent("");
   };
 
   if (tournamentLoading) {
@@ -109,6 +168,76 @@ export default function TournamentTeamsPage() {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex items-center justify-center gap-2 min-h-[44px] touch-target w-full sm:w-auto"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Import Teams
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[600px]">
+                  <DialogHeader>
+                    <DialogTitle>Import Teams from CSV</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="csv-file" className="text-sm font-medium">
+                        Upload CSV File
+                      </Label>
+                      <input
+                        id="csv-file"
+                        type="file"
+                        accept=".csv"
+                        onChange={handleFileUpload}
+                        className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="csv-content" className="text-sm font-medium">
+                        Or paste CSV content directly
+                      </Label>
+                      <Textarea
+                        id="csv-content"
+                        placeholder="Team Name,Email,Number of member,School/Organization,Location&#10;Robotics Team 1,test@example.com,3,THPT ABC,Hanoi&#10;Tech Warriors,test2@example.com,4,THPT XYZ,Ho Chi Minh"
+                        value={csvContent}
+                        onChange={(e) => setCsvContent(e.target.value)}
+                        rows={8}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                      <p className="font-medium mb-2">CSV Format:</p>
+                      <p className="font-mono text-xs">
+                        Team Name,Email,Number of member,School/Organization,Location
+                      </p>
+                      <p className="mt-2 text-xs">
+                        • First row should be headers<br/>
+                        • Email is optional<br/>
+                        • Number of members must be a positive integer<br/>
+                        • School/Organization and Location are optional
+                      </p>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={handleCloseImportDialog}
+                        disabled={importTeamsMutation.isPending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleImportTeams}
+                        disabled={importTeamsMutation.isPending || !csvContent.trim()}
+                      >
+                        {importTeamsMutation.isPending ? "Importing..." : "Import Teams"}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <Button
                 onClick={() => router.push(`/tournaments/${tournamentId}/teams/register`)}
                 className="flex items-center justify-center gap-2 min-h-[44px] touch-target w-full sm:w-auto"
