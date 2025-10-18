@@ -209,8 +209,9 @@ export class RankingService {
       pointsConceded: item.pointsConceded || 0,
       pointDifferential: item.pointDifferential || 0,
       rankingPoints: item.rankingPoints || 0,
-      tiebreaker1: item.tiebreaker1 || item.opponentWinPercentage || 0,
-      tiebreaker2: item.tiebreaker2 || item.matchesPlayed || 0,
+      // After migration: tiebreaker1 = OWP, tiebreaker2 = pointsScored
+      tiebreaker1: item.tiebreaker1 || item.opponentWinPercentage || 0, // OWP
+       tiebreaker2: item.tiebreaker2 || item.pointsScored || 0, // Points scored (final tiebreaker)
       rank: item.rank || index + 1,
 
       // Add real-time specific fields

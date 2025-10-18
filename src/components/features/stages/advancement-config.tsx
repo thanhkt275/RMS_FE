@@ -318,8 +318,8 @@ export function AdvancementConfig({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
-                          <SelectItem value="2" className="text-gray-900 hover:bg-gray-50">2 teams</SelectItem>
-                          <SelectItem value="3" className="text-gray-900 hover:bg-gray-50">3 teams</SelectItem>
+                          <SelectItem value="2" className="text-gray-900 hover:bg-gray-50">1 teams</SelectItem>
+                          <SelectItem value="1" className="text-gray-900 hover:bg-gray-50">2 teams</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

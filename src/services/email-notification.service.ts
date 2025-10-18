@@ -22,12 +22,14 @@ export interface EmailConfig {
 
 // Email template types
 export type EmailTemplateType =
-  | 'tournament_created'
-  | 'tournament_updated'
-  | 'stage_created'
-  | 'stage_updated'
-  | 'stage_schedule_notification'
-  | 'tournament_reminder';
+| 'tournament_created'
+| 'tournament_updated'
+| 'stage_created'
+| 'stage_updated'
+| 'stage_schedule_notification'
+| 'tournament_reminder'
+| 'user_account_created'
+  | 'bulk_user_creation';
 
 // Email notification data interfaces
 export interface TournamentNotificationData {
@@ -37,10 +39,17 @@ export interface TournamentNotificationData {
 }
 
 export interface StageNotificationData {
-  stage: Stage;
-  tournament: Tournament;
-  teams: Team[];
-  changes?: string[];
+stage: Stage;
+tournament: Tournament;
+teams: Team[];
+changes?: string[];
+}
+
+export interface UserAccountCreationData {
+  username: string;
+  password: string;
+  role: string;
+  loginUrl?: string;
 }
 
 export interface EmailTemplate {
@@ -117,10 +126,34 @@ export class EmailNotificationService {
   }
 
   /**
-   * Check if email service is properly configured
-   */
+  * Check if email service is properly configured
+  */
   public isReady(): boolean {
-    return this.isConfigured;
+  return this.isConfigured;
+  }
+
+  /**
+    * Get email service status with details
+    */
+  public getStatus(): { isConfigured: boolean; missingVars?: string[] } {
+    if (this.isConfigured) {
+      return { isConfigured: true };
+    }
+
+    // Check which variables are missing
+    const requiredEnvVars = {
+      smtpHost: process.env.SMTP_HOST,
+      smtpPort: process.env.SMTP_PORT,
+      smtpUser: process.env.SMTP_USER || process.env.EMAIL,
+      smtpPassword: process.env.SMTP_PASSWORD || process.env.EMAIL_PASSWORD,
+      fromEmail: process.env.FROM_EMAIL || process.env.EMAIL,
+    };
+
+    const missingVars = Object.entries(requiredEnvVars)
+      .filter(([key, value]) => !value)
+      .map(([key]) => key);
+
+    return { isConfigured: false, missingVars };
   }
 
   /**
@@ -172,19 +205,63 @@ export class EmailNotificationService {
   }
 
   /**
-   * Send stage update notification
-   */
+  * Send stage update notification
+  */
   public async sendStageUpdateNotification(
-    data: StageNotificationData
+  data: StageNotificationData
   ): Promise<EmailNotificationResult[]> {
+  if (!this.isConfigured) {
+  throw new Error('Email service is not configured');
+  }
+
+  const recipients = this.extractRecipientsFromTeams(data.teams);
+  const template = this.generateStageUpdateTemplate(data);
+
+  return this.sendBulkEmails(recipients, template);
+  }
+
+  /**
+  * Send user account creation notification
+  */
+  public async sendUserAccountCreationNotification(
+  recipientEmail: string,
+  recipientName: string,
+  data: UserAccountCreationData
+  ): Promise<EmailNotificationResult> {
+  if (!this.isConfigured) {
+  throw new Error('Email service is not configured');
+  }
+
+  const recipient: EmailRecipient = {
+  email: recipientEmail,
+  name: recipientName,
+  };
+
+  const template = this.generateUserAccountCreationTemplate(data);
+
+  return this.sendSingleEmail(recipient, template);
+  }
+
+  /**
+    * Send bulk user creation notification with direct credentials
+    */
+  public async sendBulkUserCreationNotification(
+    recipientEmail: string,
+    recipientName: string,
+    data: UserAccountCreationData
+  ): Promise<EmailNotificationResult> {
     if (!this.isConfigured) {
       throw new Error('Email service is not configured');
     }
 
-    const recipients = this.extractRecipientsFromTeams(data.teams);
-    const template = this.generateStageUpdateTemplate(data);
+    const recipient: EmailRecipient = {
+      email: recipientEmail,
+      name: recipientName,
+    };
 
-    return this.sendBulkEmails(recipients, template);
+    const template = this.generateBulkUserCreationTemplate(data);
+
+    return this.sendSingleEmail(recipient, template);
   }
 
   /**
@@ -473,11 +550,171 @@ Tournament Management Team
     `;
 
     return { subject, htmlContent, textContent };
+    }
+
+    /**
+    * Generate user account creation email template
+    */
+  private generateUserAccountCreationTemplate(data: UserAccountCreationData): EmailTemplate {
+    const { username, password, role, loginUrl } = data;
+    const loginLink = loginUrl || 'https://your-app-url.com/login';
+
+    const subject = `Your Account Has Been Created - ${role}`;
+
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background-color: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+          <h1 style="margin: 0; font-size: 24px;">Welcome to the Tournament Management System</h1>
+        </div>
+
+        <div style="background-color: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px;">
+          <h2 style="color: #1e40af; margin-top: 0;">Your Account Details</h2>
+
+          <div style="background-color: white; padding: 20px; border-radius: 6px; border: 1px solid #e5e7eb; margin: 20px 0;">
+            <p style="margin: 10px 0;"><strong>Username:</strong> ${username}</p>
+            <p style="margin: 10px 0;"><strong>Password:</strong> ${password}</p>
+            <p style="margin: 10px 0;"><strong>Role:</strong> ${role}</p>
+          </div>
+
+          <div style="background-color: #fef3c7; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+            <p style="margin: 0;"><strong>Important:</strong> Please change your password after your first login for security reasons.</p>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${loginLink}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Login to Your Account</a>
+          </div>
+
+          <p>If you have any questions or need assistance, please contact your system administrator.</p>
+
+          <p>Best regards,<br>Tournament Management Team</p>
+        </div>
+      </div>
+    `;
+
+    const textContent = `
+Welcome to the Tournament Management System
+
+Your Account Details:
+- Username: ${username}
+- Password: ${password}
+- Role: ${role}
+
+Important: Please change your password after your first login for security reasons.
+
+Login URL: ${loginLink}
+
+If you have any questions or need assistance, please contact your system administrator.
+
+Best regards,
+Tournament Management Team
+    `.trim();
+
+    return { subject, htmlContent, textContent };
+    }
+
+    /**
+    * Generate bulk user creation email template with direct credentials
+    */
+  private generateBulkUserCreationTemplate(data: UserAccountCreationData): EmailTemplate {
+    const { username, password, role, loginUrl } = data;
+    const loginLink = loginUrl || 'https://your-app-url.com/login';
+
+    const subject = `Your Tournament Management Account Credentials - ${role}`;
+
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background-color: #10b981; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+          <h1 style="margin: 0; font-size: 24px;">🎯 Your Account Has Been Created</h1>
+          <p style="margin: 10px 0 0 0;">Welcome to the Tournament Management System</p>
+        </div>
+
+        <div style="background-color: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px;">
+          <div style="background-color: #ffffff; padding: 25px; border-radius: 8px; border: 2px solid #e5e7eb; margin: 20px 0;">
+            <h2 style="color: #1e40af; margin-top: 0; text-align: center;">Your Login Credentials</h2>
+
+            <div style="background-color: #f0f9ff; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #0ea5e9;">
+              <h3 style="margin: 0 0 10px 0; color: #0c4a6e;">📋 Account Details</h3>
+              <p style="margin: 8px 0; font-size: 16px;"><strong>Username:</strong> <code style="background-color: #e0f2fe; padding: 2px 6px; border-radius: 3px; font-family: monospace;">${username}</code></p>
+              <p style="margin: 8px 0; font-size: 16px;"><strong>Password:</strong> <code style="background-color: #fef3c7; padding: 2px 6px; border-radius: 3px; font-family: monospace; color: #92400e;">${password}</code></p>
+              <p style="margin: 8px 0; font-size: 16px;"><strong>Role:</strong> <span style="background-color: #ecfdf5; color: #065f46; padding: 2px 8px; border-radius: 12px; font-weight: bold;">${role}</span></p>
+            </div>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${loginLink}" style="background-color: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);">🔐 Login to Your Account</a>
+          </div>
+
+          <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+            <h4 style="margin: 0 0 10px 0; color: #92400e;">⚠️ Important Security Notice</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #92400e;">
+              <li>Keep your credentials secure and do not share them</li>
+              <li>Change your password after first login for better security</li>
+              <li>Contact your administrator if you have any issues</li>
+            </ul>
+          </div>
+
+          <div style="background-color: #ecfdf5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+            <h4 style="margin: 0 0 10px 0; color: #065f46;">🎯 Getting Started</h4>
+            <ol style="margin: 0; padding-left: 20px; color: #065f46;">
+              <li>Click the login button above</li>
+              <li>Use your username and password to sign in</li>
+              <li>Explore your role-specific features</li>
+              <li>Consider updating your password for security</li>
+            </ol>
+          </div>
+
+          <p style="text-align: center; margin: 20px 0; color: #6b7280;">
+            If you have any questions or need assistance, please contact your system administrator.
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+          <p style="text-align: center; margin: 20px 0; font-size: 14px; color: #9ca3af;">
+            <strong>Tournament Management System</strong><br>
+            Best regards, Tournament Management Team
+          </p>
+        </div>
+      </div>
+    `;
+
+    const textContent = `
+🎯 YOUR ACCOUNT HAS BEEN CREATED
+Welcome to the Tournament Management System
+
+📋 YOUR LOGIN CREDENTIALS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Username: ${username}
+Password: ${password}
+Role: ${role}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔐 LOGIN LINK: ${loginLink}
+
+⚠️  IMPORTANT SECURITY NOTICE:
+• Keep your credentials secure and do not share them
+• Change your password after first login for better security
+• Contact your administrator if you have any issues
+
+🎯 GETTING STARTED:
+1. Click the login link above
+2. Use your username and password to sign in
+3. Explore your role-specific features
+4. Consider updating your password for security
+
+If you have any questions or need assistance, please contact your system administrator.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Tournament Management System
+Best regards, Tournament Management Team
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    `.trim();
+
+    return { subject, htmlContent, textContent };
   }
 
   /**
-   * Send bulk emails to multiple recipients
-   */
+    * Send bulk emails to multiple recipients
+    */
   private async sendBulkEmails(
     recipients: EmailRecipient[],
     template: EmailTemplate

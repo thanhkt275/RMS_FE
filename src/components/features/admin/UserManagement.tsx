@@ -12,6 +12,7 @@ import { AdvancedUserSearch } from './UserSearch';
 import BulkActions from './BulkActions';
 import ResponsiveUserDisplay from './ResponsiveUserDisplay';
 import UserForm from './UserForm';
+import BulkUserCreation from './BulkUserCreation';
 
 export const UserManagement: React.FC = () => {
   const { screenSize, isMounted } = useResponsiveLayout();
@@ -46,6 +47,7 @@ export const UserManagement: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showBulkCreateModal, setShowBulkCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [roleChangeUser, setRoleChangeUser] = useState<User | null>(null);
@@ -74,10 +76,17 @@ export const UserManagement: React.FC = () => {
   }, [setFilters]);
 
   /**
-   * Handle user creation
-   */
+  * Handle user creation
+  */
   const handleCreateUser = useCallback(() => {
-    setShowCreateModal(true);
+  setShowCreateModal(true);
+  }, []);
+
+  /**
+    * Handle bulk user creation
+    */
+  const handleBulkCreateUsers = useCallback(() => {
+    setShowBulkCreateModal(true);
   }, []);
 
   /**
@@ -175,16 +184,27 @@ export const UserManagement: React.FC = () => {
             
             <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
               <button
-                onClick={refreshUsers}
-                disabled={loading}
-                className="flex items-center px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 transition-all duration-200 shadow-sm touch-target"
+              onClick={refreshUsers}
+              disabled={loading}
+              className="flex items-center px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 transition-all duration-200 shadow-sm touch-target"
               >
-                <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span className="hidden sm:inline">Refresh</span>
+              <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span className="hidden sm:inline">Refresh</span>
               </button>
-              
+
+              <button
+              onClick={handleBulkCreateUsers}
+              className="flex items-center px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-all duration-200 shadow-md hover:shadow-lg touch-target"
+              >
+              <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <span className="hidden sm:inline">Bulk</span>
+              <span className="sm:inline"> Create</span>
+              </button>
+
               <button
                 onClick={handleCreateUser}
                 className="flex items-center px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg touch-target"
@@ -335,6 +355,17 @@ export const UserManagement: React.FC = () => {
         onSubmit={editingUser ? handleEditSubmit : handleCreateSubmit}
         loading={loading}
       />
+
+      {showBulkCreateModal && (
+        <BulkUserCreation
+          isOpen={showBulkCreateModal}
+          onClose={() => setShowBulkCreateModal(false)}
+          onSuccess={() => {
+            setShowBulkCreateModal(false);
+            refreshUsers();
+          }}
+        />
+      )}
 
       {/* TODO: Add RoleChangeModal */}
       {/* TODO: Add UserProfile modal */}

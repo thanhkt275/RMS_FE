@@ -125,37 +125,14 @@ export function SwissRankingsDisplay({
       },
       {
         accessorKey: "opponentWinPercentage",
-        header: "Tỉ lệ thua",
+        header: "Tỉ lệ thắng đối thủ",
         cell: ({ getValue }: any) => (
-          <div className="text-xl md:text-2xl font-bold text-foreground text-center">
-            {((getValue() as number) * 100).toFixed(1)}%
+          <div className="text-xl md:text-2xl font-bold text-orange-600 text-center" title="Tỉ lệ thắng của các đối thủ đã gặp (Opponent Win Percentage)">
+            {(100 - ((getValue() as number) * 100)).toFixed(1)}%
           </div>
         ),
         enableSorting: true,
         size: 140,
-      },
-
-      {
-        accessorKey: "pointsScored",
-        header: "Điểm ghi",
-        cell: ({ getValue }: any) => (
-          <div className="text-xl md:text-2xl font-semibold text-foreground text-center">
-            {getValue() as number}
-          </div>
-        ),
-        enableSorting: true,
-        size: 120,
-      },
-      {
-        accessorKey: "pointsConceded",
-        header: "Điểm thua",
-        cell: ({ getValue }: any) => (
-          <div className="text-xl md:text-2xl font-semibold text-foreground text-center">
-            {getValue() as number}
-          </div>
-        ),
-        enableSorting: true,
-        size: 120,
       },
       {
         accessorKey: "pointDifferential",
@@ -180,6 +157,30 @@ export function SwissRankingsDisplay({
         enableSorting: true,
         size: 120,
       },
+
+      {
+        accessorKey: "pointsScored",
+        header: "Điểm ghi",
+        cell: ({ getValue }: any) => (
+          <div className="text-xl md:text-2xl font-semibold text-foreground text-center">
+            {getValue() as number}
+          </div>
+        ),
+        enableSorting: true,
+        size: 120,
+      },
+      {
+        accessorKey: "pointsConceded",
+        header: "Điểm thua",
+        cell: ({ getValue }: any) => (
+          <div className="text-xl md:text-2xl font-semibold text-foreground text-center">
+            {getValue() as number}
+          </div>
+        ),
+        enableSorting: true,
+        size: 120,
+      },
+      
       {
         accessorKey: "matchesPlayed",
         header: "Số trận đã đấu",

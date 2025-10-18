@@ -102,9 +102,9 @@ class UserService {
         : undefined,
     };
 
-    // Remove empty string values and undefined values
+    // Handle email field - send null if not provided
     if (cleanedData.email === "" || cleanedData.email === undefined) {
-      delete cleanedData.email;
+    cleanedData.email = null;
     }
     if (
       cleanedData.phoneNumber === "" ||
@@ -268,8 +268,24 @@ class UserService {
   }
 
   /**
-   * Import users from CSV
-   */
+  * Send bulk user creation emails
+  */
+  async sendBulkUserCreationEmails(
+  emailData: Array<{
+      email: string;
+    username: string;
+    password: string;
+      role: string;
+  }>
+  ): Promise<{ sent: number; failed: number; results: Array<{ email: string; success: boolean; error?: string }> }> {
+  console.log('[UserService] Sending bulk user creation emails:', emailData.length, 'emails');
+  const response = await apiClient.post<any>("/users/bulk-email", { emails: emailData });
+  return response.data || response;
+  }
+
+  /**
+    * Import users from CSV
+    */
   async importUsers(
     file: File
   ): Promise<{ imported: number; errors: string[] }> {

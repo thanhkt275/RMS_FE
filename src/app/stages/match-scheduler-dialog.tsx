@@ -90,18 +90,35 @@ export default function MatchSchedulerDialog({
       setShowAdvancedFrcConfig(false);
     }
   }, [isOpen, stageType]);
-  // Fetch teams by stage ID - only when teams view is active AND not Swiss or FRC
-  const { 
-    data: teams = [], 
-    isLoading: isLoadingTeams, 
-    refetch: refetchTeams 
+  // Fetch teams - for playoff stages, get from tournament; for others, get from stage
+  const {
+  data: teams = [],
+  isLoading: isLoadingTeams,
+  refetch: refetchTeams
   } = useQuery({
-    queryKey: ["stage-teams", stageId],
-    queryFn: async () => {
-      try {
-        // Fetch only teams assigned to this stage
-        const response = await apiClient.get<any>(`/stages/${stageId}/teams`);
-        // The response is expected to be { success, data: Team[] }
+  queryKey: schedulerType === "playoff" ? ["tournament-teams", tournamentId] : ["stage-teams", stageId],
+  queryFn: async () => {
+  try {
+  let response;
+  if (schedulerType === "playoff") {
+    // For playoff stages, fetch teams from the tournament
+    response = await apiClient.get<any>(`/tournaments/${tournamentId}/teams`);
+  } else {
+  // For other stages, fetch teams assigned to the stage
+  response = await apiClient.get<any>(`/stages/${stageId}/teams`);
+  }
+
+  // Handle tournament teams response
+  if (schedulerType === "playoff" && response && Array.isArray(response)) {
+    return response.map((t: any) => ({
+        id: t.id,
+      teamNumber: t.teamNumber,
+      name: t.name,
+      organization: t.organization || undefined,
+      }));
+      }
+
+      // Handle stage teams response
         if (response.success && Array.isArray(response.data)) {
           return response.data.map((t: any) => ({
             id: t.teamId,
@@ -112,12 +129,12 @@ export default function MatchSchedulerDialog({
         }
         return [];
       } catch (error: any) {
-        console.error("Error fetching stage teams:", error);
+        console.error("Error fetching teams:", error);
         toast.error(`Failed to load teams: ${error.message}`);
         return [];
       }
     },
-    enabled: !!stageId && isOpen && activeView === "teams" && !["swiss", "frc"].includes(schedulerType),
+    enabled: !!stageId && !!tournamentId && isOpen && activeView === "teams" && !["swiss", "frc"].includes(schedulerType),
     staleTime: 1000 * 60,
   });
 
@@ -164,11 +181,11 @@ export default function MatchSchedulerDialog({
   };
   // Function to schedule matches
   const handleSchedule = async () => {
-    // For Swiss and FRC tournaments, no team selection is required
-    if (!["swiss", "frc"].includes(schedulerType) && selectedTeams.length === 0) {
-      toast.error("Please select at least one team");
-      return;
-    }
+  // For Swiss, FRC, and Playoff tournaments, no team selection is required
+  if (!["swiss", "frc", "playoff"].includes(schedulerType) && selectedTeams.length === 0) {
+  toast.error("Please select at least one team");
+  return;
+  }
 
     setIsLoading(true);
     setError(null);
@@ -185,39 +202,39 @@ export default function MatchSchedulerDialog({
         requestBody.teamsPerAlliance = teamsPerAlliance;
         // Swiss tournaments don't require team selection - backend uses all teams
       } else if (schedulerType === "frc") {
-        endpoint = "/match-scheduler/generate-frc-schedule";
-        requestBody.rounds = frcRounds;
-        requestBody.teamsPerAlliance = teamsPerAlliance;
-        requestBody.minMatchSeparation = frcMinMatchSeparation;
-        requestBody.qualityLevel = frcQualityLevel;
-        
-        // Add preset if selected
-        if (frcPreset) {
-          requestBody.preset = frcPreset;
-        }
-        
-        // Add advanced config if enabled
-        if (showAdvancedFrcConfig) {
-          requestBody.config = {
-            penalties: {
-              partnerRepeat: teamsPerAlliance === 1 ? 0.0 : teamsPerAlliance === 2 ? 4.0 : 3.0, // No partners in 1v1
-              opponentRepeat: teamsPerAlliance === 1 ? 3.0 : 2.0, // Higher penalty for 1v1 since only 1 opponent
-              matchSeparationViolation: 15.0
-            },
-            stationBalancing: {
-              enabled: true,
-              strategy: "position",
-              perfectBalancing: true
-            }
-          };
-        }
-        
-        // FRC tournaments don't require team selection - backend uses all teams
+      endpoint = "/match-scheduler/generate-frc-schedule";
+      requestBody.rounds = frcRounds;
+      requestBody.teamsPerAlliance = teamsPerAlliance;
+      requestBody.minMatchSeparation = frcMinMatchSeparation;
+      requestBody.qualityLevel = frcQualityLevel;
+
+      // Add preset if selected
+      if (frcPreset) {
+      requestBody.preset = frcPreset;
+      }
+
+      // Add advanced config if enabled
+      if (showAdvancedFrcConfig) {
+      requestBody.config = {
+      penalties: {
+      partnerRepeat: teamsPerAlliance === 1 ? 0.0 : teamsPerAlliance === 2 ? 4.0 : 3.0, // No partners in 1v1
+      opponentRepeat: teamsPerAlliance === 1 ? 3.0 : 2.0, // Higher penalty for 1v1 since only 1 opponent
+      matchSeparationViolation: 15.0
+      },
+      stationBalancing: {
+      enabled: true,
+      strategy: "position",
+      perfectBalancing: true
+      }
+      };
+      }
+
+      // FRC tournaments don't require team selection - backend uses all teams
       } else if (schedulerType === "playoff") {
-        endpoint = "/match-scheduler/generate-playoff";
-        requestBody.numberOfRounds = numberOfRounds;
-        requestBody.teamsPerAlliance = teamsPerAlliance;
-        requestBody.teamIds = selectedTeams; // Only add teamIds for non-Swiss/FRC tournaments
+      endpoint = "/match-scheduler/generate-playoff";
+      requestBody.numberOfRounds = numberOfRounds;
+      requestBody.teamsPerAlliance = teamsPerAlliance;
+      // Playoff tournaments don't require team selection - backend uses all teams with stats
       }
 
       const response = await apiClient.post(endpoint, requestBody);
@@ -263,7 +280,7 @@ export default function MatchSchedulerDialog({
           >
             1. Configuration
           </div>
-          {!["swiss", "frc"].includes(schedulerType) && (
+          {!["swiss", "frc", "playoff"].includes(schedulerType) && (
             <div
               className={`px-4 py-2 cursor-pointer rounded-t-lg transition-colors ${
                 activeView === "teams" 
@@ -284,7 +301,7 @@ export default function MatchSchedulerDialog({
               }`}
               onClick={() => setActiveView("results")}
             >
-              {["swiss", "frc"].includes(schedulerType) ? "2. Results" : "3. Results"}
+              {["swiss", "frc", "playoff"].includes(schedulerType) ? "2. Results" : "3. Results"}
             </div>
           )}
         </div>{/* Content based on active view */}
@@ -703,19 +720,21 @@ export default function MatchSchedulerDialog({
               <Button variant="outline" onClick={onClose} className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 rounded-lg">
                 Cancel
               </Button>
-              {["swiss", "frc"].includes(schedulerType) ? (
+              {["swiss", "frc", "playoff"].includes(schedulerType) ? (
                 <Button
                   onClick={handleSchedule}
                   disabled={isLoading}
                   className="bg-blue-500 text-white font-semibold rounded-lg px-5 py-2.5 shadow-md hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
-                    <>
-                      <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2"></div>
-                      Creating...
-                    </>
+                  <>
+                  <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2"></div>
+                  Creating...
+                  </>
                   ) : (
-                    schedulerType === "swiss" ? "Generate Swiss Round" : "Generate FRC Schedule"
+                  schedulerType === "swiss" ? "Generate Swiss Round" :
+                    schedulerType === "frc" ? "Generate FRC Schedule" :
+                    "Generate Playoff Bracket"
                   )}
                 </Button>
               ) : (
